@@ -1,0 +1,322 @@
+{
+  "project": "img-style-ag_1",
+  "registry_version": 1,
+  "purpose": {
+    "human": "Быстро понять архитектуру проекта и не пропустить связанные области при изменениях.",
+    "system": "Выполнять change-impact контроль по явной карте подсистем, инвариантов и обязательных проверок."
+  },
+  "canonical_docs": [
+    "PROJECT_STRUCTURE.md",
+    "USER_GUIDE.md",
+    "Руководство_пользователя.md"
+  ],
+  "core_invariants": [
+    "GenerationConfig в config.py является единой точкой правды для generation-флагов.",
+    "Все stage-артефакты одного этапа должны иметь общий префикс stage_id.",
+    "Изменение naming contract требует проверки всех consumers, которые извлекают stage_id или строят пути по имени файла.",
+    "Одновременно можно включить только один framing-режим: prefer_face_closeups, use_ai_optimal_framing, generate_dual_framing_videos.",
+    "main_grok_batch.py по умолчанию очищает input/ и output/ после успешного batch-run, если не указан keep-workdirs.",
+    "main_full_pipeline.py может удалять обработанные входные изображения из input/.",
+    "mp4 доставляются в final_videos_dir, а non-video stage assets - в regeneration_assets_dir/<stage_id>/."
+  ],
+  "subsystems": [
+    {
+      "id": "config",
+      "purpose": "Флаги генерации, валидация, canonical paths.",
+      "files": [
+        "config.py",
+        "config.json",
+        "config_BASE.json",
+        "config_*.json"
+      ],
+      "tests": [
+        "test/test_config_cli_defaults.py"
+      ],
+      "must_review_when_changed": [
+        "main.py",
+        "main_desktop_pipeline.py",
+        "main_full_pipeline.py",
+        "USER_GUIDE.md",
+        "Руководство_пользователя.md"
+      ]
+    },
+    {
+      "id": "scene_analysis",
+      "purpose": "Схема scene payload и ее получение.",
+      "files": [
+        "models/scene_analysis.py",
+        "api/openai_scene.py",
+        "main_scene.py",
+        "utils/image_analysis.py"
+      ],
+      "tests": [
+        "test/test_openai_scene.py",
+        "test/test_scene_app.py",
+        "test/test_scene_pipeline_integration.py"
+      ],
+      "must_review_when_changed": [
+        "main.py",
+        "api/openai_prompt_synthesizer.py",
+        "utils/prompt_builder.py"
+      ]
+    },
+    {
+      "id": "prompt_generation",
+      "purpose": "Сборка video/background/final-frame/music prompts и motion selection.",
+      "files": [
+        "main.py",
+        "api/openai_prompt_synthesizer.py",
+        "api/openai_motion_selector.py",
+        "utils/prompt_builder.py",
+        "utils/camera_movements.py"
+      ],
+      "tests": [
+        "test/test_scene_pipeline_integration.py",
+        "test/test_motion_selection.py",
+        "test/test_video_framing_modes.py",
+        "tests/test_selfie_phone_prompt.py"
+      ],
+      "must_review_when_changed": [
+        "config.py",
+        "USER_GUIDE.md",
+        "Руководство_пользователя.md"
+      ]
+    },
+    {
+      "id": "grok_runtime",
+      "purpose": "Запуск Grok для single-stage и batch сценариев.",
+      "files": [
+        "api/grok_web.py",
+        "main_grok_web.py",
+        "main_grok_batch.py",
+        "main_full_pipeline.py"
+      ],
+      "tests": [
+        "test/test_grok_web_app.py",
+        "test/test_grok_batch_app.py",
+        "test/test_full_pipeline.py"
+      ],
+      "must_review_when_changed": [
+        "utils/project_delivery.py"
+      ]
+    },
+    {
+      "id": "delivery_lifecycle",
+      "purpose": "Синхронизация, очистка, перенос ошибок, доставка итогов.",
+      "files": [
+        "utils/project_delivery.py",
+        "utils/artifact_cleanup.py",
+        "main_cleanup_artifacts.py",
+        "main_full_pipeline.py",
+        "main_grok_batch.py"
+      ],
+      "tests": [
+        "test/test_project_delivery.py",
+        "test/test_full_pipeline.py",
+        "test/test_artifact_cleanup.py"
+      ],
+      "must_review_when_changed": [
+        "config.py"
+      ]
+    },
+    {
+      "id": "sequence_optimization",
+      "purpose": "Парсинг sequence, оптимизация порядка, экспорт XML/PRPROJ и отчеты.",
+      "files": [
+        "main_sequence_optimizer.py",
+        "models/video_sequence.py",
+        "utils/sequence_optimizer.py",
+        "utils/sequence_optimizer_runtime.py",
+        "utils/premiere_xml.py",
+        "utils/premiere_project.py",
+        "utils/premiere_xml_export.py",
+        "utils/premiere_project_export.py",
+        "utils/sequence_structure_report.py",
+        "utils/transition_recommendations.py",
+        "utils/current_sequence_reports.py",
+        "utils/human_profile_sequence_report.py",
+        "utils/fcp_translation_results.py",
+        "utils/project_sequence_batch.py"
+      ],
+      "tests": [
+        "test/test_sequence_optimizer_app.py"
+      ],
+      "must_review_when_changed": [
+        "main_project_sequence_batch.py",
+        "main_sequence_reports.py",
+        "main_human_sequence_report.py"
+      ]
+    }
+  ],
+  "change_types": [
+    {
+      "id": "generation_flag",
+      "description": "Добавление нового generation-флага или изменение semantics существующего.",
+      "must_touch": [
+        "config.py",
+        "config.json",
+        "config_BASE.json",
+        "main.py",
+        "main_desktop_pipeline.py",
+        "api/openai_prompt_synthesizer.py",
+        "utils/prompt_builder.py",
+        "USER_GUIDE.md",
+        "Руководство_пользователя.md"
+      ],
+      "must_review": [
+        "main_full_pipeline.py",
+        "config_*.json",
+        "tests/test_selfie_phone_prompt.py",
+        "test/test_motion_selection.py",
+        "test/test_scene_pipeline_integration.py"
+      ],
+      "minimum_checks": [
+        "config load",
+        "CLI override",
+        "prompt output",
+        "manifest serialization",
+        "targeted tests"
+      ],
+      "recommended_tests": [
+        "test/test_config_cli_defaults.py",
+        "test/test_scene_pipeline_integration.py",
+        "test/test_motion_selection.py",
+        "test/test_video_framing_modes.py",
+        "tests/test_selfie_phone_prompt.py"
+      ]
+    },
+    {
+      "id": "scene_schema",
+      "description": "Изменение схемы scene-analysis payload.",
+      "must_touch": [
+        "models/scene_analysis.py",
+        "api/openai_scene.py"
+      ],
+      "must_review": [
+        "main_scene.py",
+        "main.py",
+        "api/openai_prompt_synthesizer.py",
+        "utils/prompt_builder.py",
+        "utils/project_sequence_batch.py",
+        "utils/current_sequence_reports.py",
+        "utils/human_profile_sequence_report.py"
+      ],
+      "minimum_checks": [
+        "scene json serialization",
+        "scene parsing tests",
+        "prompt integration tests"
+      ],
+      "recommended_tests": [
+        "test/test_openai_scene.py",
+        "test/test_scene_app.py",
+        "test/test_scene_pipeline_integration.py"
+      ]
+    },
+    {
+      "id": "artifact_naming",
+      "description": "Изменение naming rules, stage_id или имен файлов output-артефактов.",
+      "must_touch": [
+        "main.py",
+        "main_desktop_pipeline.py",
+        "main_grok_web.py",
+        "main_grok_batch.py"
+      ],
+      "must_review": [
+        "main_full_pipeline.py",
+        "utils/project_delivery.py",
+        "utils/premiere_xml.py",
+        "utils/premiere_project.py",
+        "utils/fcp_translation_results.py",
+        "utils/current_sequence_reports.py"
+      ],
+      "minimum_checks": [
+        "single-stage prompt generation",
+        "grok single-stage",
+        "grok batch",
+        "sequence optimizer compatibility"
+      ],
+      "recommended_tests": [
+        "test/test_api_pipeline.py",
+        "test/test_grok_web_app.py",
+        "test/test_grok_batch_app.py",
+        "test/test_sequence_optimizer_app.py"
+      ]
+    },
+    {
+      "id": "grok_runtime",
+      "description": "Изменение браузерной автоматизации Grok, таймаутов или flow подготовки background/video.",
+      "must_touch": [
+        "api/grok_web.py",
+        "main_grok_web.py"
+      ],
+      "must_review": [
+        "main_grok_batch.py",
+        "main_full_pipeline.py",
+        "utils/project_delivery.py"
+      ],
+      "minimum_checks": [
+        "single-stage run",
+        "batch run",
+        "background-only run",
+        "no-submit mode"
+      ],
+      "recommended_tests": [
+        "test/test_grok_web_app.py",
+        "test/test_grok_batch_app.py",
+        "test/test_full_pipeline.py",
+        "test/test_project_delivery.py"
+      ]
+    },
+    {
+      "id": "delivery_cleanup",
+      "description": "Изменение правил синхронизации, очистки, архивации или error-handling.",
+      "must_touch": [
+        "utils/project_delivery.py"
+      ],
+      "must_review": [
+        "main_grok_batch.py",
+        "main_full_pipeline.py",
+        "utils/artifact_cleanup.py",
+        "main_cleanup_artifacts.py"
+      ],
+      "minimum_checks": [
+        "final media copy",
+        "regeneration assets sync",
+        "error directory flow",
+        "no unexpected input deletion"
+      ],
+      "recommended_tests": [
+        "test/test_project_delivery.py",
+        "test/test_full_pipeline.py",
+        "test/test_artifact_cleanup.py"
+      ]
+    },
+    {
+      "id": "sequence_optimizer",
+      "description": "Изменение логики sequence optimization, export или reporting.",
+      "must_touch": [
+        "main_sequence_optimizer.py",
+        "utils/sequence_optimizer.py",
+        "utils/sequence_optimizer_runtime.py",
+        "models/video_sequence.py"
+      ],
+      "must_review": [
+        "utils/premiere_xml.py",
+        "utils/premiere_project.py",
+        "utils/premiere_xml_export.py",
+        "utils/premiere_project_export.py",
+        "utils/sequence_structure_report.py",
+        "utils/transition_recommendations.py",
+        "utils/project_sequence_batch.py"
+      ],
+      "minimum_checks": [
+        "optimizer tests",
+        "json/txt reports",
+        "xml/prproj export if affected"
+      ],
+      "recommended_tests": [
+        "test/test_sequence_optimizer_app.py"
+      ]
+    }
+  ]
+}

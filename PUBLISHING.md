@@ -1,7 +1,7 @@
 # Publishing Workflow
 
 This repository is intended to contain only the managed publication bundle exported from the source project.
-The current bundle includes a limited public code snapshot: core entry/config files plus selected Python sources from `api/` and `utils/`.
+The current bundle includes a full safe source mirror under `source/`, excluding secrets and runtime-only folders.
 
 ## Safe Update Flow
 
@@ -21,6 +21,6 @@ python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Vi
 
 - Do not push the working project root directly.
 - Do not copy `.env`, `input`, `output`, browser profiles, or temporary directories into this repository.
-- Publish only the managed code snapshot in `code/`: root `main/config` files plus selected Python sources from `api/` and `utils/`.
+- Publish only the managed `source/` mirror plus generated docs/data; runtime folders and secret files stay excluded.
 - The publication sync blocks secret-like content and sanitizes local absolute paths.
 - `.gitignore` in this repository is generated to keep the repo limited to the managed publication files.

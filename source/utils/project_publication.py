@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
@@ -20,22 +21,38 @@ EXCLUDED_DIR_NAMES = {
     "human_details_filtered",
     "input",
     "output",
+    "project_publication",
     "test_runtime",
 }
+EXCLUDED_DIR_PREFIXES = ("pytest-cache-files-",)
+EXCLUDED_FILE_NAMES = {".env"}
+EXCLUDED_FILE_PREFIXES = (".env.",)
+PUBLISHED_SOURCE_SUFFIXES = {
+    ".bat",
+    ".css",
+    ".csv",
+    ".html",
+    ".ini",
+    ".js",
+    ".json",
+    ".md",
+    ".ps1",
+    ".py",
+    ".sh",
+    ".toml",
+    ".ts",
+    ".txt",
+    ".xml",
+    ".yaml",
+    ".yml",
+}
+TEXT_READ_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251")
 
 DOC_TARGETS = {
     "PROJECT_STRUCTURE.md": "docs/PROJECT_STRUCTURE.md",
     "USER_GUIDE.md": "docs/USER_GUIDE_EN.md",
     "Руководство_пользователя.md": "docs/USER_GUIDE_RU.md",
 }
-ROOT_CODE_TARGETS = {
-    "main.py": "code/main.py",
-    "config.py": "code/config.py",
-    "config.json": "code/config.json",
-}
-CODE_DIR_TARGETS = ("api", "utils")
-PUBLISHED_CODE_SUFFIXES = {".py"}
-
 WINDOWS_QUOTED_PATH_RE = re.compile(r'"[A-Za-z]:\\[^"\n]+"')
 WINDOWS_INLINE_PATH_RE = re.compile(r"(?<![A-Za-z0-9_])(?:[A-Za-z]:\\[^\s`]+)")
 SECRET_PATTERNS = {
@@ -72,32 +89,50 @@ class PublicationResult:
 
 
 def _iter_project_files(source_root: Path):
-    for path in sorted(source_root.rglob("*")):
-        if not path.is_file():
-            continue
-        if any(part in EXCLUDED_DIR_NAMES for part in path.parts):
-            continue
-        yield path
+    for current_root, dirnames, filenames in os.walk(source_root, topdown=True, onerror=lambda _error: None):
+        dirnames[:] = sorted(dirname for dirname in dirnames if not _is_excluded_dir_name(dirname))
+        current_path = Path(current_root)
+        for filename in sorted(filenames):
+            if _is_excluded_file_name(filename):
+                continue
+            yield current_path / filename
 
 
-def _iter_published_code_targets(source_root: Path):
-    for source_name, target_relpath in ROOT_CODE_TARGETS.items():
-        yield source_root / source_name, target_relpath
+def _is_excluded_dir_name(dirname: str) -> bool:
+    return dirname in EXCLUDED_DIR_NAMES or any(dirname.startswith(prefix) for prefix in EXCLUDED_DIR_PREFIXES)
 
-    for dirname in CODE_DIR_TARGETS:
-        base_dir = source_root / dirname
-        if not base_dir.exists():
+
+def _is_excluded_file_name(filename: str) -> bool:
+    return filename in EXCLUDED_FILE_NAMES or any(filename.startswith(prefix) for prefix in EXCLUDED_FILE_PREFIXES)
+
+
+def _is_publishable_source_file(source_path: Path, source_root: Path) -> bool:
+    relpath = source_path.relative_to(source_root)
+    if any(_is_excluded_dir_name(part) for part in relpath.parts[:-1]):
+        return False
+    if _is_excluded_file_name(relpath.name):
+        return False
+    return source_path.suffix.lower() in PUBLISHED_SOURCE_SUFFIXES
+
+
+def _iter_published_source_targets(source_root: Path):
+    for source_path in _iter_project_files(source_root):
+        if not _is_publishable_source_file(source_path, source_root):
             continue
-        for source_path in sorted(base_dir.rglob("*")):
-            if not source_path.is_file():
-                continue
-            rel_parts = source_path.relative_to(source_root).parts
-            if any(part in EXCLUDED_DIR_NAMES for part in rel_parts):
-                continue
-            if source_path.suffix not in PUBLISHED_CODE_SUFFIXES:
-                continue
-            target_relpath = Path("code") / source_path.relative_to(source_root)
-            yield source_path, target_relpath.as_posix()
+        target_relpath = Path("source") / source_path.relative_to(source_root)
+        yield source_path, target_relpath.as_posix()
+
+
+def _read_text_with_fallbacks(source_path: Path) -> str:
+    last_error: UnicodeDecodeError | None = None
+    for encoding in TEXT_READ_ENCODINGS:
+        try:
+            return source_path.read_text(encoding=encoding)
+        except UnicodeDecodeError as exc:
+            last_error = exc
+    if last_error is not None:
+        raise last_error
+    return source_path.read_text(encoding="utf-8")
 
 
 def _project_snapshot(source_root: Path, registry: dict[str, object]) -> dict[str, object]:
@@ -279,7 +314,8 @@ def _change_impact_markdown(registry: dict[str, object]) -> str:
 def _readme_markdown(snapshot: dict[str, object], manifest_relpaths: list[str]) -> str:
     counts = snapshot["counts"]
     root_links = [path for path in manifest_relpaths if "/" not in path and path not in {"README.md"}]
-    code_links = [path for path in manifest_relpaths if path.startswith("code/")]
+    source_links = [path for path in manifest_relpaths if path.startswith("source/")]
+    source_entries = sorted({"/".join(path.split("/")[:2]) for path in source_links})
     docs_links = [path for path in manifest_relpaths if path.startswith("docs/")]
     data_links = [path for path in manifest_relpaths if path.startswith("data/")]
     lines = [
@@ -295,10 +331,12 @@ def _readme_markdown(snapshot: dict[str, object], manifest_relpaths: list[str]) 
         f"- Test files: `{counts['test_files']}`",
         f"- Entry points: `{counts['entry_points']}`",
         "",
-        "## Published Code Snapshot",
+        "## Published Source Mirror",
         "",
+        f"- Mirrored source files: `{len(source_links)}`",
+        "- Full file list: `data/publication_manifest.json`",
     ]
-    lines.extend(f"- `{item}`" for item in code_links)
+    lines.extend(f"- `{item}`" for item in source_entries)
     lines.extend(
         [
             "",
@@ -351,8 +389,8 @@ def _publication_gitignore() -> str:
             "!.gitignore",
             "!README.md",
             "!PUBLISHING.md",
-            "!code/",
-            "!code/**",
+            "!source/",
+            "!source/**",
             "!docs/",
             "!docs/**",
             "!data/",
@@ -368,7 +406,7 @@ def _publication_push_guide() -> str:
             "# Publishing Workflow",
             "",
             "This repository is intended to contain only the managed publication bundle exported from the source project.",
-            "The current bundle includes a limited public code snapshot: core entry/config files plus selected Python sources from `api/` and `utils/`.",
+            "The current bundle includes a full safe source mirror under `source/`, excluding secrets and runtime-only folders.",
             "",
             "## Safe Update Flow",
             "",
@@ -388,7 +426,7 @@ def _publication_push_guide() -> str:
             "",
             "- Do not push the working project root directly.",
             "- Do not copy `.env`, `input`, `output`, browser profiles, or temporary directories into this repository.",
-            "- Publish only the managed code snapshot in `code/`: root `main/config` files plus selected Python sources from `api/` and `utils/`.",
+            "- Publish only the managed `source/` mirror plus generated docs/data; runtime folders and secret files stay excluded.",
             "- The publication sync blocks secret-like content and sanitizes local absolute paths.",
             "- `.gitignore` in this repository is generated to keep the repo limited to the managed publication files.",
             "",
@@ -417,10 +455,10 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
     snapshot = _project_snapshot(source_root, registry)
 
     docs_dir = target_dir / "docs"
-    code_dir = target_dir / "code"
+    source_dir = target_dir / "source"
     data_dir = target_dir / "data"
     docs_dir.mkdir(parents=True, exist_ok=True)
-    code_dir.mkdir(parents=True, exist_ok=True)
+    source_dir.mkdir(parents=True, exist_ok=True)
     data_dir.mkdir(parents=True, exist_ok=True)
 
     written_files: list[str] = []
@@ -430,15 +468,15 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
         source_path = source_root / source_name
         target_path = target_dir / target_relpath
         target_path.parent.mkdir(parents=True, exist_ok=True)
-        public_text = _sanitize_public_text(source_path.read_text(encoding="utf-8"))
+        public_text = _sanitize_public_text(_read_text_with_fallbacks(source_path))
         texts_to_validate[target_relpath] = public_text
         target_path.write_text(public_text, encoding="utf-8")
         written_files.append(target_path.relative_to(target_dir).as_posix())
 
-    for source_path, target_relpath in _iter_published_code_targets(source_root):
+    for source_path, target_relpath in _iter_published_source_targets(source_root):
         target_path = target_dir / target_relpath
         target_path.parent.mkdir(parents=True, exist_ok=True)
-        public_text = _sanitize_public_text(source_path.read_text(encoding="utf-8"))
+        public_text = _sanitize_public_text(_read_text_with_fallbacks(source_path))
         texts_to_validate[target_relpath] = public_text
         target_path.write_text(public_text, encoding="utf-8")
         written_files.append(target_path.relative_to(target_dir).as_posix())

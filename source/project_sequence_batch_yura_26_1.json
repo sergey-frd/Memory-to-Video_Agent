@@ -1,0 +1,18 @@
+{
+  "project_path": "<LOCAL_PATH>",
+  "prin_path": "<LOCAL_PATH>",
+  "regeneration_assets_dir": "<LOCAL_PATH>",
+  "output_project_path": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "engine": "heuristic",
+  "transition_mode": "recommend_only",
+  "enable_auto_transitions": false,
+  "allow_transition_handle_trimming": false,
+  "enable_subject_series_grouping": false,
+  "sequence_jobs": [
+    {
+      "source_sequence_name": "Yura26_2_1e_v01",
+      "new_sequence_name": "Yura26_2_1o_v01"
+    }
+  ]
+}

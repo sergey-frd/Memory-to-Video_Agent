@@ -3,8 +3,8 @@
 !.gitignore
 !README.md
 !PUBLISHING.md
-!code/
-!code/**
+!source/
+!source/**
 !docs/
 !docs/**
 !data/

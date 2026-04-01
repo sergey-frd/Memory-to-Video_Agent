@@ -4,48 +4,78 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Last synchronized: `2026-04-01T15:31:14+02:00`
+- Last synchronized: `2026-04-01T17:54:27+02:00`
 - Source project: `img-style-ag_1`
-- Python files: `108`
+- Python files: `75`
 - Test files: `22`
 - Entry points: `17`
 
-## Published Code Snapshot
+## Published Source Mirror
 
-- `code/api/__init__.py`
-- `code/api/chatgpt_desktop.py`
-- `code/api/chatgpt_desktop_v2.py`
-- `code/api/chatgpt_web.py`
-- `code/api/grok_video.py`
-- `code/api/grok_web.py`
-- `code/api/openai_image.py`
-- `code/api/openai_motion_selector.py`
-- `code/api/openai_prompt_synthesizer.py`
-- `code/api/openai_scene.py`
-- `code/config.json`
-- `code/config.py`
-- `code/main.py`
-- `code/utils/__init__.py`
-- `code/utils/artifact_cleanup.py`
-- `code/utils/camera_movements.py`
-- `code/utils/change_impact.py`
-- `code/utils/current_sequence_reports.py`
-- `code/utils/fcp_translation_results.py`
-- `code/utils/human_profile_sequence_report.py`
-- `code/utils/image_analysis.py`
-- `code/utils/premiere_project.py`
-- `code/utils/premiere_project_export.py`
-- `code/utils/premiere_xml.py`
-- `code/utils/premiere_xml_export.py`
-- `code/utils/project_delivery.py`
-- `code/utils/project_publication.py`
-- `code/utils/project_publication_push.py`
-- `code/utils/project_sequence_batch.py`
-- `code/utils/prompt_builder.py`
-- `code/utils/sequence_optimizer.py`
-- `code/utils/sequence_optimizer_runtime.py`
-- `code/utils/sequence_structure_report.py`
-- `code/utils/transition_recommendations.py`
+- Mirrored source files: `118`
+- Full file list: `data/publication_manifest.json`
+- `source/PROJECT_STRUCTURE.md`
+- `source/USER_GUIDE.md`
+- `source/api`
+- `source/config.json`
+- `source/config.py`
+- `source/config_Alex.json`
+- `source/config_BASE.json`
+- `source/config_Nicol.json`
+- `source/config_Rita.json`
+- `source/config_Yura.json`
+- `source/config_igor.json`
+- `source/config_kira.json`
+- `source/config_kira_bg_only.json`
+- `source/config_maya.json`
+- `source/config_slava.json`
+- `source/config_vika.json`
+- `source/login_grok_profile.bat`
+- `source/main.py`
+- `source/main1.py`
+- `source/main_change_impact.py`
+- `source/main_cleanup_artifacts.py`
+- `source/main_desktop.py`
+- `source/main_desktop_pipeline.py`
+- `source/main_full_pipeline.py`
+- `source/main_grok_batch.py`
+- `source/main_grok_pipeline.py`
+- `source/main_grok_web.py`
+- `source/main_human_sequence_report.py`
+- `source/main_project_publication.py`
+- `source/main_project_publication_push.py`
+- `source/main_project_sequence_batch.py`
+- `source/main_scene.py`
+- `source/main_sequence_optimizer.py`
+- `source/main_sequence_reports.py`
+- `source/models`
+- `source/project_sequence_batch_alex_26_1.json`
+- `source/project_sequence_batch_igor_26_1A.json`
+- `source/project_sequence_batch_maya_26_1.json`
+- `source/project_sequence_batch_nicol_26_T2.json`
+- `source/project_sequence_batch_slava_26_1.json`
+- `source/project_sequence_batch_template.json`
+- `source/project_sequence_batch_vika_26_1A.json`
+- `source/project_sequence_batch_yura_26_1.json`
+- `source/project_structure_registry.json`
+- `source/pytest.ini`
+- `source/requirements.txt`
+- `source/run_full_grok_pipeline.bat`
+- `source/run_grok_automation.bat`
+- `source/run_grok_automation_all.bat`
+- `source/run_project_publication_push.bat`
+- `source/run_project_publication_stage.bat`
+- `source/run_project_sequence_batch.bat`
+- `source/run_project_sequence_batch_igor_26_1A.bat`
+- `source/run_project_sequence_batch_nicol_26_T2.bat`
+- `source/run_project_sequence_batch_vika_26_1A.bat`
+- `source/services`
+- `source/styles`
+- `source/test`
+- `source/test_openai.py`
+- `source/tests`
+- `source/utils`
+- `source/Руководство_пользователя.md`
 
 ## Published Documents
 

@@ -10,6 +10,7 @@ from utils.project_publication import write_publication_bundle
 
 
 DEFAULT_PUBLICATION_REMOTE = "https://github.com/sergey-frd/Memory-to-Video_Agent.git"
+GIT_ADD_BATCH_SIZE = 40
 
 
 @dataclass
@@ -120,7 +121,9 @@ def stage_publication_files(repo_dir: Path, relpaths: list[str]) -> list[str]:
     staged = sorted({relpath for relpath in relpaths if relpath})
     if not staged:
         return []
-    _run_git(repo_dir, "add", "--all", "--", *staged)
+    for start in range(0, len(staged), GIT_ADD_BATCH_SIZE):
+        batch = staged[start : start + GIT_ADD_BATCH_SIZE]
+        _run_git(repo_dir, "add", "--all", "--", *batch)
     return staged
 
 

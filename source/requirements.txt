@@ -1,0 +1,7 @@
+﻿openai>=1.0
+Pillow>=10.0
+python-dotenv>=1.0
+pyperclip>=1.9
+pywinauto>=0.6.8
+xai-sdk>=1.0
+playwright>=1.58
