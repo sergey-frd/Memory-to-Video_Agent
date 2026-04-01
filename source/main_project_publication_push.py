@@ -66,9 +66,12 @@ def main() -> None:
     print(f"Publication repo prepared: {result.repo_dir}")
     print(f"Remote: {result.remote_url}")
     print(f"Branch: {result.branch or '<unknown>'}")
+    print(f"Version: {result.publication_version or '<unknown>'}")
+    print(f"Git tag: {result.git_tag or '<none>'}")
     print(f"Managed files: {len(result.managed_files)}")
     print(f"Removed stale files: {len(result.removed_stale_files)}")
     print(f"Staged files: {len(result.staged_files)}")
+    print(f"Tagged: {result.tagged}")
     print(f"Committed: {result.committed}")
     print(f"Pushed: {result.pushed}")
 

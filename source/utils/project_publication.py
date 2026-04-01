@@ -5,6 +5,7 @@ import os
 import re
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
+from hashlib import sha256
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -53,6 +54,7 @@ DOC_TARGETS = {
     "USER_GUIDE.md": "docs/USER_GUIDE_EN.md",
     "Руководство_пользователя.md": "docs/USER_GUIDE_RU.md",
 }
+PUBLICATION_VERSION_RE = re.compile(r"^(?P<date>\d{4}\.\d{2}\.\d{2})\.(?P<index>\d{2})$")
 WINDOWS_QUOTED_PATH_RE = re.compile(r'"[A-Za-z]:\\[^"\n]+"')
 WINDOWS_INLINE_PATH_RE = re.compile(r"(?<![A-Za-z0-9_])(?:[A-Za-z]:\\[^\s`]+)")
 SECRET_PATTERNS = {
@@ -82,10 +84,18 @@ class PublicationResult:
     target_dir: str
     manifest_path: str
     snapshot_path: str
+    publication_version: str
+    git_tag: str
     written_files: list[str]
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
+
+
+@dataclass
+class PublicationVersionInfo:
+    version: str
+    git_tag: str
 
 
 def _iter_project_files(source_root: Path):
@@ -135,7 +145,14 @@ def _read_text_with_fallbacks(source_path: Path) -> str:
     return source_path.read_text(encoding="utf-8")
 
 
-def _project_snapshot(source_root: Path, registry: dict[str, object]) -> dict[str, object]:
+def _project_snapshot(
+    source_root: Path,
+    registry: dict[str, object],
+    *,
+    publication_version: str,
+    git_tag: str,
+    publication_signature: str,
+) -> dict[str, object]:
     files = list(_iter_project_files(source_root))
     relative_files = [path.relative_to(source_root).as_posix() for path in files]
     top_level = [path for path in files if path.parent == source_root]
@@ -155,6 +172,9 @@ def _project_snapshot(source_root: Path, registry: dict[str, object]) -> dict[st
         "generated_at": generated_at,
         "source_project": source_root.name,
         "source_workspace": source_root.name,
+        "publication_version": publication_version,
+        "publication_git_tag": git_tag,
+        "publication_signature": publication_signature,
         "counts": {
             "all_files": len(relative_files),
             "top_level_files": len(top_level),
@@ -180,6 +200,49 @@ def _project_snapshot(source_root: Path, registry: dict[str, object]) -> dict[st
         "subsystem_ids": [str(item.get("id", "")) for item in subsystems],
         "change_type_ids": [str(item.get("id", "")) for item in change_types],
     }
+
+
+def _publication_signature(texts_by_relpath: dict[str, str]) -> str:
+    digest = sha256()
+    for relpath in sorted(texts_by_relpath):
+        digest.update(relpath.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(texts_by_relpath[relpath].encode("utf-8"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _load_previous_version_state(target_dir: Path) -> tuple[str | None, str | None]:
+    snapshot_path = target_dir / "data" / "project_snapshot.json"
+    if not snapshot_path.exists():
+        return None, None
+    try:
+        payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None, None
+    version = payload.get("publication_version")
+    signature = payload.get("publication_signature")
+    if not isinstance(version, str) or not version.strip():
+        version = None
+    if not isinstance(signature, str) or not signature.strip():
+        signature = None
+    return version, signature
+
+
+def _next_publication_version(target_dir: Path, signature: str) -> PublicationVersionInfo:
+    now = datetime.now(JERUSALEM_TZ)
+    current_date = now.strftime("%Y.%m.%d")
+    previous_version, previous_signature = _load_previous_version_state(target_dir)
+    if previous_version and previous_signature == signature:
+        return PublicationVersionInfo(version=previous_version, git_tag=f"v{previous_version}")
+
+    next_index = 1
+    if previous_version:
+        match = PUBLICATION_VERSION_RE.match(previous_version)
+        if match and match.group("date") == current_date:
+            next_index = int(match.group("index")) + 1
+    version = f"{current_date}.{next_index:02d}"
+    return PublicationVersionInfo(version=version, git_tag=f"v{version}")
 
 
 def _sanitize_public_text(text: str) -> str:
@@ -325,6 +388,8 @@ def _readme_markdown(snapshot: dict[str, object], manifest_relpaths: list[str]) 
         "",
         "This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.",
         "",
+        f"- Publication version: `{snapshot['publication_version']}`",
+        f"- Git tag: `{snapshot['publication_git_tag']}`",
         f"- Last synchronized: `{snapshot['generated_at']}`",
         f"- Source project: `{snapshot['source_project']}`",
         f"- Python files: `{counts['python_files']}`",
@@ -387,6 +452,7 @@ def _publication_gitignore() -> str:
             "# Managed by main_project_publication.py",
             "*",
             "!.gitignore",
+            "!VERSION",
             "!README.md",
             "!PUBLISHING.md",
             "!source/",
@@ -407,13 +473,15 @@ def _publication_push_guide() -> str:
             "",
             "This repository is intended to contain only the managed publication bundle exported from the source project.",
             "The current bundle includes a full safe source mirror under `source/`, excluding secrets and runtime-only folders.",
+            "Each successful guarded publication commit can also receive a matching Git tag derived from the generated `VERSION` file.",
             "",
             "## Safe Update Flow",
             "",
             "1. Refresh the bundle into this local clone.",
             "2. Stage only the managed files from `data/publication_manifest.json`.",
-            "3. Review `git diff --staged`.",
+            "3. Review `git diff --staged` and the root `VERSION` file.",
             "4. Commit and push only after the staged diff looks correct.",
+            "5. Keep the generated Git tag aligned with the publication version.",
             "",
             "## Commands",
             "",
@@ -428,6 +496,7 @@ def _publication_push_guide() -> str:
             "- Do not copy `.env`, `input`, `output`, browser profiles, or temporary directories into this repository.",
             "- Publish only the managed `source/` mirror plus generated docs/data; runtime folders and secret files stay excluded.",
             "- The publication sync blocks secret-like content and sanitizes local absolute paths.",
+            "- `VERSION`, `README.md`, and `data/project_snapshot.json` should agree on the current publication version.",
             "- `.gitignore` in this repository is generated to keep the repo limited to the managed publication files.",
             "",
         ]
@@ -452,7 +521,6 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
     target_dir = target_dir.resolve()
     registry_path = (registry_path or source_root / "project_structure_registry.json").resolve()
     registry = json.loads(registry_path.read_text(encoding="utf-8"))
-    snapshot = _project_snapshot(source_root, registry)
 
     docs_dir = target_dir / "docs"
     source_dir = target_dir / "source"
@@ -463,6 +531,7 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
 
     written_files: list[str] = []
     texts_to_validate: dict[str, str] = {}
+    signature_inputs: dict[str, str] = {}
 
     for source_name, target_relpath in DOC_TARGETS.items():
         source_path = source_root / source_name
@@ -470,6 +539,7 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
         target_path.parent.mkdir(parents=True, exist_ok=True)
         public_text = _sanitize_public_text(_read_text_with_fallbacks(source_path))
         texts_to_validate[target_relpath] = public_text
+        signature_inputs[target_relpath] = public_text
         target_path.write_text(public_text, encoding="utf-8")
         written_files.append(target_path.relative_to(target_dir).as_posix())
 
@@ -478,14 +548,28 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
         target_path.parent.mkdir(parents=True, exist_ok=True)
         public_text = _sanitize_public_text(_read_text_with_fallbacks(source_path))
         texts_to_validate[target_relpath] = public_text
+        signature_inputs[target_relpath] = public_text
         target_path.write_text(public_text, encoding="utf-8")
         written_files.append(target_path.relative_to(target_dir).as_posix())
+
+    registry_text = _sanitize_public_text(json.dumps(registry, ensure_ascii=False, indent=2))
+    signature_inputs["data/project_structure_registry.json"] = registry_text
+    publication_signature = _publication_signature(signature_inputs)
+    version_info = _next_publication_version(target_dir, publication_signature)
+    snapshot = _project_snapshot(
+        source_root,
+        registry,
+        publication_version=version_info.version,
+        git_tag=version_info.git_tag,
+        publication_signature=publication_signature,
+    )
 
     generated_docs = {
         "docs/PROJECT_OVERVIEW.md": _overview_markdown(snapshot, registry),
         "docs/CHANGE_IMPACT.md": _change_impact_markdown(registry),
         "PUBLISHING.md": _publication_push_guide(),
         ".gitignore": _publication_gitignore(),
+        "VERSION": version_info.version + "\n",
     }
     for relpath, content in generated_docs.items():
         target_path = target_dir / relpath
@@ -502,7 +586,6 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
     written_files.append(snapshot_path.relative_to(target_dir).as_posix())
 
     registry_copy_path = target_dir / "data" / "project_structure_registry.json"
-    registry_text = _sanitize_public_text(json.dumps(registry, ensure_ascii=False, indent=2))
     texts_to_validate[registry_copy_path.relative_to(target_dir).as_posix()] = registry_text
     registry_copy_path.write_text(registry_text, encoding="utf-8")
     written_files.append(registry_copy_path.relative_to(target_dir).as_posix())
@@ -518,6 +601,8 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
         "generated_at": snapshot["generated_at"],
         "source_project": snapshot["source_project"],
         "source_workspace": snapshot["source_workspace"],
+        "publication_version": snapshot["publication_version"],
+        "publication_git_tag": snapshot["publication_git_tag"],
         "managed_files": manifest_relpaths,
     }
     manifest_path = target_dir / "data" / "publication_manifest.json"
@@ -531,5 +616,7 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
         target_dir=str(target_dir),
         manifest_path=str(manifest_path),
         snapshot_path=str(snapshot_path),
+        publication_version=version_info.version,
+        git_tag=version_info.git_tag,
         written_files=manifest_relpaths,
     )

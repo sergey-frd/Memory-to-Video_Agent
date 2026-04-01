@@ -18,9 +18,12 @@ class PublicationPushResult:
     repo_dir: str
     remote_url: str | None
     branch: str | None
+    publication_version: str | None
+    git_tag: str | None
     managed_files: list[str]
     removed_stale_files: list[str]
     staged_files: list[str]
+    tagged: bool
     committed: bool
     pushed: bool
 
@@ -138,6 +141,49 @@ def _current_branch(repo_dir: Path) -> str | None:
     return branch or None
 
 
+def read_publication_version(repo_dir: Path) -> str | None:
+    version_path = repo_dir / "VERSION"
+    if not version_path.exists():
+        return None
+    try:
+        version = version_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return version or None
+
+
+def git_tag_for_version(version: str | None) -> str | None:
+    if version is None:
+        return None
+    return f"v{version}"
+
+
+def _head_commit(repo_dir: Path) -> str | None:
+    result = _run_git(repo_dir, "rev-parse", "HEAD", check=False)
+    if result.returncode != 0:
+        return None
+    head = result.stdout.strip()
+    return head or None
+
+
+def _tag_commit(repo_dir: Path, tag_name: str) -> str | None:
+    result = _run_git(repo_dir, "rev-list", "-n", "1", tag_name, check=False)
+    if result.returncode != 0:
+        return None
+    commit = result.stdout.strip()
+    return commit or None
+
+
+def create_publication_tag(repo_dir: Path, tag_name: str, message: str) -> bool:
+    existing_commit = _tag_commit(repo_dir, tag_name)
+    if existing_commit is not None:
+        if existing_commit == _head_commit(repo_dir):
+            return False
+        raise ValueError(f"Git tag '{tag_name}' already exists and points to another commit.")
+    _run_git(repo_dir, "tag", "-a", tag_name, "-m", message)
+    return True
+
+
 def commit_publication_changes(repo_dir: Path, message: str) -> bool:
     if not _has_staged_changes(repo_dir):
         return False
@@ -150,6 +196,11 @@ def push_publication_changes(repo_dir: Path, remote_name: str = "origin", branch
     if not branch_name:
         raise ValueError("Could not determine the current git branch for push.")
     _run_git(repo_dir, "push", remote_name, branch_name)
+    return True
+
+
+def push_publication_tag(repo_dir: Path, tag_name: str, remote_name: str = "origin") -> bool:
+    _run_git(repo_dir, "push", remote_name, f"refs/tags/{tag_name}")
     return True
 
 
@@ -192,9 +243,16 @@ def prepare_publication_push(
     if should_stage:
         staged_files = stage_publication_files(repo_dir, managed_files + removed_stale_files)
 
+    publication_version = read_publication_version(repo_dir)
+    git_tag = git_tag_for_version(publication_version)
+
     committed = False
     if commit_message:
         committed = commit_publication_changes(repo_dir, commit_message)
+
+    tagged = False
+    if committed and git_tag:
+        tagged = create_publication_tag(repo_dir, git_tag, f"Publication version {publication_version}")
 
     if push and not commit_message and _has_staged_changes(repo_dir):
         raise ValueError("Refusing to push with newly staged publication changes unless --commit-message is provided.")
@@ -202,14 +260,19 @@ def prepare_publication_push(
     pushed = False
     if push:
         pushed = push_publication_changes(repo_dir, remote_name=remote_name)
+        if tagged and git_tag:
+            push_publication_tag(repo_dir, git_tag, remote_name=remote_name)
 
     return PublicationPushResult(
         repo_dir=str(repo_dir.resolve()),
         remote_url=remote_url,
         branch=_current_branch(repo_dir),
+        publication_version=publication_version,
+        git_tag=git_tag,
         managed_files=managed_files,
         removed_stale_files=removed_stale_files,
         staged_files=staged_files,
+        tagged=tagged,
         committed=committed,
         pushed=pushed,
     )

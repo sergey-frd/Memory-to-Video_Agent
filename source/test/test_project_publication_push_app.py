@@ -108,6 +108,8 @@ def test_prepare_publication_push_stages_managed_files_and_removes_stale_outputs
     assert "source/services/reference.txt" in staged_payload["relpaths"]
     assert "source/.env" not in staged_payload["relpaths"]
     assert "old.txt" in staged_payload["relpaths"]
+    assert result.publication_version is not None
+    assert result.git_tag == f"v{result.publication_version}"
 
 
 def test_prepare_publication_push_rejects_remote_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -154,9 +156,12 @@ def test_main_project_publication_push_prints_json(monkeypatch: pytest.MonkeyPat
             repo_dir="E:/Git/Memory-to-Video_Agent",
             remote_url=DEFAULT_PUBLICATION_REMOTE,
             branch="main",
+            publication_version="2026.04.01.01",
+            git_tag="v2026.04.01.01",
             managed_files=["README.md"],
             removed_stale_files=[],
             staged_files=[],
+            tagged=False,
             committed=False,
             pushed=False,
         ),
@@ -167,3 +172,42 @@ def test_main_project_publication_push_prints_json(monkeypatch: pytest.MonkeyPat
     payload = json.loads(capsys.readouterr().out)
     assert payload["remote_url"] == DEFAULT_PUBLICATION_REMOTE
     assert payload["pushed"] is False
+    assert payload["git_tag"] == "v2026.04.01.01"
+
+
+def test_prepare_publication_push_creates_tag_for_committed_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    root = Path("test_runtime") / f"publication_push_tag_{uuid4().hex}"
+    source_root = root / "source"
+    repo_dir = root / "repo"
+    _make_source_project(source_root)
+
+    repo_dir.mkdir(parents=True, exist_ok=True)
+    (repo_dir / ".git").mkdir()
+
+    monkeypatch.setattr(publication_push_module, "verify_expected_remote", lambda *_args, **_kwargs: DEFAULT_PUBLICATION_REMOTE)
+    monkeypatch.setattr(publication_push_module, "stage_publication_files", lambda _repo_dir, relpaths: sorted(relpaths))
+    monkeypatch.setattr(publication_push_module, "_current_branch", lambda _repo_dir: "main")
+    monkeypatch.setattr(publication_push_module, "commit_publication_changes", lambda _repo_dir, _message: True)
+
+    observed_tags: list[tuple[str, str]] = []
+
+    def fake_create_tag(_repo_dir: Path, tag_name: str, message: str) -> bool:
+        observed_tags.append((tag_name, message))
+        return True
+
+    monkeypatch.setattr(publication_push_module, "create_publication_tag", fake_create_tag)
+    monkeypatch.setattr(publication_push_module, "push_publication_changes", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(publication_push_module, "push_publication_tag", lambda *_args, **_kwargs: True)
+
+    result = prepare_publication_push(
+        source_root=source_root,
+        repo_dir=repo_dir,
+        commit_message="Publish versioned bundle",
+        push=True,
+    )
+
+    assert result.committed is True
+    assert result.tagged is True
+    assert result.publication_version is not None
+    assert result.git_tag == f"v{result.publication_version}"
+    assert observed_tags == [(result.git_tag, f"Publication version {result.publication_version}")]

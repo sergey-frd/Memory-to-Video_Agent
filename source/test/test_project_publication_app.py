@@ -75,6 +75,7 @@ def test_write_publication_bundle_creates_full_safe_source_mirror() -> None:
     result = write_publication_bundle(root, target)
 
     assert (target / "README.md").exists()
+    assert (target / "VERSION").exists()
     assert (target / ".gitignore").exists()
     assert (target / "PUBLISHING.md").exists()
     assert (target / "source" / "main.py").exists()
@@ -106,9 +107,18 @@ def test_write_publication_bundle_creates_full_safe_source_mirror() -> None:
 
     snapshot = json.loads((target / "data" / "project_snapshot.json").read_text(encoding="utf-8"))
     manifest = json.loads((target / "data" / "publication_manifest.json").read_text(encoding="utf-8"))
+    version_text = (target / "VERSION").read_text(encoding="utf-8").strip()
     assert "source_root" not in snapshot
     assert "source_root" not in manifest
     assert snapshot["source_workspace"] == root.name
+    assert result.publication_version == version_text
+    assert result.git_tag == f"v{version_text}"
+    assert snapshot["publication_version"] == version_text
+    assert snapshot["publication_git_tag"] == f"v{version_text}"
+    assert snapshot["publication_signature"]
+    assert manifest["publication_version"] == version_text
+    assert manifest["publication_git_tag"] == f"v{version_text}"
+    assert "VERSION" in manifest["managed_files"]
     assert "source/api/x.py" in manifest["managed_files"]
     assert "source/utils/y.py" in manifest["managed_files"]
     assert "source/models/z.py" in manifest["managed_files"]
@@ -211,6 +221,8 @@ def test_main_project_publication_prints_json(monkeypatch, capsys) -> None:
             target_dir=str(target),
             manifest_path=str(target / "data" / "publication_manifest.json"),
             snapshot_path=str(target / "data" / "project_snapshot.json"),
+            publication_version="2026.04.01.01",
+            git_tag="v2026.04.01.01",
             written_files=["README.md", "source/main.py"],
         ),
     )
@@ -220,3 +232,4 @@ def test_main_project_publication_prints_json(monkeypatch, capsys) -> None:
     payload = json.loads(capsys.readouterr().out)
     assert Path(payload["target_dir"]).name == "repo"
     assert payload["manifest_path"].endswith("publication_manifest.json")
+    assert payload["publication_version"] == "2026.04.01.01"

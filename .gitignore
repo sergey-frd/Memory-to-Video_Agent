@@ -1,6 +1,7 @@
 # Managed by main_project_publication.py
 *
 !.gitignore
+!VERSION
 !README.md
 !PUBLISHING.md
 !source/

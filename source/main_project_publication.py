@@ -65,6 +65,8 @@ def main() -> None:
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return
     print(f"Publication bundle refreshed: {result.target_dir}")
+    print(f"Version: {result.publication_version}")
+    print(f"Git tag: {result.git_tag}")
     print(f"Manifest: {result.manifest_path}")
     print(f"Snapshot: {result.snapshot_path}")
     print(f"Managed files: {len(result.written_files)}")
