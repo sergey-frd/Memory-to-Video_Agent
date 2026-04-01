@@ -318,6 +318,21 @@ Use this for a dry readiness check without starting the pipeline:
 powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1 -CheckOnly
 ```
 
+## Three-Command Working Cheat Sheet
+
+Use this short sequence for day-to-day work in the main project directory:
+
+```powershell
+cd <LOCAL_PATH>
+powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1 -CheckOnly
+python .\main_project_publication_push.py --repo-dir <LOCAL_PATH> --commit-message "Update project publication" --push
+```
+
+Meaning:
+- `work` — switch to the main working directory;
+- `check` — verify the environment, the clone-specific Grok profile, and `input\`;
+- `publish` — refresh and push the public project mirror.
+
 ## What Gets Copied After a Successful Stage
 
 Into `final_videos_dir`:

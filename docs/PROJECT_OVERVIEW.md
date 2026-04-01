@@ -2,7 +2,7 @@
 
 This document is generated from the source project and is intended for the external project-information repository.
 
-- Generated at: `2026-04-01T22:15:11+02:00`
+- Generated at: `2026-04-01T22:17:01+02:00`
 - Source project: `img-style-ag_1`
 
 ## Snapshot

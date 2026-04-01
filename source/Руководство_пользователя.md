@@ -318,6 +318,21 @@ powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1
 powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1 -CheckOnly
 ```
 
+## Короткая Рабочая Памятка Из 3 Команд
+
+Для повседневной работы в основной директории проекта используйте такую короткую последовательность:
+
+```powershell
+cd <LOCAL_PATH>
+powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1 -CheckOnly
+python .\main_project_publication_push.py --repo-dir <LOCAL_PATH> --commit-message "Update project publication" --push
+```
+
+Смысл команд:
+- `работать` — перейти в основную рабочую директорию;
+- `проверить` — проверить окружение, клоновый Grok-профиль и `input\`;
+- `опубликовать` — обновить и отправить публичное зеркало проекта.
+
 ## Что куда переносится после успешного stage
 
 В `final_videos_dir`:
