@@ -4,17 +4,48 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Last synchronized: `2026-04-01T15:12:07+02:00`
+- Last synchronized: `2026-04-01T15:31:14+02:00`
 - Source project: `img-style-ag_1`
-- Python files: `77`
+- Python files: `108`
 - Test files: `22`
 - Entry points: `17`
 
 ## Published Code Snapshot
 
+- `code/api/__init__.py`
+- `code/api/chatgpt_desktop.py`
+- `code/api/chatgpt_desktop_v2.py`
+- `code/api/chatgpt_web.py`
+- `code/api/grok_video.py`
+- `code/api/grok_web.py`
+- `code/api/openai_image.py`
+- `code/api/openai_motion_selector.py`
+- `code/api/openai_prompt_synthesizer.py`
+- `code/api/openai_scene.py`
 - `code/config.json`
 - `code/config.py`
 - `code/main.py`
+- `code/utils/__init__.py`
+- `code/utils/artifact_cleanup.py`
+- `code/utils/camera_movements.py`
+- `code/utils/change_impact.py`
+- `code/utils/current_sequence_reports.py`
+- `code/utils/fcp_translation_results.py`
+- `code/utils/human_profile_sequence_report.py`
+- `code/utils/image_analysis.py`
+- `code/utils/premiere_project.py`
+- `code/utils/premiere_project_export.py`
+- `code/utils/premiere_xml.py`
+- `code/utils/premiere_xml_export.py`
+- `code/utils/project_delivery.py`
+- `code/utils/project_publication.py`
+- `code/utils/project_publication_push.py`
+- `code/utils/project_sequence_batch.py`
+- `code/utils/prompt_builder.py`
+- `code/utils/sequence_optimizer.py`
+- `code/utils/sequence_optimizer_runtime.py`
+- `code/utils/sequence_structure_report.py`
+- `code/utils/transition_recommendations.py`
 
 ## Published Documents
 
