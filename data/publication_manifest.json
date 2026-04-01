@@ -1,11 +1,14 @@
 {
-  "generated_at": "2026-04-01T15:04:06+02:00",
+  "generated_at": "2026-04-01T15:12:07+02:00",
   "source_project": "img-style-ag_1",
   "source_workspace": "img-style-ag_1",
   "managed_files": [
     "README.md",
     ".gitignore",
     "PUBLISHING.md",
+    "code/config.json",
+    "code/config.py",
+    "code/main.py",
     "data/project_snapshot.json",
     "data/project_structure_registry.json",
     "docs/CHANGE_IMPACT.md",

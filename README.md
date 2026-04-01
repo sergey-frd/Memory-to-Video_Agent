@@ -4,11 +4,17 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Last synchronized: `2026-04-01T15:04:06+02:00`
+- Last synchronized: `2026-04-01T15:12:07+02:00`
 - Source project: `img-style-ag_1`
-- Python files: `75`
+- Python files: `77`
 - Test files: `22`
 - Entry points: `17`
+
+## Published Code Snapshot
+
+- `code/config.json`
+- `code/config.py`
+- `code/main.py`
 
 ## Published Documents
 

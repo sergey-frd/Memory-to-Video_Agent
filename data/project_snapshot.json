@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-04-01T15:04:06+02:00",
+  "generated_at": "2026-04-01T15:12:07+02:00",
   "source_project": "img-style-ag_1",
   "source_workspace": "img-style-ag_1",
   "counts": {
-    "all_files": 131,
+    "all_files": 134,
     "top_level_files": 57,
-    "python_files": 75,
+    "python_files": 77,
     "test_files": 22,
-    "config_files": 12,
+    "config_files": 13,
     "markdown_files": 10,
     "entry_points": 17,
     "api_modules": 10,
@@ -125,7 +125,8 @@
     "config_Rita.json",
     "config_slava.json",
     "config_vika.json",
-    "config_Yura.json"
+    "config_Yura.json",
+    "project_publication/Memory-to-Video_Agent/code/config.json"
   ],
   "subsystem_ids": [
     "config",

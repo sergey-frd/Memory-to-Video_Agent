@@ -348,6 +348,9 @@ python .\main_project_publication.py --target-dir <path-to-local-Memory-to-Video
 - `README.md`
 - `.gitignore`
 - `PUBLISHING.md`
+- `code/main.py`
+- `code/config.py`
+- `code/config.json`
 - `docs/PROJECT_OVERVIEW.md`
 - `docs/CHANGE_IMPACT.md`
 - `docs/PROJECT_STRUCTURE.md`

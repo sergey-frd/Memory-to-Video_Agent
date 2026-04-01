@@ -1,6 +1,7 @@
 # Publishing Workflow
 
 This repository is intended to contain only the managed publication bundle exported from the source project.
+The current bundle includes a limited public code snapshot: `main.py`, `config.py`, and `config.json`.
 
 ## Safe Update Flow
 
@@ -20,5 +21,6 @@ python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Vi
 
 - Do not push the working project root directly.
 - Do not copy `.env`, `input`, `output`, browser profiles, or temporary directories into this repository.
+- Only the limited code snapshot in `code/` should be published unless the publication rules are intentionally expanded.
 - The publication sync blocks secret-like content and sanitizes local absolute paths.
 - `.gitignore` in this repository is generated to keep the repo limited to the managed publication files.
