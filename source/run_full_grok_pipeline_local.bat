@@ -27,5 +27,5 @@ if not exist ".\config.local.json" (
     exit /b 1
 )
 
-".\.venv\Scripts\python.exe" ".\main_full_pipeline.py" --config-file ".\config.local.json" --chrome-exe "%CHROME_EXE%" %*
+".\.venv\Scripts\python.exe" ".\main_full_pipeline.py" --config-file ".\config.local.json" --profile-dir ".\.browser-profile\grok-web" --chrome-exe "%CHROME_EXE%" %*
 exit /b %errorlevel%

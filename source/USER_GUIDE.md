@@ -294,6 +294,7 @@ This script:
 Then:
 - fill real keys into `.env`;
 - place source images into `input\`;
+- for a new clone, run `login_grok_profile.bat` once and sign in to Grok inside that clone-specific Chrome profile;
 - run `.\run_full_grok_pipeline_local.bat`.
 
 Or use the one-step deploy/check/run helper:
@@ -306,6 +307,7 @@ It runs bootstrap first, then checks:
 - `.env` and `OPENAI_API_KEY`;
 - local Chrome availability;
 - whether `input\` already contains supported source images.
+- Note: each clone uses its own Grok Chrome profile under `.browser-profile\grok-web` unless you explicitly pass another `--profile-dir`.
 
 Use this for a dry readiness check without starting the pipeline:
 

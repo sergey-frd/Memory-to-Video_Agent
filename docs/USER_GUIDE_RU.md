@@ -294,6 +294,7 @@ powershell -ExecutionPolicy Bypass -File .\setup_project.ps1
 Дальше:
 - заполните реальные ключи в `.env`;
 - положите исходные изображения в `input\`;
+- для нового клона один раз запустите `login_grok_profile.bat` и выполните вход в Grok именно в этом клоновом Chrome-профиле;
 - запускайте `.\run_full_grok_pipeline_local.bat`.
 
 Или используйте единый скрипт bootstrap/check/run:
@@ -306,6 +307,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1
 - `.env` и наличие `OPENAI_API_KEY`;
 - доступность локального Chrome;
 - наличие подходящих исходных изображений в `input\`.
+- Важно: каждый клон по умолчанию использует собственный Grok Chrome-профиль в `.browser-profile\grok-web`, если вы явно не передали другой `--profile-dir`.
 
 Для dry-run проверки без запуска pipeline:
 
