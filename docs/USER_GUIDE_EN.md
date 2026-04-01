@@ -448,10 +448,26 @@ python .\main_sequence_reports.py `
 This command rebuilds:
 
 - `<sequence>_manual_order.json`;
+- `<sequence>_manual_order_music.txt`;
 - `<sequence>_manual_order_structure.txt`;
 - `<sequence>_manual_order_transition_recommendations.txt`.
 
 Use this when the user manually improved the sequence after automatic optimization and now wants fresh editing, description, and music recommendations for the approved order.
+
+Music now comes first in this flow: `main_sequence_reports.py` always writes a dedicated music-first report for the current sequence before the structure and transition recommendations.
+
+If you only need the music recommendation for the current sequence, use:
+
+```powershell
+python .\main_sequence_reports.py `
+  --prproj "<LOCAL_PATH>" `
+  --sequence-name "Igor26_baby_1_o01" `
+  --optimization-report-json "<LOCAL_PATH>" `
+  --output-dir "<LOCAL_PATH>" `
+  --music-only
+```
+
+In `--music-only` mode the command still rebuilds the current-order JSON context, but skips the structure and transition text reports.
 
 The structure report now separates adult travel/leisure sequences from family portraits more conservatively. Older adults, large groups, or generic portrait/group cues alone should not force the report into a family theme if the sequence is clearly built around travel, rest, and locations.
 

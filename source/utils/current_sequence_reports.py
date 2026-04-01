@@ -12,7 +12,7 @@ from models.video_sequence import (
     SequenceRecommendationEntry,
 )
 from utils.premiere_project import parse_premiere_project_sequence_clips
-from utils.sequence_structure_report import write_sequence_structure_report
+from utils.sequence_structure_report import write_sequence_music_report, write_sequence_structure_report
 from utils.transition_recommendations import write_transition_recommendations_report
 
 
@@ -76,7 +76,40 @@ def write_current_sequence_reports(
     output_json: Path,
     output_structure_txt: Path,
     output_transition_txt: Path,
+    output_music_txt: Path | None = None,
 ) -> tuple[Path, Path, Path]:
+    bundle_music_path = output_music_txt or derive_current_sequence_music_report_path(
+        sequence_name=sequence_name,
+        optimization_report_json=optimization_report_json,
+        output_dir=output_json.parent,
+    )
+    result_json, _music_txt, structure_txt, transition_txt = write_current_sequence_report_bundle(
+        project_path=project_path,
+        sequence_name=sequence_name,
+        optimization_report_json=optimization_report_json,
+        output_json=output_json,
+        output_music_txt=bundle_music_path,
+        output_structure_txt=output_structure_txt,
+        output_transition_txt=output_transition_txt,
+    )
+    assert structure_txt is not None
+    assert transition_txt is not None
+    return result_json, structure_txt, transition_txt
+
+
+def write_current_sequence_report_bundle(
+    *,
+    project_path: Path,
+    sequence_name: str,
+    optimization_report_json: Path,
+    output_json: Path,
+    output_music_txt: Path,
+    output_structure_txt: Path | None,
+    output_transition_txt: Path | None,
+    include_music: bool = True,
+    include_structure: bool = True,
+    include_transition: bool = True,
+) -> tuple[Path, Path | None, Path | None, Path | None]:
     result = build_current_sequence_result_from_report(
         project_path=project_path,
         sequence_name=sequence_name,
@@ -84,18 +117,32 @@ def write_current_sequence_reports(
     )
 
     output_json.parent.mkdir(parents=True, exist_ok=True)
-    output_structure_txt.parent.mkdir(parents=True, exist_ok=True)
-    output_transition_txt.parent.mkdir(parents=True, exist_ok=True)
-
     output_json.write_text(json.dumps(result.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
-    write_sequence_structure_report(result, output_path=output_structure_txt)
-    write_transition_recommendations_report(
-        project_path=project_path,
-        sequence_name=result.selected_sequence_name,
-        optimization_report_json=output_json,
-        output_path=output_transition_txt,
-    )
-    return output_json, output_structure_txt, output_transition_txt
+
+    written_music_txt: Path | None = None
+    if include_music:
+        output_music_txt.parent.mkdir(parents=True, exist_ok=True)
+        written_music_txt = write_sequence_music_report(result, output_path=output_music_txt)
+
+    written_structure_txt: Path | None = None
+    if include_structure:
+        if output_structure_txt is None:
+            raise ValueError("output_structure_txt must be provided when include_structure=True")
+        output_structure_txt.parent.mkdir(parents=True, exist_ok=True)
+        written_structure_txt = write_sequence_structure_report(result, output_path=output_structure_txt)
+
+    written_transition_txt: Path | None = None
+    if include_transition:
+        if output_transition_txt is None:
+            raise ValueError("output_transition_txt must be provided when include_transition=True")
+        output_transition_txt.parent.mkdir(parents=True, exist_ok=True)
+        written_transition_txt = write_transition_recommendations_report(
+            project_path=project_path,
+            sequence_name=result.selected_sequence_name,
+            optimization_report_json=output_json,
+            output_path=output_transition_txt,
+        )
+    return output_json, written_music_txt, written_structure_txt, written_transition_txt
 
 
 def derive_current_sequence_report_paths(
@@ -112,6 +159,37 @@ def derive_current_sequence_report_paths(
         report_dir / f"{base_name}_structure.txt",
         report_dir / f"{base_name}_transition_recommendations.txt",
     )
+
+
+def derive_current_sequence_music_report_path(
+    *,
+    sequence_name: str,
+    optimization_report_json: Path,
+    output_dir: Path | None = None,
+) -> Path:
+    report_dir = output_dir or optimization_report_json.parent
+    sequence_slug = _slugify_filename(sequence_name)
+    base_name = f"{sequence_slug}_manual_order"
+    return report_dir / f"{base_name}_music.txt"
+
+
+def derive_current_sequence_report_bundle_paths(
+    *,
+    sequence_name: str,
+    optimization_report_json: Path,
+    output_dir: Path | None = None,
+) -> tuple[Path, Path, Path, Path]:
+    output_json, output_structure_txt, output_transition_txt = derive_current_sequence_report_paths(
+        sequence_name=sequence_name,
+        optimization_report_json=optimization_report_json,
+        output_dir=output_dir,
+    )
+    output_music_txt = derive_current_sequence_music_report_path(
+        sequence_name=sequence_name,
+        optimization_report_json=optimization_report_json,
+        output_dir=output_dir,
+    )
+    return output_json, output_music_txt, output_structure_txt, output_transition_txt
 
 
 def _build_current_sequence_entry(

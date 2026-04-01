@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-04-01T22:37:04+02:00",
+  "generated_at": "2026-04-01T22:56:05+02:00",
   "source_project": "img-style-ag_1",
   "source_workspace": "img-style-ag_1",
-  "publication_version": "2026.04.01.01",
-  "publication_git_tag": "v2026.04.01.01",
+  "publication_version": "2026.04.01.02",
+  "publication_git_tag": "v2026.04.01.02",
   "managed_files": [
     "README.md",
     ".gitignore",
@@ -109,6 +109,7 @@
     "source/test/test_scene_app.py",
     "source/test/test_scene_aware_prompts.py",
     "source/test/test_scene_pipeline_integration.py",
+    "source/test/test_sequence_music_report_app.py",
     "source/test/test_sequence_optimizer_app.py",
     "source/test/test_video_framing_modes.py",
     "source/test_openai.py",

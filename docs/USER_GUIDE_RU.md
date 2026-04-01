@@ -448,10 +448,26 @@ python .\main_sequence_reports.py `
 Команда заново строит:
 
 - `<sequence>_manual_order.json`;
+- `<sequence>_manual_order_music.txt`;
 - `<sequence>_manual_order_structure.txt`;
 - `<sequence>_manual_order_transition_recommendations.txt`.
 
 Это нужно в тот момент, когда пользователь руками улучшил sequence после автоматической оптимизации и хочет получить свежие рекомендации по монтажу, описанию видео и музыке уже для утвержденного порядка.
+
+Теперь в этом сценарии музыка идет первой: `main_sequence_reports.py` всегда пишет отдельный `music-first` отчет для текущей sequence раньше, чем structure и transition recommendations.
+
+Если для текущей sequence нужна только рекомендация по музыке, используйте:
+
+```powershell
+python .\main_sequence_reports.py `
+  --prproj "<LOCAL_PATH>" `
+  --sequence-name "Igor26_baby_1_o01" `
+  --optimization-report-json "<LOCAL_PATH>" `
+  --output-dir "<LOCAL_PATH>" `
+  --music-only
+```
+
+В режиме `--music-only` команда все равно пересобирает текущий JSON-контекст sequence, но не создает structure- и transition-отчеты.
 
 Теперь `*_structure.txt` осторожнее отделяет взрослые travel/leisure-последовательности от семейного портрета. Сам по себе пожилой герой, большая группа людей или общий портретный кадр больше не должны автоматически переводить описание в семейную тему, если видеоряд явно построен вокруг поездки, отдыха и локаций.
 

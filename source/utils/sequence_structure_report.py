@@ -734,6 +734,19 @@ def derive_structure_report_path(report_txt_path: Path) -> Path:
     return report_txt_path.with_name(f"{report_txt_path.stem}_structure.txt")
 
 
+def derive_music_report_path(report_txt_path: Path) -> Path:
+    return report_txt_path.with_name(f"{report_txt_path.stem}_music.txt")
+
+
+def write_sequence_music_report(
+    result: SequenceOptimizationResult,
+    *,
+    output_path: Path,
+) -> Path:
+    output_path.write_text(build_sequence_music_report(result), encoding="utf-8")
+    return output_path
+
+
 def write_sequence_structure_report(
     result: SequenceOptimizationResult,
     *,
@@ -773,6 +786,32 @@ def build_sequence_structure_report(result: SequenceOptimizationResult) -> str:
         lines.extend(_format_structure_section(section, result.entries, story_mode))
 
     lines.extend(_format_global_notes(result.entries))
+    return "\n".join(lines).strip() + "\n"
+
+
+def build_sequence_music_report(result: SequenceOptimizationResult) -> str:
+    profile_metrics, profile_tags, story_mode = _build_profile_context(result.entries)
+    section_entries = _group_entries_by_structure(result.entries)
+    lines = [
+        "МУЗЫКАЛЬНАЯ РЕКОМЕНДАЦИЯ ДЛЯ SEQUENCE",
+        "",
+        f"Источник: {result.source_xml}",
+        f"Последовательность: {result.selected_sequence_name}",
+        f"Количество видео-клипов: {len(result.entries)}",
+        "",
+        "Главный музыкальный вектор",
+        "",
+        f"Основная тема ролика: {_describe_main_theme(profile_tags, story_mode, profile_metrics)}",
+        f"Эмоциональный тон: {_describe_video_tone(profile_tags, story_mode, profile_metrics)}",
+        f"Музыкальный профиль: {_describe_music_profile(profile_tags, story_mode, profile_metrics)}",
+        f"Монтажный ритм: {_describe_music_rhythm(profile_tags, story_mode, profile_metrics)}",
+        "",
+        "Музыкальная драматургия по блокам",
+        "",
+    ]
+    for section in section_entries:
+        lines.extend(_format_music_section(section, story_mode))
+    lines.extend(_format_soundtrack_recommendations_section(result.entries))
     return "\n".join(lines).strip() + "\n"
 
 
@@ -940,6 +979,35 @@ def _format_soundtrack_recommendations_section(entries: list[SequenceRecommendat
     return lines
 
 
+def _format_music_section(
+    section: tuple[StructureBeatSpec, list[SequenceRecommendationEntry], float, float],
+    story_mode: str,
+) -> list[str]:
+    spec, entries, start_ratio, end_ratio = section
+    lines = [
+        f"{spec.index}. {spec.title}",
+        "",
+        f"Тайминг блока: {_format_ratio(start_ratio)} - {_format_ratio(end_ratio)} ролика",
+    ]
+    if entries:
+        lines.extend(
+            [
+                f"Кадры блока: {_format_clip_labels(entries)}",
+                f"Музыкальная задача: {_describe_music_strategy(entries, spec, story_mode)}",
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "Кадры блока: использовать музыкальную функцию этого блока как ориентир, даже если в текущем делении кадры почти не попали в секцию.",
+                f"Музыкальная задача: {spec.music}",
+                "",
+            ]
+        )
+    return lines
+
+
 def _build_profile_context(
     entries: list[SequenceRecommendationEntry],
 ) -> tuple[dict[str, float | int | bool], set[str], str]:
@@ -947,6 +1015,51 @@ def _build_profile_context(
     profile_tags = _derive_music_profile_tags_from_metrics(profile_metrics, len(entries))
     story_mode = _derive_story_mode(profile_metrics, profile_tags)
     return profile_metrics, profile_tags, story_mode
+
+
+def _describe_music_profile(
+    profile_tags: set[str],
+    story_mode: str,
+    profile_metrics: dict[str, float | int | bool],
+) -> str:
+    family = _resolve_soundtrack_family(story_mode, profile_tags)
+    family_labels = {
+        "memory_archive": "архивно-памятный, деликатный и эмоционально зрелый саундтрек",
+        "cultural_travel": "маршрутный и кинематографичный travel-саундтрек с ощущением места",
+        "leisure_travel": "свободный и теплый саундтрек отдыха, дороги и воздуха",
+        "childhood_family": "светлый семейный саундтрек с линией детства и роста",
+        "family_celebration": "семейный и объединяющий саундтрек для общих сцен и близости",
+        "portrait_intimate": "камерный и личный саундтрек, который держит внимание на герое",
+    }
+    reasons: list[str] = [family_labels.get(family, "смешанный гибридный саундтрек под характер текущего ролика")]
+    if "archive" in profile_tags:
+        reasons.append("важно сохранить память, воздух и мягкое послевкусие")
+    if "travel" in profile_tags:
+        reasons.append("музыка должна поддерживать ощущение пути и смены пространств")
+    if "group_family" in profile_tags:
+        reasons.append("нужна теплая объединяющая интонация без излишней агрессии")
+    if "intimate" in profile_tags:
+        reasons.append("лучше держать близкий, не демонстративный эмоциональный регистр")
+    if "energetic" in profile_tags:
+        reasons.append("пульс может быть заметнее, но не должен ломать читаемость образов")
+    return "; ".join(reasons) + "."
+
+
+def _describe_music_rhythm(
+    profile_tags: set[str],
+    story_mode: str,
+    profile_metrics: dict[str, float | int | bool],
+) -> str:
+    average_energy = float(profile_metrics.get("average_energy", 0.0) or 0.0)
+    if "archive" in profile_tags or "reflective" in profile_tags:
+        return "держать музыку более плавной, с длинными хвостами, мягким развитием и без резких beat-drop решений."
+    if story_mode in {"cultural_travel", "adult_leisure_escape", "family_outing"} or "travel" in profile_tags:
+        return "строить пульс на ощущении движения и маршрута: умеренное нарастание, чистые переходы и ясный дорожный темп."
+    if "childhood" in profile_tags or "playful" in profile_tags:
+        return "держать более живой и светлый ритм, но не превращать ролик в клиповую суету."
+    if average_energy >= 2.0 or "energetic" in profile_tags:
+        return "можно вести ролик на более собранном пульсе с отчетливыми акцентами в крючке и пике."
+    return "лучше выбирать умеренный темп с мягким ростом, чтобы музыка поддерживала монтаж, а не спорила с ним."
 
 
 def _format_ratio(value: float) -> str:
