@@ -3,10 +3,16 @@ setlocal
 
 cd /d "%~dp0"
 
-set "CHROME_EXE=<LOCAL_PATH> Files\Google\Chrome\Application\chrome.exe"
-if not exist "%CHROME_EXE%" set "CHROME_EXE=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"
+set "CHROME_EXE="
+if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" set "CHROME_EXE=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
+if not defined CHROME_EXE if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" set "CHROME_EXE=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"
+if not defined CHROME_EXE (
+    for /f "delims=" %%P in ('where chrome.exe 2^>nul') do (
+        if not defined CHROME_EXE set "CHROME_EXE=%%~fP"
+    )
+)
 
-if not exist "%CHROME_EXE%" (
+if not defined CHROME_EXE (
     echo Chrome executable was not found. Edit CHROME_EXE in run_full_grok_pipeline_local.bat.
     exit /b 1
 )
