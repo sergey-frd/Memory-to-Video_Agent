@@ -272,6 +272,7 @@ For automation and machine-guided change review, see `project_structure_registry
 Use `python .\main_change_impact.py --change-type generation_flag --changed-file config.py` to generate a concrete impact checklist.
 Use `python .\main_project_publication.py --target-dir .\project_publication\Memory-to-Video_Agent` to refresh the external project-information repository bundle.
 Use `python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Video_Agent-clone> --stage` for the guarded public-repo publish flow.
+Use `.\run_project_publication_push.bat` for the shortest manual publish command with your current local clone path.
 
 ## What Gets Copied After a Successful Stage
 

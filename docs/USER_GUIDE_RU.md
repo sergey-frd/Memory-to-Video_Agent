@@ -272,6 +272,7 @@ CLI-параметры:
 Для быстрого impact-анализа используйте `python .\main_change_impact.py --change-type generation_flag --changed-file config.py`.
 Для обновления отдельного репозитория с документацией проекта используйте `python .\main_project_publication.py --target-dir .\project_publication\Memory-to-Video_Agent`.
 Для безопасного publish-flow в публичный локальный клон используйте `python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Video_Agent-clone> --stage`.
+Для самого короткого ручного запуска используйте `.\run_project_publication_push.bat`.
 
 ## Что куда переносится после успешного stage
 

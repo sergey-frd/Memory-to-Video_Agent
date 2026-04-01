@@ -2,12 +2,12 @@
 
 This document is generated from the source project and is intended for the external project-information repository.
 
-- Generated at: `2026-04-01T14:44:54+02:00`
+- Generated at: `2026-04-01T14:55:50+02:00`
 - Source project: `img-style-ag_1`
 
 ## Snapshot
 
-- Files scanned: `129`
+- Files scanned: `130`
 - Python files: `75`
 - Test files: `22`
 - Config JSON files: `12`

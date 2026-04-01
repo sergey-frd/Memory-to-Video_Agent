@@ -364,6 +364,12 @@ python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Vi
 python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Video_Agent-clone> --commit-message "Update project publication" --push
 ```
 
+Короткая команда для вашего текущего локального клона:
+
+```powershell
+.\run_project_publication_push.bat
+```
+
 Этот flow:
 
 - проверяет, что target является git-репозиторием;
