@@ -101,43 +101,61 @@ class GrokWebAgent:
             launch_kwargs["channel"] = "chrome"
         return launch_kwargs
 
+    def _open_browser_context(self, playwright) -> BrowserContext:
+        if self.config.debug_port is None:
+            self._close_lingering_login_browser(playwright)
+            self._terminate_profile_processes()
+        if self.config.debug_port is not None:
+            try:
+                return self._connect_context(playwright)
+            except GrokWebError:
+                self._log("chrome debug-port connect failed; falling back to profile launch")
+                return self._launch_managed_context(playwright)
+        return self._launch_managed_context(playwright)
+
+    def _close_browser_context(self, context: BrowserContext) -> None:
+        used_managed_browser = self._managed_browser_process is not None
+        if self._connected_over_cdp and self._managed_browser_process is not None and self._connected_browser is not None:
+            try:
+                context.close()
+            except Exception:
+                pass
+            try:
+                self._connected_browser.close()
+            except Exception:
+                pass
+        if not self._connected_over_cdp:
+            context.close()
+        self._connected_browser = None
+        self._connected_over_cdp = False
+        self._cleanup_managed_browser_process()
+        if used_managed_browser:
+            self._terminate_profile_processes()
+            self._clear_profile_restore_artifacts()
+        self._cleanup_runtime_profile_dir()
+
     def run(self) -> Path:
         self._ensure_dependencies()
         self.config.profile_dir.mkdir(parents=True, exist_ok=True)
         with sync_playwright() as playwright:
-            if self.config.debug_port is None:
-                self._close_lingering_login_browser(playwright)
-                self._terminate_profile_processes()
-            if self.config.debug_port is not None:
-                try:
-                    context = self._connect_context(playwright)
-                except GrokWebError:
-                    self._log("chrome debug-port connect failed; falling back to profile launch")
-                    context = self._launch_managed_context(playwright)
-            else:
-                context = self._launch_managed_context(playwright)
+            context = self._open_browser_context(playwright)
             try:
                 return self.run_in_context(context)
             finally:
-                used_managed_browser = self._managed_browser_process is not None
-                if self._connected_over_cdp and self._managed_browser_process is not None and self._connected_browser is not None:
-                    try:
-                        context.close()
-                    except Exception:
-                        pass
-                    try:
-                        self._connected_browser.close()
-                    except Exception:
-                        pass
-                if not self._connected_over_cdp:
-                    context.close()
-                self._connected_browser = None
-                self._connected_over_cdp = False
-                self._cleanup_managed_browser_process()
-                if used_managed_browser:
-                    self._terminate_profile_processes()
-                    self._clear_profile_restore_artifacts()
-                self._cleanup_runtime_profile_dir()
+                self._close_browser_context(context)
+
+    def check_authentication(self) -> None:
+        self._ensure_dependencies()
+        self.config.profile_dir.mkdir(parents=True, exist_ok=True)
+        with sync_playwright() as playwright:
+            context = self._open_browser_context(playwright)
+            try:
+                self.check_authentication_in_context(context)
+            finally:
+                self._close_browser_context(context)
+
+    def check_authentication_in_context(self, context: BrowserContext) -> None:
+        self._get_page(context)
 
     def _close_lingering_login_browser(self, playwright) -> None:
         if self.config.debug_port is not None:

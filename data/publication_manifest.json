@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-01T21:25:11+02:00",
+  "generated_at": "2026-04-01T21:50:58+02:00",
   "source_project": "img-style-ag_1",
   "source_workspace": "img-style-ag_1",
   "managed_files": [
@@ -49,6 +49,7 @@
     "source/main_full_pipeline.py",
     "source/main_grok_batch.py",
     "source/main_grok_pipeline.py",
+    "source/main_grok_profile_check.py",
     "source/main_grok_web.py",
     "source/main_human_sequence_report.py",
     "source/main_project_publication.py",
@@ -95,6 +96,7 @@
     "source/test/test_config_cli_defaults.py",
     "source/test/test_full_pipeline.py",
     "source/test/test_grok_batch_app.py",
+    "source/test/test_grok_profile_check_app.py",
     "source/test/test_grok_web_app.py",
     "source/test/test_motion_selection.py",
     "source/test/test_openai_scene.py",

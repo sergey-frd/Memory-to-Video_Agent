@@ -2,17 +2,17 @@
 
 This document is generated from the source project and is intended for the external project-information repository.
 
-- Generated at: `2026-04-01T21:25:11+02:00`
+- Generated at: `2026-04-01T21:50:58+02:00`
 - Source project: `img-style-ag_1`
 
 ## Snapshot
 
-- Files scanned: `122`
-- Python files: `75`
-- Test files: `22`
+- Files scanned: `124`
+- Python files: `77`
+- Test files: `23`
 - Config JSON files: `12`
 - Markdown docs: `3`
-- Entry points: `17`
+- Entry points: `18`
 - API modules: `10`
 - Utils modules: `21`
 - Model modules: `3`
@@ -28,6 +28,7 @@ This document is generated from the source project and is intended for the exter
 - `main_full_pipeline.py`
 - `main_grok_batch.py`
 - `main_grok_pipeline.py`
+- `main_grok_profile_check.py`
 - `main_grok_web.py`
 - `main_human_sequence_report.py`
 - `main_project_publication.py`

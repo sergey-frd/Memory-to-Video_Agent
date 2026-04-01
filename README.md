@@ -4,15 +4,15 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Last synchronized: `2026-04-01T21:25:11+02:00`
+- Last synchronized: `2026-04-01T21:50:58+02:00`
 - Source project: `img-style-ag_1`
-- Python files: `75`
-- Test files: `22`
-- Entry points: `17`
+- Python files: `77`
+- Test files: `23`
+- Entry points: `18`
 
 ## Published Source Mirror
 
-- Mirrored source files: `121`
+- Mirrored source files: `123`
 - Full file list: `data/publication_manifest.json`
 - `source/PROJECT_STRUCTURE.md`
 - `source/USER_GUIDE.md`
@@ -41,6 +41,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/main_full_pipeline.py`
 - `source/main_grok_batch.py`
 - `source/main_grok_pipeline.py`
+- `source/main_grok_profile_check.py`
 - `source/main_grok_web.py`
 - `source/main_human_sequence_report.py`
 - `source/main_project_publication.py`

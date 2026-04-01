@@ -306,8 +306,11 @@ powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1
 Он сначала выполняет bootstrap, затем проверяет:
 - `.env` и наличие `OPENAI_API_KEY`;
 - доступность локального Chrome;
+- что клоновый Grok-профиль в `.browser-profile\grok-web` уже авторизован для `https://grok.com/imagine`;
 - наличие подходящих исходных изображений в `input\`.
 - Важно: каждый клон по умолчанию использует собственный Grok Chrome-профиль в `.browser-profile\grok-web`, если вы явно не передали другой `--profile-dir`.
+
+Если этот Grok-профиль еще не авторизован, `deploy_and_run.ps1` теперь останавливается до запуска pipeline и подсказывает запустить `login_grok_profile.bat`.
 
 Для dry-run проверки без запуска pipeline:
 

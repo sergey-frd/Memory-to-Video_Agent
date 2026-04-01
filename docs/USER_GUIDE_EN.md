@@ -306,8 +306,11 @@ powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1
 It runs bootstrap first, then checks:
 - `.env` and `OPENAI_API_KEY`;
 - local Chrome availability;
+- whether the clone-specific Grok profile in `.browser-profile\grok-web` is already authenticated for `https://grok.com/imagine`;
 - whether `input\` already contains supported source images.
 - Note: each clone uses its own Grok Chrome profile under `.browser-profile\grok-web` unless you explicitly pass another `--profile-dir`.
+
+If the Grok profile is not logged in yet, `deploy_and_run.ps1` now stops before the pipeline and tells you to run `login_grok_profile.bat`.
 
 Use this for a dry readiness check without starting the pipeline:
 

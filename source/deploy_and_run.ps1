@@ -3,6 +3,7 @@ param(
     [string]$VenvDir = ".venv",
     [string]$ConfigFile = "config.local.json",
     [string]$ChromeExe = "",
+    [string]$ProfileDir = ".browser-profile\grok-web",
     [switch]$InstallChromium,
     [switch]$ForceConfig,
     [switch]$CheckOnly,
@@ -65,6 +66,11 @@ $venvPython = Join-Path $projectRoot "$VenvDir\Scripts\python.exe"
 $configPath = Join-Path $projectRoot $ConfigFile
 $envPath = Join-Path $projectRoot ".env"
 $inputDir = Join-Path $projectRoot "input"
+$profilePath = if ([System.IO.Path]::IsPathRooted($ProfileDir)) {
+    [System.IO.Path]::GetFullPath($ProfileDir)
+} else {
+    Join-Path $projectRoot $ProfileDir
+}
 
 if (-not (Test-Path -LiteralPath $venvPython)) {
     throw "Virtual environment Python was not found after bootstrap: $venvPython"
@@ -91,6 +97,12 @@ if (-not $resolvedChrome) {
     throw "Chrome executable was not detected. Install Chrome or pass -ChromeExe <path>."
 }
 
+Write-Step "Checking Grok profile authentication"
+& $venvPython (Join-Path $projectRoot "main_grok_profile_check.py") --profile-dir $profilePath --chrome-exe $resolvedChrome
+if ($LASTEXITCODE -ne 0) {
+    throw "Grok automation profile is not authenticated: $profilePath. Run .\login_grok_profile.bat, sign in to Grok in this clone profile, open https://grok.com/imagine once, close that Chrome window, then rerun deploy_and_run.ps1."
+}
+
 Write-Step "Checking input\\"
 $supportedInputExtensions = @(".png", ".jpg", ".jpeg", ".webp", ".bmp")
 $inputFiles = @()
@@ -105,6 +117,7 @@ Write-Host ""
 Write-Host "Environment is ready."
 Write-Host "Config: $configPath"
 Write-Host "Chrome: $resolvedChrome"
+Write-Host "Grok profile: $profilePath"
 Write-Host "Input files: $($inputFiles.Count)"
 
 if ($CheckOnly) {
@@ -113,5 +126,5 @@ if ($CheckOnly) {
 }
 
 Write-Step "Starting local pipeline"
-& $venvPython (Join-Path $projectRoot "main_full_pipeline.py") --config-file $configPath --chrome-exe $resolvedChrome @PipelineArgs
+& $venvPython (Join-Path $projectRoot "main_full_pipeline.py") --config-file $configPath --chrome-exe $resolvedChrome --profile-dir $profilePath @PipelineArgs
 exit $LASTEXITCODE
