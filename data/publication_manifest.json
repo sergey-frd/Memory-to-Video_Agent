@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-01T17:54:27+02:00",
+  "generated_at": "2026-04-01T20:34:55+02:00",
   "source_project": "img-style-ag_1",
   "source_workspace": "img-style-ag_1",
   "managed_files": [
@@ -71,6 +71,7 @@
     "source/pytest.ini",
     "source/requirements.txt",
     "source/run_full_grok_pipeline.bat",
+    "source/run_full_grok_pipeline_local.bat",
     "source/run_grok_automation.bat",
     "source/run_grok_automation_all.bat",
     "source/run_project_publication_push.bat",
@@ -85,6 +86,7 @@
     "source/services/FULL LIST 3  DISTANCE.txt",
     "source/services/FULL LIST 3 NEARBY.txt",
     "source/services/PROMPT CREATION_260303_1.txt",
+    "source/setup_project.ps1",
     "source/styles/styles.txt",
     "source/test/test_api_pipeline.py",
     "source/test/test_artifact_cleanup.py",

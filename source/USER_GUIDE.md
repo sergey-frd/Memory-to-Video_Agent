@@ -276,6 +276,26 @@ Use `python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-
 Use `.\run_project_publication_stage.bat` for the shortest preview/stage-only run without push.
 Use `.\run_project_publication_push.bat` for the shortest manual publish command with your current local clone path.
 
+## Deploying On Another Machine
+
+For a clean local deployment in another folder or on another machine:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup_project.ps1
+```
+
+This script:
+- creates `.venv`;
+- installs `requirements.txt`;
+- creates local runtime folders such as `input`, `output`, `final_project\videos`, and `final_project\regeneration_assets`;
+- writes `.env.template`;
+- creates `config.local.json` with relative local paths.
+
+Then:
+- fill real keys into `.env`;
+- place source images into `input\`;
+- run `.\run_full_grok_pipeline_local.bat`.
+
 ## What Gets Copied After a Successful Stage
 
 Into `final_videos_dir`:

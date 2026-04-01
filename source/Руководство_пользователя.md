@@ -276,6 +276,26 @@ CLI-параметры:
 Для самого короткого preview/stage-only запуска без push используйте `.\run_project_publication_stage.bat`.
 Для самого короткого ручного запуска используйте `.\run_project_publication_push.bat`.
 
+## Развертывание В Другом Месте
+
+Для чистого локального развертывания в другой папке или на другой машине используйте:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup_project.ps1
+```
+
+Скрипт:
+- создает `.venv`;
+- устанавливает зависимости из `requirements.txt`;
+- создает локальные рабочие папки `input`, `output`, `final_project\videos`, `final_project\regeneration_assets`;
+- записывает `.env.template`;
+- создает `config.local.json` с относительными локальными путями.
+
+Дальше:
+- заполните реальные ключи в `.env`;
+- положите исходные изображения в `input\`;
+- запускайте `.\run_full_grok_pipeline_local.bat`.
+
 ## Что куда переносится после успешного stage
 
 В `final_videos_dir`:

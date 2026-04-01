@@ -4,7 +4,7 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Last synchronized: `2026-04-01T17:54:27+02:00`
+- Last synchronized: `2026-04-01T20:34:55+02:00`
 - Source project: `img-style-ag_1`
 - Python files: `75`
 - Test files: `22`
@@ -12,7 +12,7 @@ This repository is intended to store the current architecture, guides, change-im
 
 ## Published Source Mirror
 
-- Mirrored source files: `118`
+- Mirrored source files: `120`
 - Full file list: `data/publication_manifest.json`
 - `source/PROJECT_STRUCTURE.md`
 - `source/USER_GUIDE.md`
@@ -61,6 +61,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/pytest.ini`
 - `source/requirements.txt`
 - `source/run_full_grok_pipeline.bat`
+- `source/run_full_grok_pipeline_local.bat`
 - `source/run_grok_automation.bat`
 - `source/run_grok_automation_all.bat`
 - `source/run_project_publication_push.bat`
@@ -70,6 +71,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/run_project_sequence_batch_nicol_26_T2.bat`
 - `source/run_project_sequence_batch_vika_26_1A.bat`
 - `source/services`
+- `source/setup_project.ps1`
 - `source/styles`
 - `source/test`
 - `source/test_openai.py`

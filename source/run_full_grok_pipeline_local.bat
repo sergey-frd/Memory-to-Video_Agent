@@ -1,0 +1,25 @@
+@echo off
+setlocal
+
+cd /d "%~dp0"
+
+set "CHROME_EXE=<LOCAL_PATH> Files\Google\Chrome\Application\chrome.exe"
+if not exist "%CHROME_EXE%" set "CHROME_EXE=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"
+
+if not exist "%CHROME_EXE%" (
+    echo Chrome executable was not found. Edit CHROME_EXE in run_full_grok_pipeline_local.bat.
+    exit /b 1
+)
+
+if not exist ".\.venv\Scripts\python.exe" (
+    echo Local virtual environment was not found. Run setup_project.ps1 first.
+    exit /b 1
+)
+
+if not exist ".\config.local.json" (
+    echo config.local.json was not found. Run setup_project.ps1 first.
+    exit /b 1
+)
+
+".\.venv\Scripts\python.exe" ".\main_full_pipeline.py" --config-file ".\config.local.json" --chrome-exe "%CHROME_EXE%" %*
+exit /b %errorlevel%

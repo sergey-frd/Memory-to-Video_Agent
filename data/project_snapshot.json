@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-04-01T17:54:27+02:00",
+  "generated_at": "2026-04-01T20:34:55+02:00",
   "source_project": "img-style-ag_1",
   "source_workspace": "img-style-ag_1",
   "counts": {
-    "all_files": 119,
-    "top_level_files": 56,
+    "all_files": 121,
+    "top_level_files": 58,
     "python_files": 75,
     "test_files": 22,
     "config_files": 12,
