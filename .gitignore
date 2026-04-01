@@ -1,0 +1,9 @@
+# Managed by main_project_publication.py
+*
+!.gitignore
+!README.md
+!PUBLISHING.md
+!docs/
+!docs/**
+!data/
+!data/**

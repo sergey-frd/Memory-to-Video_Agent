@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-04-01T14:44:54+02:00",
+  "source_project": "img-style-ag_1",
+  "source_workspace": "img-style-ag_1",
+  "managed_files": [
+    "README.md",
+    ".gitignore",
+    "PUBLISHING.md",
+    "data/project_snapshot.json",
+    "data/project_structure_registry.json",
+    "docs/CHANGE_IMPACT.md",
+    "docs/PROJECT_OVERVIEW.md",
+    "docs/PROJECT_STRUCTURE.md",
+    "docs/USER_GUIDE_EN.md",
+    "docs/USER_GUIDE_RU.md"
+  ]
+}
