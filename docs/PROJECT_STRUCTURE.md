@@ -367,8 +367,12 @@ python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Vi
 Короткая команда для вашего текущего локального клона:
 
 ```powershell
+.\run_project_publication_stage.bat
 .\run_project_publication_push.bat
 ```
+
+`run_project_publication_stage.bat` делает только безопасный `--stage` без commit/push.
+`run_project_publication_push.bat` выполняет полный guarded publish-flow.
 
 Этот flow:
 
