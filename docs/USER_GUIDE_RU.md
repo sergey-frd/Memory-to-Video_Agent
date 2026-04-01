@@ -296,6 +296,23 @@ powershell -ExecutionPolicy Bypass -File .\setup_project.ps1
 - положите исходные изображения в `input\`;
 - запускайте `.\run_full_grok_pipeline_local.bat`.
 
+Или используйте единый скрипт bootstrap/check/run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1
+```
+
+Он сначала выполняет bootstrap, затем проверяет:
+- `.env` и наличие `OPENAI_API_KEY`;
+- доступность локального Chrome;
+- наличие подходящих исходных изображений в `input\`.
+
+Для dry-run проверки без запуска pipeline:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1 -CheckOnly
+```
+
 ## Что куда переносится после успешного stage
 
 В `final_videos_dir`:

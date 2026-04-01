@@ -296,6 +296,23 @@ Then:
 - place source images into `input\`;
 - run `.\run_full_grok_pipeline_local.bat`.
 
+Or use the one-step deploy/check/run helper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1
+```
+
+It runs bootstrap first, then checks:
+- `.env` and `OPENAI_API_KEY`;
+- local Chrome availability;
+- whether `input\` already contains supported source images.
+
+Use this for a dry readiness check without starting the pipeline:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1 -CheckOnly
+```
+
 ## What Gets Copied After a Successful Stage
 
 Into `final_videos_dir`:

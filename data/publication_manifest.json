@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-01T20:34:55+02:00",
+  "generated_at": "2026-04-01T20:40:24+02:00",
   "source_project": "img-style-ag_1",
   "source_workspace": "img-style-ag_1",
   "managed_files": [
@@ -38,6 +38,7 @@
     "source/config_maya.json",
     "source/config_slava.json",
     "source/config_vika.json",
+    "source/deploy_and_run.ps1",
     "source/login_grok_profile.bat",
     "source/main.py",
     "source/main1.py",
