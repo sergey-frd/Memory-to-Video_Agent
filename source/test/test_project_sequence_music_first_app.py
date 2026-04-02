@@ -37,6 +37,27 @@ def test_parse_premiere_project_sequence_visual_clips_reads_generic_media_paths(
     assert clips[2].order_index == 3
 
 
+def test_parse_premiere_project_sequence_visual_clips_extracts_stage_id_from_bg_image_names() -> None:
+    root = Path("test_runtime") / f"project_sequence_visual_bg_stage_{uuid4().hex}"
+    media_dir = root / "media"
+    media_dir.mkdir(parents=True, exist_ok=True)
+    media_path = (media_dir / "travel_panorama_20260401_bg_image_16x9.jpg").resolve()
+    Image.new("RGB", (320, 240), (220, 180, 120)).save(media_path, format="JPEG")
+    project_path = _write_sample_prproj(
+        root,
+        sequence_name="GenericVisualSequence",
+        media_paths=[media_path],
+    )
+
+    _selected_sequence_name, clips = parse_premiere_project_sequence_visual_clips(
+        project_path,
+        "GenericVisualSequence",
+    )
+
+    assert len(clips) == 1
+    assert clips[0].stage_id == "travel_panorama_20260401"
+
+
 def test_write_project_sequence_music_first_bundle_builds_json_and_music_report() -> None:
     root = Path("test_runtime") / f"project_sequence_music_first_{uuid4().hex}"
     media_paths = _create_sample_images(root)
@@ -101,6 +122,7 @@ def test_write_project_sequence_music_first_bundle_builds_json_and_music_report(
     assert payload["sampled_clip_count"] == 3
     assert "МУЗЫКАЛЬНАЯ РЕКОМЕНДАЦИЯ ДЛЯ SEQUENCE" in report_text
     assert "Главный музыкальный вектор" in report_text
+    assert "Вариант с самым высоким приоритетом:" in report_text
     assert "Рекомендуемая музыка" in report_text
 
 
@@ -169,7 +191,8 @@ def test_write_project_sequence_music_first_bundle_builds_structure_and_transiti
     assert payload["sequence_recommendations_included"] is True
     assert len(payload["recommended_sequence_order"]) == 3
     assert "RECOMMENDED TRANSITIONS FOR THE PROPOSED SEQUENCE ORDER" in transition_text
-    assert structure_text
+    assert "Рекомендуемая музыка" in structure_text
+    assert "Вариант с самым высоким приоритетом:" in structure_text
 
 
 def test_main_sequence_music_first_cli_prints_output_paths(monkeypatch, capsys) -> None:

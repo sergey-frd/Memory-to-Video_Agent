@@ -163,6 +163,19 @@ def extract_stage_id_from_project_media_name(media_name: str) -> str | None:
     return match.group("stage_id")
 
 
+def _resolve_visual_stage_identity(clip_name: str, source_path: str, clipitem_id: str) -> tuple[str, int]:
+    for media_name in (clip_name, source_path):
+        if not media_name:
+            continue
+        match = _VIDEO_NAME_PATTERN.match(Path(media_name).stem)
+        if match is not None:
+            return match.group("stage_id"), int(match.group("video_index"))
+        stage_id = extract_stage_id_from_project_media_name(media_name)
+        if stage_id is not None:
+            return stage_id, 1
+    return _derive_generic_stage_id(clip_name, source_path, clipitem_id), 1
+
+
 def resolve_project_track_item_name(track_item_node: ET.Element, object_id_lookup: dict[str, ET.Element]) -> str:
     subclip_node = resolve_project_track_item_subclip(track_item_node, object_id_lookup)
     if subclip_node is None:
@@ -453,15 +466,7 @@ def _build_project_track_item_payload(
     else:
         if media_suffix not in _VISUAL_MEDIA_SUFFIXES:
             return None
-        match = _VIDEO_NAME_PATTERN.match(Path(clip_name).stem)
-        if match is None and source_path:
-            match = _VIDEO_NAME_PATTERN.match(Path(source_path).stem)
-        if match is not None:
-            stage_id = match.group("stage_id")
-            video_index = int(match.group("video_index"))
-        else:
-            stage_id = _derive_generic_stage_id(clip_name, source_path, item_object_ref)
-            video_index = 1
+        stage_id, video_index = _resolve_visual_stage_identity(clip_name, source_path, item_object_ref)
 
     start, end = resolve_project_track_item_timeline(track_item_node)
     in_point = _safe_int(clip_node.findtext("./Clip/InPoint")) if clip_node is not None else 0

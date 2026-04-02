@@ -455,6 +455,7 @@ This command rebuilds:
 Use this when the user manually improved the sequence after automatic optimization and now wants fresh editing, description, and music recommendations for the approved order.
 
 Music now comes first in this flow: `main_sequence_reports.py` always writes a dedicated music-first report for the current sequence before the structure and transition recommendations.
+That music-first report now also starts with one single highest-priority track choice for this video before the broader category lists.
 
 If you only need the music recommendation for the current sequence, use:
 
@@ -487,6 +488,7 @@ This mode:
 - extracts still frames from those clips;
 - runs scene analysis on the sampled frames;
 - writes a JSON context plus a music-first recommendation report.
+- that music-first report begins with one highest-priority track choice for the sequence, followed by the broader category lists.
 
 Use this mode for a completely new sequence that has never gone through the older stage-based optimization pipeline.
 

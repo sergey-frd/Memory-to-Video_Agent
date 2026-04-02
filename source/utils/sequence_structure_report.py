@@ -99,6 +99,12 @@ _SOUNDTRACK_CATEGORY_TITLES = {
     "jazz": "3. Из джаза",
 }
 
+_SOUNDTRACK_CATEGORY_LABELS = {
+    "non_classical": "не из мировой классической музыки",
+    "classical": "из мировой классической музыки",
+    "jazz": "из джаза",
+}
+
 _GENERIC_SERIES_TOKENS = {
     "главный",
     "главная",
@@ -806,13 +812,36 @@ def build_sequence_music_report(result: SequenceOptimizationResult) -> str:
         f"Музыкальный профиль: {_describe_music_profile(profile_tags, story_mode, profile_metrics)}",
         f"Монтажный ритм: {_describe_music_rhythm(profile_tags, story_mode, profile_metrics)}",
         "",
-        "Музыкальная драматургия по блокам",
-        "",
     ]
+    lines.extend(_format_top_priority_soundtrack_section(profile_tags, story_mode))
+    lines.extend(
+        [
+            "Музыкальная драматургия по блокам",
+            "",
+        ]
+    )
     for section in section_entries:
         lines.extend(_format_music_section(section, story_mode))
-    lines.extend(_format_soundtrack_recommendations_section(result.entries))
+    lines.extend(_format_soundtrack_recommendations_section(result.entries, include_top_priority=False))
     return "\n".join(lines).strip() + "\n"
+
+
+def _format_top_priority_soundtrack_section(
+    profile_tags: set[str],
+    story_mode: str,
+) -> list[str]:
+    priority_pick = _select_top_priority_soundtrack_reference(profile_tags, story_mode)
+    if priority_pick is None:
+        return []
+    category_key, option = priority_pick
+    return [
+        "Главный приоритет среди всех вариантов",
+        "",
+        f"Вариант с самым высоким приоритетом: {option.artist} — {option.title}.",
+        f"Категория: {_SOUNDTRACK_CATEGORY_LABELS.get(category_key, category_key)}.",
+        f"Почему именно он: {option.note}",
+        "",
+    ]
 
 
 def _group_entries_by_structure(
@@ -961,7 +990,11 @@ def _format_video_description_section(entries: list[SequenceRecommendationEntry]
     ]
 
 
-def _format_soundtrack_recommendations_section(entries: list[SequenceRecommendationEntry]) -> list[str]:
+def _format_soundtrack_recommendations_section(
+    entries: list[SequenceRecommendationEntry],
+    *,
+    include_top_priority: bool = True,
+) -> list[str]:
     _profile_metrics, profile_tags, story_mode = _build_profile_context(entries)
     lines = [
         "Рекомендуемая музыка",
@@ -970,6 +1003,8 @@ def _format_soundtrack_recommendations_section(entries: list[SequenceRecommendat
         "Музыкальный каталог жёстко разделён по типам ролика, поэтому архив, детство, путешествие, взрослый отдых и семейная сцена получают разные по природе саундтреки.",
         "",
     ]
+    if include_top_priority:
+        lines.extend(_format_top_priority_soundtrack_section(profile_tags, story_mode))
     for category_key in ("non_classical", "classical", "jazz"):
         lines.append(_SOUNDTRACK_CATEGORY_TITLES[category_key])
         lines.append("")
@@ -1776,6 +1811,31 @@ def _soundtrack_key(option: SoundtrackReference) -> tuple[str, str]:
     return option.artist, option.title
 
 
+def _select_top_priority_soundtrack_reference(
+    profile_tags: set[str],
+    story_mode: str,
+) -> tuple[str, SoundtrackReference] | None:
+    best_pick: tuple[int, int, int, str, SoundtrackReference] | None = None
+    for category_priority, category_key in enumerate(("non_classical", "classical", "jazz")):
+        selected = _select_soundtrack_references(category_key, profile_tags, story_mode)
+        if not selected:
+            continue
+        option = selected[0]
+        score, preferred_count = _score_soundtrack_option(option, profile_tags, story_mode)
+        candidate = (
+            score,
+            preferred_count,
+            -category_priority,
+            category_key,
+            option,
+        )
+        if best_pick is None or candidate > best_pick:
+            best_pick = candidate
+    if best_pick is None:
+        return None
+    return best_pick[3], best_pick[4]
+
+
 def _resolve_soundtrack_family(story_mode: str, profile_tags: set[str]) -> str:
     family = _SOUNDTRACK_FAMILY_BY_STORY_MODE.get(story_mode)
     if family:
@@ -1902,55 +1962,11 @@ def _select_soundtrack_references(
         for index, option in enumerate(_SOUNDTRACK_REFERENCES[category_key])
     }
     for pool_index, option in enumerate(candidate_pool):
-        score = 0
-        option_tags = set(option.tags)
-        score += len(option_tags & profile_tags) * 3
-        score += len(option_tags & preferred_tags) * 5
-        score -= len(option_tags & avoided_tags) * 4
-        if "cultural_travel" in profile_tags and {"travel", "cultural", "scenic"} & option_tags:
-            score += 4
-        if "leisure_travel" in profile_tags and {"travel", "leisure", "sun", "scenic", "elegant"} & option_tags:
-            score += 4
-        if "family_trip" in profile_tags and {"travel", "family", "scenic", "light"} & option_tags:
-            score += 3
-        if "family_outing" in profile_tags and {"motion", "light", "family", "playful"} & option_tags:
-            score += 3
-        if "celebration" in profile_tags and {"celebration", "bright", "group", "playful"} & option_tags:
-            score += 3
-        if "warm" in profile_tags and {"family", "light", "tender"} & option_tags:
-            score += 2
-        if "childhood" in profile_tags and {"family", "playful", "light", "childhood"} & option_tags:
-            score += 4
-        if "group_family" in profile_tags and {"family", "group", "graceful", "multi_generation"} & option_tags:
-            score += 3
-        if "holiday" in profile_tags and {"holiday", "bright", "light", "playful"} & option_tags:
-            score += 3
-        if "archive" in profile_tags and {"archive", "nostalgic", "reflective", "multi_generation"} & option_tags:
-            score += 4
-        if "dreamy" in profile_tags and {"dreamy", "elegant", "reflective"} & option_tags:
-            score += 2
-        if "motion" in profile_tags and {"motion", "dynamic", "groove"} & option_tags:
-            score += 3
-        if "night" in profile_tags and {"night", "reflective", "melancholic"} & option_tags:
-            score += 2
-        if "adult_portrait" in profile_tags and {"elegant", "intimate", "graceful"} & option_tags:
-            score += 2
-        if story_mode == "archive_family_memory" and {"archive", "reflective"} & option_tags:
-            score += 3
-        if story_mode == "adult_leisure_escape" and {"leisure", "sun", "relaxed"} & option_tags:
-            score += 3
-        if story_mode == "cultural_travel" and {"cultural", "flow"} & option_tags:
-            score += 3
-        if story_mode in {"festive_childhood", "childhood_album"} and {"childhood", "playful", "light"} & option_tags:
-            score += 3
-        if story_mode == "festive_family" and {"family", "group", "celebration"} & option_tags:
-            score += 3
-        if story_mode == "adult_family_portrait" and {"family", "elegant", "graceful", "intimate", "warm"} & option_tags:
-            score += 3
+        score, preferred_count = _score_soundtrack_option(option, profile_tags, story_mode)
         weighted.append(
             (
                 score,
-                len(option_tags & preferred_tags),
+                preferred_count,
                 -pool_index,
                 option,
             )
@@ -1989,6 +2005,62 @@ def _select_soundtrack_references(
         if len(selected) == 5:
             break
     return selected
+
+
+def _score_soundtrack_option(
+    option: SoundtrackReference,
+    profile_tags: set[str],
+    story_mode: str,
+) -> tuple[int, int]:
+    mode_rule = _SOUNDTRACK_MODE_RULES.get(story_mode, _SOUNDTRACK_MODE_RULES["generic_human_story"])
+    preferred_tags = mode_rule["prefer"]
+    avoided_tags = mode_rule["avoid"]
+    option_tags = set(option.tags)
+    score = 0
+    score += len(option_tags & profile_tags) * 3
+    score += len(option_tags & preferred_tags) * 5
+    score -= len(option_tags & avoided_tags) * 4
+    if "cultural_travel" in profile_tags and {"travel", "cultural", "scenic"} & option_tags:
+        score += 4
+    if "leisure_travel" in profile_tags and {"travel", "leisure", "sun", "scenic", "elegant"} & option_tags:
+        score += 4
+    if "family_trip" in profile_tags and {"travel", "family", "scenic", "light"} & option_tags:
+        score += 3
+    if "family_outing" in profile_tags and {"motion", "light", "family", "playful"} & option_tags:
+        score += 3
+    if "celebration" in profile_tags and {"celebration", "bright", "group", "playful"} & option_tags:
+        score += 3
+    if "warm" in profile_tags and {"family", "light", "tender"} & option_tags:
+        score += 2
+    if "childhood" in profile_tags and {"family", "playful", "light", "childhood"} & option_tags:
+        score += 4
+    if "group_family" in profile_tags and {"family", "group", "graceful", "multi_generation"} & option_tags:
+        score += 3
+    if "holiday" in profile_tags and {"holiday", "bright", "light", "playful"} & option_tags:
+        score += 3
+    if "archive" in profile_tags and {"archive", "nostalgic", "reflective", "multi_generation"} & option_tags:
+        score += 4
+    if "dreamy" in profile_tags and {"dreamy", "elegant", "reflective"} & option_tags:
+        score += 2
+    if "motion" in profile_tags and {"motion", "dynamic", "groove"} & option_tags:
+        score += 3
+    if "night" in profile_tags and {"night", "reflective", "melancholic"} & option_tags:
+        score += 2
+    if "adult_portrait" in profile_tags and {"elegant", "intimate", "graceful"} & option_tags:
+        score += 2
+    if story_mode == "archive_family_memory" and {"archive", "reflective"} & option_tags:
+        score += 3
+    if story_mode == "adult_leisure_escape" and {"leisure", "sun", "relaxed"} & option_tags:
+        score += 3
+    if story_mode == "cultural_travel" and {"cultural", "flow"} & option_tags:
+        score += 3
+    if story_mode in {"festive_childhood", "childhood_album"} and {"childhood", "playful", "light"} & option_tags:
+        score += 3
+    if story_mode == "festive_family" and {"family", "group", "celebration"} & option_tags:
+        score += 3
+    if story_mode == "adult_family_portrait" and {"family", "elegant", "graceful", "intimate", "warm"} & option_tags:
+        score += 3
+    return score, len(option_tags & preferred_tags)
 
 
 def _derive_story_mode(

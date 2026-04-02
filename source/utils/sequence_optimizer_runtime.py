@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from functools import lru_cache
 from pathlib import Path
 
 from models.video_sequence import (
@@ -16,6 +17,7 @@ from utils.fcp_translation_results import (
     resolve_translation_results_path,
     summarize_lost_effects,
 )
+from utils.premiere_project import extract_stage_id_from_project_media_name
 
 
 _TOKEN_PATTERN = re.compile(r"[A-Za-zА-Яа-яЁё0-9']{3,}")
@@ -179,7 +181,7 @@ def build_sequence_candidates(
 
 
 def load_clip_asset_bundle(regeneration_assets_dir: Path, clip: PremiereSequenceClip) -> ClipAssetBundle:
-    bundle_dir = regeneration_assets_dir / clip.stage_id
+    bundle_dir, resolved_stage_id = _resolve_clip_bundle_dir(regeneration_assets_dir, clip)
     missing_files: list[str] = []
     manifest: dict[str, object] = {}
     scene_analysis: dict[str, object] = {}
@@ -187,16 +189,16 @@ def load_clip_asset_bundle(regeneration_assets_dir: Path, clip: PremiereSequence
 
     if not bundle_dir.exists():
         return ClipAssetBundle(
-            stage_id=clip.stage_id,
+            stage_id=resolved_stage_id,
             bundle_dir=str(bundle_dir),
             missing_files=["bundle_dir", "scene_analysis", "v_prompt", "manifest"],
         )
 
-    manifest_path = bundle_dir / f"{clip.stage_id}_api_pipeline_manifest.json"
-    scene_analysis_path = bundle_dir / f"{clip.stage_id}_scene_analysis.json"
-    prompt_path = bundle_dir / f"{clip.stage_id}_v_prompt_{clip.video_index}.txt"
+    manifest_path = bundle_dir / f"{resolved_stage_id}_api_pipeline_manifest.json"
+    scene_analysis_path = bundle_dir / f"{resolved_stage_id}_scene_analysis.json"
+    prompt_path = bundle_dir / f"{resolved_stage_id}_v_prompt_{clip.video_index}.txt"
     if not prompt_path.exists():
-        prompt_candidates = sorted(bundle_dir.glob(f"{clip.stage_id}_v_prompt_*.txt"))
+        prompt_candidates = sorted(bundle_dir.glob(f"{resolved_stage_id}_v_prompt_*.txt"))
         if prompt_candidates:
             prompt_path = prompt_candidates[0]
 
@@ -216,7 +218,7 @@ def load_clip_asset_bundle(regeneration_assets_dir: Path, clip: PremiereSequence
         missing_files.append("v_prompt")
 
     return ClipAssetBundle(
-        stage_id=clip.stage_id,
+        stage_id=resolved_stage_id,
         bundle_dir=str(bundle_dir),
         manifest_path=str(manifest_path) if manifest_path.exists() else None,
         scene_analysis_path=str(scene_analysis_path) if scene_analysis_path.exists() else None,
@@ -226,6 +228,56 @@ def load_clip_asset_bundle(regeneration_assets_dir: Path, clip: PremiereSequence
         prompt_text=prompt_text,
         missing_files=missing_files,
     )
+
+
+@lru_cache(maxsize=None)
+def _candidate_regeneration_roots(regeneration_assets_dir: str) -> tuple[Path, ...]:
+    base_dir = Path(regeneration_assets_dir)
+    candidates = [base_dir]
+    parent_dir = base_dir.parent
+    if not parent_dir.exists():
+        return tuple(candidates)
+
+    normalized_base_name = base_dir.name.casefold()
+    allowed_prefixes = (
+        f"{normalized_base_name}_",
+        f"{normalized_base_name}-",
+    )
+    try:
+        sibling_dirs = sorted(
+            (
+                path
+                for path in parent_dir.iterdir()
+                if path.is_dir() and path != base_dir
+            ),
+            key=lambda path: path.name.casefold(),
+        )
+    except OSError:
+        return tuple(candidates)
+
+    for path in sibling_dirs:
+        normalized_name = path.name.casefold()
+        if normalized_name == normalized_base_name or normalized_name.startswith(allowed_prefixes):
+            candidates.append(path)
+    return tuple(candidates)
+
+
+def _candidate_stage_ids(clip: PremiereSequenceClip) -> tuple[str, ...]:
+    candidates: list[str] = [clip.stage_id]
+    for raw_value in (clip.name, clip.source_path):
+        stage_id = extract_stage_id_from_project_media_name(raw_value)
+        if stage_id and stage_id not in candidates:
+            candidates.append(stage_id)
+    return tuple(candidates)
+
+
+def _resolve_clip_bundle_dir(regeneration_assets_dir: Path, clip: PremiereSequenceClip) -> tuple[Path, str]:
+    for stage_id in _candidate_stage_ids(clip):
+        for root_dir in _candidate_regeneration_roots(str(regeneration_assets_dir)):
+            candidate_dir = root_dir / stage_id
+            if candidate_dir.exists():
+                return candidate_dir, stage_id
+    return regeneration_assets_dir / clip.stage_id, clip.stage_id
 
 
 def optimize_sequence(

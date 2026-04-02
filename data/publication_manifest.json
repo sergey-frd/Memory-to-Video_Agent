@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-04-02T02:05:41+02:00",
-  "source_project": "img-style-ag_1",
-  "source_workspace": "img-style-ag_1",
-  "publication_version": "2026.04.02.01",
-  "publication_git_tag": "v2026.04.02.01",
+  "generated_at": "2026-04-02T08:12:05+02:00",
+  "source_project": "source",
+  "source_workspace": "source",
+  "publication_version": "2026.04.02.02",
+  "publication_git_tag": "v2026.04.02.02",
   "managed_files": [
     "README.md",
     ".gitignore",
@@ -72,6 +72,7 @@
     "source/project_sequence_batch_slava_26_1.json",
     "source/project_sequence_batch_template.json",
     "source/project_sequence_batch_vika_26_1A.json",
+    "source/project_sequence_batch_vika_26_2w_v01.json",
     "source/project_sequence_batch_yura_26_1.json",
     "source/project_structure_registry.json",
     "source/pytest.ini",

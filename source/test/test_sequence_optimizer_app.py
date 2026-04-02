@@ -20,13 +20,16 @@ from models.video_sequence import (
 from utils.current_sequence_reports import write_current_sequence_reports
 from utils.fcp_translation_results import parse_fcp_translation_results
 from utils.human_profile_sequence_report import (
+    _describe_human_adjusted_soundtrack,
     build_human_profile_sequence_report,
+    extract_human_profile_overlay,
     write_human_profile_sequence_report_from_json,
 )
 from utils.premiere_project import parse_premiere_project_sequence_clips, resolve_project_track_item_stage_id
 from utils.project_sequence_batch import run_project_sequence_batch_from_config
 from utils.premiere_xml import parse_premiere_sequence_clips
 from utils.sequence_optimizer import optimize_sequence
+from utils.sequence_optimizer_runtime import load_clip_asset_bundle
 from utils.sequence_structure_report import (
     _build_profile_context,
     _count_fragment_hits,
@@ -89,6 +92,56 @@ def test_run_sequence_optimizer_writes_json_and_text_report() -> None:
     assert [entry["original_index"] for entry in json_payload["entries"]] == [2, 3, 1]
     assert "Recommended order" in txt_payload
     assert "1. Original V2: park morning_20260322_100002_video_1.mp4" in txt_payload
+
+
+def test_load_clip_asset_bundle_falls_back_to_sibling_regeneration_assets_dir() -> None:
+    root = Path("test_runtime") / f"sequence_optimizer_alt_assets_{uuid4().hex}"
+    primary_assets_dir = root / "regeneration_assets"
+    secondary_assets_dir = root / "regeneration_assets_2"
+    primary_assets_dir.mkdir(parents=True, exist_ok=True)
+    secondary_assets_dir.mkdir(parents=True, exist_ok=True)
+
+    stage_id = "family_trip_20260322_100001"
+    bundle_dir = secondary_assets_dir / stage_id
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    (bundle_dir / f"{stage_id}_scene_analysis.json").write_text(
+        json.dumps(
+            {
+                "summary": "Семья гуляет вместе по японской деревне.",
+                "background": "Традиционные дома и прогулочная улица.",
+                "main_action": "walking together",
+                "mood": ["тепло"],
+                "relationships": ["семья"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (bundle_dir / f"{stage_id}_api_pipeline_manifest.json").write_text("{}", encoding="utf-8")
+    (bundle_dir / f"{stage_id}_v_prompt_1.txt").write_text("family trip prompt", encoding="utf-8")
+
+    clip = PremiereSequenceClip(
+        sequence_name="MainSequence",
+        order_index=1,
+        track_index=1,
+        clipitem_id="clip-1",
+        name=f"{stage_id}_video_1.mp4",
+        source_path=str(root / f"{stage_id}_video_1.mp4"),
+        start=0,
+        end=100,
+        in_point=0,
+        out_point=100,
+        duration=100,
+        stage_id=stage_id,
+        video_index=1,
+    )
+
+    bundle = load_clip_asset_bundle(primary_assets_dir, clip)
+
+    assert bundle.bundle_dir == str(bundle_dir)
+    assert bundle.scene_analysis["summary"] == "Семья гуляет вместе по японской деревне."
+    assert bundle.prompt_text == "family trip prompt"
+    assert bundle.missing_files == []
 
 
 def test_parse_fcp_translation_results_filters_selected_sequence_and_effects() -> None:
@@ -473,11 +526,14 @@ def test_run_project_sequence_optimizer_writes_russian_structure_report() -> Non
     assert "Описание видеоролика" in structure_text
     assert "Основная тема:" in structure_text
     assert "Рекомендуемая музыка" in structure_text
+    assert "Главный приоритет среди всех вариантов" in structure_text
+    assert "Вариант с самым высоким приоритетом:" in structure_text
     assert "по 5 вариантов" in structure_text
     assert "1. Не из мировой классической музыки" in structure_text
     assert "2. Из мировой классической музыки" in structure_text
     assert "3. Из джаза" in structure_text
     music_section = structure_text.split("Рекомендуемая музыка", 1)[1].split("Каркас ролика", 1)[0]
+    assert music_section.count("Вариант с самым высоким приоритетом:") == 1
     assert music_section.count("\n- ") == 15
     assert "1. Вход" in structure_text
     assert "6. Послевкусие" in structure_text
@@ -610,6 +666,45 @@ def test_human_profile_report_merges_video_story_with_human_preferences() -> Non
     assert "поход" in report_text.lower()
     assert "Корректировка музыкальных рекомендаций" in report_text
     assert "Что не стоит превращать в факт видеоряда" in report_text
+
+
+def test_human_profile_report_detects_cultural_classical_preferences() -> None:
+    entries = [
+        _make_structure_entry(
+            clip_name="vika_stage_japan_video_1.mp4",
+            summary="Взрослая женщина проходит по японской улице и рассматривает культурные места во время поездки.",
+            subject_tokens=["взрослая женщина"],
+            appearance_tokens=["улица", "город"],
+            mood=["светло", "интерес"],
+            relationships=[],
+            people_count=1,
+            energy_level=1,
+        ),
+    ]
+    entries[0].recommended_index = 1
+
+    human_detail_text = (
+        "Вика получила образование в музыкальной школе, обожает театр во всех его проявлениях: "
+        "оперы, балеты, симфонические оркестры, камерные концерты, регулярно посещает культурные мероприятия."
+    )
+    overlay = extract_human_profile_overlay(human_detail_text)
+    reason = _describe_human_adjusted_soundtrack(("elegant", "cultural", "flow"), overlay)
+    report_text = build_human_profile_sequence_report(
+        SimpleNamespace(
+            source_xml=Path("vika_source.prproj"),
+            selected_sequence_name="Vika26_e04",
+            entries=entries,
+        ),
+        human_detail_text=human_detail_text,
+        human_detail_path=Path("vika_detail.txt"),
+        optimization_report_json=Path("01_Vika26_e04.json"),
+    )
+
+    assert "cultural_classical_sensibility" in overlay.matched_keys
+    assert "театр" in reason.lower()
+    assert "изящн" in report_text.lower()
+    assert "камерно-классическ" in report_text.lower()
+    assert "культурн" in report_text.lower()
 
 
 def test_write_human_profile_sequence_report_from_json_writes_default_named_file() -> None:

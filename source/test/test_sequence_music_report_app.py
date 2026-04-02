@@ -126,6 +126,9 @@ def test_build_sequence_music_report_contains_music_first_sections() -> None:
 
     assert "МУЗЫКАЛЬНАЯ РЕКОМЕНДАЦИЯ ДЛЯ SEQUENCE" in report
     assert "Главный музыкальный вектор" in report
+    assert "Главный приоритет среди всех вариантов" in report
+    assert "Вариант с самым высоким приоритетом:" in report
+    assert report.count("Вариант с самым высоким приоритетом:") == 1
     assert "Музыкальная драматургия по блокам" in report
     assert "Рекомендуемая музыка" in report
     assert "1. Не из мировой классической музыки" in report
@@ -184,7 +187,9 @@ def test_write_current_sequence_report_bundle_can_generate_music_only(monkeypatc
     assert written_music == output_music
     assert written_structure is None
     assert written_transition is None
-    assert "МУЗЫКАЛЬНАЯ РЕКОМЕНДАЦИЯ ДЛЯ SEQUENCE" in output_music.read_text(encoding="utf-8")
+    music_report = output_music.read_text(encoding="utf-8")
+    assert "МУЗЫКАЛЬНАЯ РЕКОМЕНДАЦИЯ ДЛЯ SEQUENCE" in music_report
+    assert "Вариант с самым высоким приоритетом:" in music_report
 
 
 def test_main_sequence_reports_supports_music_only(monkeypatch, capsys) -> None:

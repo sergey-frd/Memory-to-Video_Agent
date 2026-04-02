@@ -35,6 +35,7 @@ class HumanSignalSpec:
 
 @dataclass(frozen=True)
 class HumanProfileOverlay:
+    matched_keys: set[str]
     highlight_labels: list[str]
     evidence_snippets: list[str]
     narrative_focus_notes: list[str]
@@ -59,6 +60,25 @@ _HUMAN_SIGNAL_SPECS = (
         music_boost_tags=("light", "bright", "groove", "playful", "motion", "celebration"),
         narrative_focus="Текстовое описание лучше делать более живым и современным по тону, без тяжелой академической интонации.",
         music_guidance="Музыкальный поиск лучше смещать к легкому contemporary-pop, indie-pop и мягкому groove, а не к траурной или слишком тяжелой подаче.",
+    ),
+    HumanSignalSpec(
+        key="cultural_classical_sensibility",
+        label="Герой тянется к театру, балету, опере и более изящной культурной эстетике.",
+        any_fragments=(
+            "музыкальн школ",
+            "театр",
+            "балет",
+            "опер",
+            "симфон",
+            "камерн",
+            "оркестр",
+            "концерт",
+            "культурные событ",
+            "культурные мероприят",
+        ),
+        music_boost_tags=("elegant", "graceful", "reflective", "cultural", "flow", "warm"),
+        narrative_focus="В финальном тексте полезно держать не только бытовой, но и более культурный, сценически собранный образ героя.",
+        music_guidance="По музыке стоит разрешать более изящную, камерно-классическую, лирическую или кинематографически культурную подачу, а не только легкий pop-пульс.",
     ),
     HumanSignalSpec(
         key="dance_and_joy",
@@ -236,6 +256,7 @@ def build_human_profile_sequence_report(
 def extract_human_profile_overlay(detail_text: str) -> HumanProfileOverlay:
     normalized_text = _normalize_text(detail_text)
     snippets = _split_detail_snippets(detail_text)
+    matched_keys: set[str] = set()
     highlight_labels: list[str] = []
     evidence_snippets: list[str] = []
     narrative_focus_notes: list[str] = []
@@ -245,6 +266,7 @@ def extract_human_profile_overlay(detail_text: str) -> HumanProfileOverlay:
     for spec in _HUMAN_SIGNAL_SPECS:
         if not _matches_signal(normalized_text, spec):
             continue
+        matched_keys.add(spec.key)
         highlight_labels.append(spec.label)
         if spec.narrative_focus:
             narrative_focus_notes.append(spec.narrative_focus)
@@ -264,6 +286,7 @@ def extract_human_profile_overlay(detail_text: str) -> HumanProfileOverlay:
         evidence_snippets = snippets[:3]
 
     return HumanProfileOverlay(
+        matched_keys=matched_keys,
         highlight_labels=highlight_labels,
         evidence_snippets=evidence_snippets,
         narrative_focus_notes=narrative_focus_notes,
@@ -350,6 +373,7 @@ def _describe_combined_character_portrait(
     overlay: HumanProfileOverlay,
 ) -> str:
     portrait_bits: list[str] = []
+    has_cultural_classical = "cultural_classical_sensibility" in overlay.matched_keys
     if "travel" in video_tags or story_mode in {"family_outing", "cultural_travel", "adult_leisure_escape"}:
         portrait_bits.append("в ролике героя лучше воспринимать через движение, прогулки, поездки и смену пространств")
     if overlay.highlight_labels:
@@ -359,6 +383,8 @@ def _describe_combined_character_portrait(
             portrait_bits.append("с живой, современной и не тяжеловесной внутренней энергией")
         if any("поддерж" in item.lower() or "спокой" in item.lower() for item in overlay.highlight_labels):
             portrait_bits.append("при этом с теплым и поддерживающим присутствием рядом с близкими")
+    if has_cultural_classical:
+        portrait_bits.append("со вкусом к сценической, культурной и более изящной эстетике")
     if not portrait_bits:
         return (
             "В итоговой подаче стоит сохранить video-only тему ролика и лишь мягко добавить человеческий характер героя через тон текста и музыку."
@@ -381,12 +407,15 @@ def _describe_description_guidance(
     if not overlay.highlight_labels:
         return base
     additions: list[str] = []
+    has_cultural_classical = "cultural_classical_sensibility" in overlay.matched_keys
     if any("музык" in item.lower() for item in overlay.highlight_labels):
         additions.append("Тон описания можно сделать более живым, современным и легким")
     if any("поход" in item.lower() or "поезд" in item.lower() for item in overlay.highlight_labels):
         additions.append("если в кадре есть движение и дорога, их стоит описывать как близкую герою среду")
     if any("поддерж" in item.lower() or "спокой" in item.lower() for item in overlay.highlight_labels):
         additions.append("образ героя полезно подавать как теплый и удерживающий")
+    if has_cultural_classical:
+        additions.append("описание можно сделать более изящным, культурным и сценически собранным, без попсовой простоты")
     if not additions:
         return base
     return base + " " + ". ".join(additions) + "."
@@ -419,6 +448,7 @@ def _describe_combined_music_vector(
     overlay: HumanProfileOverlay,
 ) -> str:
     parts: list[str] = []
+    has_cultural_classical = "cultural_classical_sensibility" in overlay.matched_keys
     if "travel" in video_tags or story_mode in {"family_outing", "cultural_travel", "adult_leisure_escape"}:
         parts.append("светлый travel / motion вектор")
     if any("музык" in item.lower() for item in overlay.highlight_labels):
@@ -427,6 +457,8 @@ def _describe_combined_music_vector(
         parts.append("мягкий groove и живая телесная пружина")
     if any("поддерж" in item.lower() or "спокой" in item.lower() for item in overlay.highlight_labels):
         parts.append("с сохранением теплой и неагрессивной человеческой основы")
+    if has_cultural_classical:
+        parts.append("более изящный камерно-классический и культурный вектор")
     if not parts:
         return "Оставить video-only музыкальный вектор без сильной дополнительной коррекции."
     return "Итоговый поиск музыки лучше вести через " + ", ".join(parts) + "."
@@ -460,6 +492,14 @@ def _describe_human_adjusted_soundtrack(option_tags: tuple[str, ...], overlay: H
         "gentle",
     }:
         reasons.append("сохраняет теплое человеческое звучание")
+    if "cultural_classical_sensibility" in overlay.matched_keys and option_tag_set & {
+        "elegant",
+        "graceful",
+        "reflective",
+        "cultural",
+        "flow",
+    }:
+        reasons.append("резонирует с тягой героя к театру, опере, балету и более изящной культурной музыкальности")
     if not reasons:
         return "подходит как персонализированный музыкальный референс под текущий видео-характер и human-layer"
     return "; ".join(reasons) + "."
