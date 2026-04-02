@@ -276,6 +276,45 @@ Use `python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-
 Use `.\run_project_publication_stage.bat` for the shortest preview/stage-only run without push.
 Use `.\run_project_publication_push.bat` for the shortest manual publish command with your current local clone path.
 
+## Batch / Program / Parameter Map
+
+Use this compact map when you need to quickly see which `.bat` launches which Python entry point, and where the main parameters come from.
+
+```mermaid
+flowchart LR
+  B1["run_full_grok_pipeline*.bat"] --> P1["main_full_pipeline.py"]
+  B2["run_grok_automation*.bat"] --> P2["main_grok_web.py / main_grok_batch.py"]
+  B3A["run_project_sequence_batch_(project).bat"] --> B3["run_project_sequence_batch.bat"]
+  B3 --> P3["main_project_sequence_batch.py"]
+  B4["run_project_publication*.bat"] --> P4["main_project_publication_push.py"]
+
+  A1["CLI flags"] --> P1
+  A2["CLI flags"] --> P2
+  C1["config.json / config.local.json / config_*.json"] --> G1["config.py / GenerationConfig"]
+  G1 --> P1
+  G1 --> P2
+
+  C3["project_sequence_batch_*.json"] --> P3
+  P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
+
+  A4["CLI flags"] --> P4
+  R1["project_structure_registry.json\n(optional --source-root)"] --> P4
+
+  P1 --> O1["results:\noutput/ stage artifacts\nfinal_videos_dir media\nregeneration_assets_dir non-video assets"]
+  P2 --> O2["results:\n*_video_*.mp4\n*_bg_image_16x9.*\ngrok debug artifacts if enabled"]
+  P5 --> O3["reports:\noptimized JSON/TXT/XML/PRPROJ\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*"]
+  P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
+```
+
+The left side of the diagram shows launch wrappers and parameter sources, and the right side shows the reports and result artifacts produced by each route.
+
+Parameter precedence is usually:
+
+1. hardcoded arguments in the `.bat` wrapper;
+2. extra arguments forwarded through `%*`;
+3. JSON config values;
+4. defaults in Python code.
+
 ## Deploying On Another Machine
 
 For a clean local deployment in another folder or on another machine:

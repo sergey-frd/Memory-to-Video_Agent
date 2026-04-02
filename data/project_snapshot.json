@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-04-02T08:12:05+02:00",
+  "generated_at": "2026-04-02T12:42:14+02:00",
   "source_project": "source",
   "source_workspace": "source",
-  "publication_version": "2026.04.02.02",
-  "publication_git_tag": "v2026.04.02.02",
-  "publication_signature": "41f512e4d5862b583cce4014c4f646af31059cc5276d3cd357e455a40963341a",
+  "publication_version": "2026.04.02.03",
+  "publication_git_tag": "v2026.04.02.03",
+  "publication_signature": "5d7379df4bd9f35651df3794e4416adbe8490c8c0e57ed59e25324e3be23eb1b",
   "counts": {
     "all_files": 129,
     "top_level_files": 61,

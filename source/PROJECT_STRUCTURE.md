@@ -78,6 +78,45 @@
 4. Экспортеры создают JSON/TXT-отчет и при необходимости новый XML/PRPROJ.
 5. Reporting-утилиты строят human-readable overlays и structure reports.
 
+### 3.5 Карта запуска: batch -> программа -> параметры
+
+Эта схема нужна для быстрого ответа на три вопроса: какой `.bat` что запускает, где живут основные параметры, и какая Python-программа реально делает работу.
+
+```mermaid
+flowchart LR
+  B1["run_full_grok_pipeline*.bat"] --> P1["main_full_pipeline.py"]
+  B2["run_grok_automation*.bat"] --> P2["main_grok_web.py / main_grok_batch.py"]
+  B3A["run_project_sequence_batch_(project).bat"] --> B3["run_project_sequence_batch.bat"]
+  B3 --> P3["main_project_sequence_batch.py"]
+  B4["run_project_publication*.bat"] --> P4["main_project_publication_push.py"]
+
+  A1["CLI flags"] --> P1
+  A2["CLI flags"] --> P2
+  C1["config.json / config.local.json / config_*.json"] --> G1["config.py / GenerationConfig"]
+  G1 --> P1
+  G1 --> P2
+
+  C3["project_sequence_batch_*.json"] --> P3
+  P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
+
+  A4["CLI flags"] --> P4
+  R1["project_structure_registry.json\n(optional --source-root)"] --> P4
+
+  P1 --> O1["results:\noutput/ stage artifacts\nfinal_videos_dir media\nregeneration_assets_dir non-video assets"]
+  P2 --> O2["results:\n*_video_*.mp4\n*_bg_image_16x9.*\ngrok debug artifacts if enabled"]
+  P5 --> O3["reports:\noptimized JSON/TXT/XML/PRPROJ\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*"]
+  P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
+```
+
+Левая часть схемы показывает запуск и источники параметров, правая часть показывает, какие отчеты и результаты появляются на выходе.
+
+Приоритет параметров обычно такой:
+
+1. Жестко зашитые аргументы в `.bat`-оболочке.
+2. Дополнительные аргументы, проброшенные через `%*`.
+3. Значения из JSON-конфига.
+4. Значения по умолчанию в Python-коде.
+
 ## 4. Критические инварианты проекта
 
 ### 4.1 Конфигурационные инварианты
