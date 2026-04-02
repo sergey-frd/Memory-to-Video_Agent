@@ -469,6 +469,44 @@ python .\main_sequence_reports.py `
 
 In `--music-only` mode the command still rebuilds the current-order JSON context, but skips the structure and transition text reports.
 
+## Music-First From Project And Sequence Only
+
+If you only have a Premiere project and a sequence, and there is no prior optimization JSON yet, use the direct `project + sequence -> music-first` mode:
+
+```powershell
+python .\main_sequence_music_first.py `
+  --prproj "<LOCAL_PATH>" `
+  --sequence-name "Igor26_2w_e05" `
+  --max-sampled-clips 12
+```
+
+This mode:
+
+- parses the current Premiere sequence directly from `.prproj`;
+- selects representative clips across the current order;
+- extracts still frames from those clips;
+- runs scene analysis on the sampled frames;
+- writes a JSON context plus a music-first recommendation report.
+
+Use this mode for a completely new sequence that has never gone through the older stage-based optimization pipeline.
+
+If you also want the second queue of recommendations for the same brand-new sequence, use:
+
+```powershell
+python .\main_sequence_music_first.py `
+  --prproj "<LOCAL_PATH>" `
+  --sequence-name "Igor26_2w_e05" `
+  --full-recommendations
+```
+
+In `--full-recommendations` mode the command keeps the music report as the primary output, and then also:
+
+- analyzes the current sequence clips for a recommended order without requiring the old `optimization-report-json`;
+- writes `*_music_first_structure.txt` as the recommended sequence/order report;
+- writes `*_music_first_transition_recommendations.txt` as the transition guidance between the recommended neighboring clips.
+
+If the sequence is very long, you can cap the deeper second-queue analysis with `--max-analyzed-clips`, but omitting that flag gives the best full-order recommendation because all current clips are analyzed.
+
 The structure report now separates adult travel/leisure sequences from family portraits more conservatively. Older adults, large groups, or generic portrait/group cues alone should not force the report into a family theme if the sequence is clearly built around travel, rest, and locations.
 
 Repeated pets are also surfaced more explicitly now. If dogs, cats, or other домашние животные appear through multiple clips, `*_structure.txt` should mention that motif in the main theme or the brief description instead of dropping it.

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
+from models.video_sequence import SequenceOptimizationResult, SequenceRecommendationEntry
 from utils.premiere_project import (
     build_project_object_id_lookup,
     build_project_object_uid_lookup,
@@ -148,6 +149,20 @@ def write_transition_recommendations_report(
     return output_path
 
 
+def write_transition_recommendations_from_result(
+    *,
+    result: SequenceOptimizationResult,
+    output_path: Path,
+    project_path: Path | None = None,
+) -> Path:
+    report_text = build_transition_recommendations_from_result(
+        result=result,
+        project_path=project_path,
+    )
+    output_path.write_text(report_text, encoding="utf-8")
+    return output_path
+
+
 def build_transition_recommendations_report(
     *,
     project_path: Path,
@@ -270,6 +285,72 @@ def build_transition_recommendations_report(
             ]
         )
 
+    return "\n".join(lines).strip() + "\n"
+
+
+def build_transition_recommendations_from_result(
+    *,
+    result: SequenceOptimizationResult,
+    project_path: Path | None = None,
+) -> str:
+    template_duration = _resolve_transition_template_duration(project_path)
+    lines = [
+        "RECOMMENDED TRANSITIONS FOR THE PROPOSED SEQUENCE ORDER",
+        "",
+        f"Sequence source: {result.source_xml}",
+        f"Sequence: {result.selected_sequence_name}",
+        "Mode: text recommendations only, based on the optimized order derived directly from the current Premiere sequence.",
+        "",
+        "Supported recommendation types",
+        "",
+    ]
+    lines.extend(_format_transition_catalog_lines())
+    lines.append("")
+    lines.extend(
+        [
+            "Recommended clip pairs",
+            "",
+        ]
+    )
+
+    if len(result.entries) < 2:
+        lines.extend(
+            [
+                "No transition recommendation can be produced because fewer than two analyzed clips were available.",
+                "",
+            ]
+        )
+        return "\n".join(lines).strip() + "\n"
+
+    for previous_entry, current_entry in zip(result.entries, result.entries[1:]):
+        previous_candidate = _candidate_namespace_from_entry(previous_entry)
+        current_candidate = _candidate_namespace_from_entry(current_entry)
+        transition_type, transition_reason = _select_recommended_transition_type(
+            previous_candidate,
+            current_candidate,
+        )
+        duration = _adjust_recommended_duration_for_transition_type(
+            transition_type.key,
+            _choose_transition_duration(
+                previous_candidate,
+                current_candidate,
+                previous_duration=max(2, previous_entry.candidate.clip.duration),
+                current_duration=max(2, current_entry.candidate.clip.duration),
+                template_duration=template_duration,
+            ),
+            template_duration=template_duration,
+        )
+        previous_name = Path(previous_entry.candidate.clip.name).name or previous_entry.candidate.clip.stage_id
+        current_name = Path(current_entry.candidate.clip.name).name or current_entry.candidate.clip.stage_id
+        lines.append(
+            (
+                f"- #{previous_entry.recommended_index} (orig {previous_entry.original_index}) {previous_name} -> "
+                f"#{current_entry.recommended_index} (orig {current_entry.original_index}) {current_name}: "
+                f"{transition_type.display_name}, recommended duration {duration}. {transition_reason}. "
+                "Feasibility should be checked in Premiere after applying the recommended order."
+            )
+        )
+    lines.append("")
     return "\n".join(lines).strip() + "\n"
 
 
@@ -416,3 +497,36 @@ def _candidate_payload_by_stage_id(optimization_payload: dict[str, object]) -> d
             prompt_text=str(assets.get("prompt_text") or ""),
         )
     return candidate_by_stage_id
+
+
+def _candidate_namespace_from_entry(entry: SequenceRecommendationEntry) -> SimpleNamespace:
+    scene_analysis = entry.candidate.assets.scene_analysis
+    return SimpleNamespace(
+        series_subject_tokens=list(entry.candidate.series_subject_tokens),
+        series_appearance_tokens=list(entry.candidate.series_appearance_tokens),
+        keywords=list(entry.candidate.keywords),
+        shot_scale=int(entry.candidate.shot_scale),
+        people_count=int(entry.candidate.people_count),
+        energy_level=int(entry.candidate.energy_level),
+        summary=str(scene_analysis.get("summary") or ""),
+        background=str(scene_analysis.get("background") or ""),
+        shot_type_text=str(scene_analysis.get("shot_type") or ""),
+        main_action=str(scene_analysis.get("main_action") or ""),
+        mood=[str(item) for item in (scene_analysis.get("mood") or []) if item],
+        relationships=[str(item) for item in (scene_analysis.get("relationships") or []) if item],
+        prompt_text=str(entry.candidate.assets.prompt_text or ""),
+    )
+
+
+def _resolve_transition_template_duration(project_path: Path | None) -> int:
+    if project_path is None:
+        return 2
+    try:
+        root = load_premiere_project_root(project_path)
+        object_id_lookup = build_project_object_id_lookup(root)
+        transition_template = _find_video_transition_template(root, object_id_lookup)
+        if transition_template is None:
+            return 2
+        return _transition_duration(transition_template)
+    except Exception:
+        return 2

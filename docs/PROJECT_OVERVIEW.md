@@ -2,19 +2,19 @@
 
 This document is generated from the source project and is intended for the external project-information repository.
 
-- Generated at: `2026-04-01T22:56:05+02:00`
+- Generated at: `2026-04-02T02:05:41+02:00`
 - Source project: `img-style-ag_1`
 
 ## Snapshot
 
-- Files scanned: `125`
-- Python files: `78`
-- Test files: `24`
+- Files scanned: `129`
+- Python files: `82`
+- Test files: `25`
 - Config JSON files: `12`
 - Markdown docs: `3`
-- Entry points: `18`
+- Entry points: `19`
 - API modules: `10`
-- Utils modules: `21`
+- Utils modules: `23`
 - Model modules: `3`
 
 ## Entry Points
@@ -35,6 +35,7 @@ This document is generated from the source project and is intended for the exter
 - `main_project_publication_push.py`
 - `main_project_sequence_batch.py`
 - `main_scene.py`
+- `main_sequence_music_first.py`
 - `main_sequence_optimizer.py`
 - `main_sequence_reports.py`
 

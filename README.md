@@ -4,17 +4,17 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.04.01.02`
-- Git tag: `v2026.04.01.02`
-- Last synchronized: `2026-04-01T22:56:05+02:00`
+- Publication version: `2026.04.02.01`
+- Git tag: `v2026.04.02.01`
+- Last synchronized: `2026-04-02T02:05:41+02:00`
 - Source project: `img-style-ag_1`
-- Python files: `78`
-- Test files: `24`
-- Entry points: `18`
+- Python files: `82`
+- Test files: `25`
+- Entry points: `19`
 
 ## Published Source Mirror
 
-- Mirrored source files: `124`
+- Mirrored source files: `128`
 - Full file list: `data/publication_manifest.json`
 - `source/PROJECT_STRUCTURE.md`
 - `source/USER_GUIDE.md`
@@ -50,6 +50,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/main_project_publication_push.py`
 - `source/main_project_sequence_batch.py`
 - `source/main_scene.py`
+- `source/main_sequence_music_first.py`
 - `source/main_sequence_optimizer.py`
 - `source/main_sequence_reports.py`
 - `source/models`
