@@ -77,6 +77,7 @@
 3. `utils/sequence_optimizer.py` вычисляет новый порядок.
 4. Экспортеры создают JSON/TXT-отчет и при необходимости новый XML/PRPROJ.
 5. Reporting-утилиты строят human-readable overlays и structure reports.
+6. Финальный optimized `.prproj` сохраняется рядом с исходным `project_path`, а `reports\temp_projects` хранит только временный рабочий `.prproj` для batch и cleanup.
 
 ### 3.5 Карта запуска: batch -> программа -> параметры
 
@@ -104,7 +105,7 @@ flowchart LR
 
   P1 --> O1["results:\noutput/ stage artifacts\nfinal_videos_dir media\nregeneration_assets_dir non-video assets"]
   P2 --> O2["results:\n*_video_*.mp4\n*_bg_image_16x9.*\ngrok debug artifacts if enabled"]
-  P5 --> O3["reports:\noptimized JSON/TXT/XML/PRPROJ\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*"]
+  P5 --> O3["reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)"]
   P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
 ```
 

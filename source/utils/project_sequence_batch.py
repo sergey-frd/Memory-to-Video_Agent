@@ -33,6 +33,10 @@ def run_project_sequence_batch_from_config(
     project_path = Path(str(payload["project_path"]))
     regeneration_assets_dir = Path(str(payload["regeneration_assets_dir"]))
     configured_output_project_path = Path(str(payload["output_project_path"]))
+    final_output_project_path = _derive_source_project_output_project_path(
+        project_path=project_path,
+        configured_output_project_path=configured_output_project_path,
+    )
     staging_reports_dir, final_reports_dir = _resolve_batch_reports_dirs(
         payload,
         settings=settings,
@@ -40,7 +44,6 @@ def run_project_sequence_batch_from_config(
         project_path=project_path,
         regeneration_assets_dir=regeneration_assets_dir,
     )
-    staged_output_project_path = staging_reports_dir / configured_output_project_path.name
     engine = str(payload.get("engine") or "heuristic")
     enable_auto_transitions = bool(payload.get("enable_auto_transitions", False))
     transition_mode = normalize_transition_mode(payload.get("transition_mode"), enable_auto_transitions=enable_auto_transitions)
@@ -64,9 +67,9 @@ def run_project_sequence_batch_from_config(
 
     clear_directory_contents(staging_reports_dir)
     staging_reports_dir.mkdir(parents=True, exist_ok=True)
-    temp_dir = staging_reports_dir / "temp_projects" if len(sequence_jobs) > 1 else None
-    if temp_dir is not None:
-        temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_dir = staging_reports_dir / "temp_projects"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    staged_output_project_path = temp_dir / configured_output_project_path.name
 
     current_project_path = project_path
     completed_jobs: list[dict[str, object]] = []
@@ -81,10 +84,8 @@ def run_project_sequence_batch_from_config(
         is_last_job = index == len(sequence_jobs)
         if is_last_job:
             job_output_project = staged_output_project_path
-        elif temp_dir is not None:
-            job_output_project = temp_dir / f"{index:02d}_{sequence_slug}.prproj"
         else:
-            job_output_project = staging_reports_dir / f"{index:02d}_{sequence_slug}.prproj"
+            job_output_project = temp_dir / f"{index:02d}_{sequence_slug}.prproj"
         transition_recommendations_txt: Path | None = None
         human_profile_report_txt: Path | None = None
 
@@ -136,11 +137,10 @@ def run_project_sequence_batch_from_config(
 
     delivered_jobs = _deliver_batch_outputs(
         completed_jobs,
-        settings=settings,
         staging_reports_dir=staging_reports_dir,
         final_reports_dir=final_reports_dir,
         staged_output_project_path=staged_output_project_path,
-        configured_output_project_path=configured_output_project_path,
+        final_output_project_path=final_output_project_path,
     )
     batch_transition_recommendations_txt = _write_batch_transition_recommendations_report(
         delivered_jobs,
@@ -154,8 +154,10 @@ def run_project_sequence_batch_from_config(
         "prin_path": legacy_prin_path,
         "translation_results_path": translation_results_path,
         "regeneration_assets_dir": str(regeneration_assets_dir),
-        "output_project_path": str(configured_output_project_path),
-        "reports_output_project_path": str(final_reports_dir / staged_output_project_path.name),
+        "configured_output_project_path": str(configured_output_project_path),
+        "output_project_path": str(final_output_project_path),
+        "source_project_output_project_path": str(final_output_project_path),
+        "reports_output_project_path": str(final_reports_dir / "temp_projects" / staged_output_project_path.name),
         "reports_dir": str(final_reports_dir),
         "staging_reports_dir": str(staging_reports_dir),
         "engine_requested": engine,
@@ -211,11 +213,10 @@ def _resolve_batch_reports_dirs(
 def _deliver_batch_outputs(
     completed_jobs: list[dict[str, object]],
     *,
-    settings: Settings,
     staging_reports_dir: Path,
     final_reports_dir: Path,
     staged_output_project_path: Path,
-    configured_output_project_path: Path,
+    final_output_project_path: Path,
 ) -> list[dict[str, object]]:
     staging_is_separate = staging_reports_dir.resolve(strict=False) != final_reports_dir.resolve(strict=False)
     staging_was_renamed = False
@@ -272,24 +273,28 @@ def _deliver_batch_outputs(
         staging_reports_dir,
         final_reports_dir,
     )
-    if path_is_within_directory(configured_output_project_path, settings.output_dir):
-        configured_copy_target: Path | None = None
-    else:
-        configured_copy_target = configured_output_project_path
+    if final_output_project_path != delivered_output_project_path:
+        copy_file_to_path(delivered_output_project_path, final_output_project_path)
 
-    if configured_copy_target is not None and configured_copy_target != delivered_output_project_path:
-        copy_file_to_path(delivered_output_project_path, configured_copy_target)
+    original_delivered_project_paths = [Path(str(item["project_after_job_path"])) for item in delivered_jobs]
+    if delivered_jobs:
+        delivered_jobs[-1]["project_after_job_path"] = final_output_project_path
 
-    for item in delivered_jobs:
+    for index, item in enumerate(delivered_jobs):
         transition_report_path = item.get("transition_recommendations_txt_path")
         if not transition_report_path:
             continue
+        original_delivered_project_path = original_delivered_project_paths[index]
         _rewrite_transition_recommendations_project_path(
             report_path=Path(transition_report_path),
-            old_project_path=Path(item["project_after_job_path"]) if staging_reports_dir == final_reports_dir else _resolve_staged_path(
-                Path(item["project_after_job_path"]),
-                staging_reports_dir=staging_reports_dir,
-                final_reports_dir=final_reports_dir,
+            old_project_path=(
+                original_delivered_project_path
+                if staging_reports_dir == final_reports_dir
+                else _resolve_staged_path(
+                    original_delivered_project_path,
+                    staging_reports_dir=staging_reports_dir,
+                    final_reports_dir=final_reports_dir,
+                )
             ),
             new_project_path=Path(item["project_after_job_path"]),
         )
@@ -303,6 +308,14 @@ def _deliver_batch_outputs(
             pass
 
     return delivered_jobs
+
+
+def _derive_source_project_output_project_path(
+    *,
+    project_path: Path,
+    configured_output_project_path: Path,
+) -> Path:
+    return project_path.parent / configured_output_project_path.name
 
 
 def _resolve_delivered_path(path: Path, staging_reports_dir: Path, final_reports_dir: Path) -> Path:
@@ -369,8 +382,9 @@ def _format_batch_summary(summary: dict[str, object]) -> str:
         f"Source prin: {summary.get('prin_path') or '<not provided>'}",
         f"Translation report path: {summary.get('translation_results_path') or '<auto/legacy lookup>'}",
         f"Regeneration assets: {summary.get('regeneration_assets_dir')}",
-        f"Output project: {summary.get('output_project_path')}",
-        f"Reports output project: {summary.get('reports_output_project_path')}",
+        f"Configured output project path: {summary.get('configured_output_project_path')}",
+        f"Final output project: {summary.get('output_project_path')}",
+        f"Reports temporary output project: {summary.get('reports_output_project_path')}",
         f"Reports dir: {summary.get('reports_dir')}",
         f"Staging reports dir: {summary.get('staging_reports_dir')}",
         f"Engine requested: {summary.get('engine_requested')}",

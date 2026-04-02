@@ -15,7 +15,7 @@ run_full_grok_pipeline.bat --upload-timeout 300
    - prompt-файлы, manifest и остальные не-видео артефакты будут в `regeneration_assets_dir`.
 5. Если stage завершился аварийно, проблемные файлы будут перенесены в `error\input` и `error\output`.
 6. После завершения генерации видео нужно вручную собрать sequence в Premiere из полученных роликов.
-7. Затем нужно запустить оптимизацию sequence и открывать итоговый `.prproj` уже из `reports`, а не из `output`.
+7. Затем нужно запустить оптимизацию sequence и открывать итоговый `.prproj` уже из той же папки, где лежит исходный `project_path`; `reports\temp_projects` хранит только временную рабочую batch-копию.
 8. Если после оптимизации вы руками снова меняете порядок клипов, отчеты можно заново пересобрать через `main_sequence_reports.py`.
 
 ## Назначение
@@ -28,8 +28,9 @@ run_full_grok_pipeline.bat --upload-timeout 300
 - `output` — временные prompt-файлы, manifest-файлы и промежуточные результаты текущего stage.
 - `final_videos_dir` — финальный каталог для готовых `mp4` и background-изображений.
 - `regeneration_assets_dir` — каталог для prompt-файлов, manifest и прочих не-видео артефактов, которые нужны для ручной правки и повторной генерации.
-- `reports` — финальный каталог для оптимизированных `.prproj` и всех отчетов по sequence.
-- `reports\temp_projects` — промежуточные `.prproj`, которые создаются внутри одного batch-запуска оптимизации.
+- `reports` — финальный каталог для отчетов по sequence, batch summary и временных batch-артефактов.
+- `reports\temp_projects` — временные `.prproj`, которые создаются внутри одного batch-запуска оптимизации и затем могут быть удалены cleanup.
+- папка исходного Premiere-проекта из `project_path` — постоянное место хранения финального оптимизированного `.prproj`.
 - `error\input` — входные изображения stage, завершившихся с ошибкой.
 - `error\output` — prompt-файлы, manifest и отчеты об ошибках для неуспешных stage.
 - `.browser-profile\grok-web` — automation-профиль Chrome для Grok.
@@ -302,7 +303,7 @@ flowchart LR
 
   P1 --> O1["results:\noutput/ stage artifacts\nfinal_videos_dir media\nregeneration_assets_dir non-video assets"]
   P2 --> O2["results:\n*_video_*.mp4\n*_bg_image_16x9.*\ngrok debug artifacts if enabled"]
-  P5 --> O3["reports:\noptimized JSON/TXT/XML/PRPROJ\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*"]
+  P5 --> O3["reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)"]
   P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
 ```
 
@@ -416,11 +417,13 @@ python .\main_project_publication_push.py --repo-dir <LOCAL_PATH> --commit-messa
 3. Проверить оптимизированный результат в Premiere.
 4. Если нужно, еще раз вручную изменить порядок клипов после оптимизации.
 5. Пересобрать отчеты уже по текущему ручному порядку.
-6. Хранить финальный результат в `reports`.
+6. Хранить финальный оптимизированный проект рядом с исходным Premiere-проектом, а отчеты держать в `reports`.
 
 Важное правило по путям:
 
-- `reports` — это финальный результат по оптимизации и отчетам.
+- `reports` — это финальный результат по отчетам и batch summary.
+- `reports\temp_projects` — это временная batch-зона для `.prproj`, которую потом можно чистить.
+- постоянный оптимизированный `.prproj` лежит рядом с `project_path`.
 - `output` — это временная рабочая зона.
 - Если все завершилось успешно, `output` в идеале должен оказаться пустым.
 
@@ -451,11 +454,14 @@ python .\main_project_sequence_batch.py --config .\project_sequence_batch_igor_2
 }
 ```
 
+Итоговый оптимизированный `.prproj` теперь хранится рядом с исходным `project_path`. Во время batch-запуска программа также держит временный рабочий `.prproj` внутри `reports\temp_projects`, и cleanup позже может удалить эту временную копию.
+
+Если старый config по-прежнему указывает `output_project_path` внутрь `reports`, имя файла все равно сохраняется, но постоянный оптимизированный проект будет записан рядом с `project_path`.
+
 В обычной работе лучше держать рядом с шаблоном отдельный batch-конфиг под конкретный проект, например `project_sequence_batch_slava_26_1.json`, и запускать batch уже из него, не редактируя шаблон каждый раз.
 
 После успешного batch-запуска в `reports` обычно находятся:
 
-- итоговый объединенный оптимизированный `.prproj`;
 - `batch_summary.json`;
 - `batch_summary.txt`;
 - `batch_transition_recommendations.txt`;
@@ -463,7 +469,9 @@ python .\main_project_sequence_batch.py --config .\project_sequence_batch_igor_2
 - `*_structure.txt`;
 - `*_human_profile_report.txt`, если был запрошен персонализированный отчет;
 - `*_transition_recommendations.txt`;
-- промежуточные проекты `temp_projects\*.prproj`.
+- временные рабочие проекты `temp_projects\*.prproj`, включая последний batch-проект.
+
+Постоянный итоговый оптимизированный `.prproj` лежит в той же папке, где находится исходный Premiere-проект из `project_path`.
 
 Чтобы batch автоматически строил персонализированные отчеты, в config должны быть одновременно включены:
 
@@ -730,7 +738,7 @@ run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_202603
 - Если нужны только фоны, используйте `--skip-video` вместе с `--generate-source-background`.
 - Если что-то пошло не так с сохранением результата Grok, временно включайте `--save-grok-debug-artifacts`.
 - Если stage упал, сначала смотрите в `error\output\<stage_id>\<stage_id>_error.txt`.
-- Финальные оптимизированные `.prproj` открывайте из `reports`, а не из `output`.
+- Финальные оптимизированные `.prproj` открывайте из той же папки, где лежит исходный `project_path`; `reports\temp_projects` хранит только временную batch-копию.
 - Если после оптимизации порядок sequence был изменен вручную, пересобирайте отчеты через `main_sequence_reports.py`.
 - Перед удалением старых артефактов сначала делайте dry-run cleanup и по возможности храните архивную копию.
 

@@ -15,7 +15,7 @@ run_full_grok_pipeline.bat --upload-timeout 300
    - prompt files, manifests, and other non-video artifacts will be copied to `regeneration_assets_dir`.
 5. If a stage fails, the problematic files will be moved to `error\input` and `error\output`.
 6. After the video generation phase, build Premiere sequences manually from the generated videos.
-7. Run sequence optimization and open the final optimized `.prproj` from `reports`, not from `output`.
+7. Run sequence optimization and open the final optimized `.prproj` from the same folder as the source `project_path`; `reports\temp_projects` keeps only the temporary batch working copy.
 8. If you manually adjust the optimized sequence, rebuild reports from the current sequence order with `main_sequence_reports.py`.
 
 ## Purpose
@@ -28,8 +28,9 @@ This project is used to prepare prompt files, generate background images and vid
 - `output` - temporary prompt files, manifest files, and intermediate results for the current stage.
 - `final_videos_dir` - final destination for generated `mp4` files and background images.
 - `regeneration_assets_dir` - destination for prompt files, manifests, and other non-video artifacts needed for manual editing and regeneration.
-- `reports` - final destination for optimized `.prproj` files and all sequence optimization reports.
-- `reports\temp_projects` - intermediate `.prproj` files produced inside one sequence optimization batch.
+- `reports` - final destination for sequence optimization reports, batch summaries, and temporary batch work files.
+- `reports\temp_projects` - temporary `.prproj` files produced inside one sequence optimization batch and removable by cleanup.
+- the source Premiere project folder from `project_path` - persistent location for the final optimized `.prproj`.
 - `error\input` - source images for stages that failed.
 - `error\output` - prompt files, manifests, and error reports for failed stages.
 - `.browser-profile\grok-web` - Chrome automation profile used for Grok.
@@ -302,7 +303,7 @@ flowchart LR
 
   P1 --> O1["results:\noutput/ stage artifacts\nfinal_videos_dir media\nregeneration_assets_dir non-video assets"]
   P2 --> O2["results:\n*_video_*.mp4\n*_bg_image_16x9.*\ngrok debug artifacts if enabled"]
-  P5 --> O3["reports:\noptimized JSON/TXT/XML/PRPROJ\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*"]
+  P5 --> O3["reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)"]
   P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
 ```
 
@@ -416,11 +417,13 @@ After video generation is finished, the normal process is:
 3. Review the optimized result in Premiere.
 4. If needed, manually change clip order again after optimization.
 5. Rebuild the reports from the current manual order.
-6. Keep the final result in `reports`.
+6. Keep the final optimized project beside the source Premiere project and keep the reports in `reports`.
 
 Important location rule:
 
-- `reports` is the final result for sequence optimization and reporting.
+- `reports` is the final result for sequence optimization reports and batch summaries.
+- `reports\temp_projects` is a temporary batch workspace for `.prproj` files and is safe to clean up later.
+- the persistent optimized `.prproj` lives beside `project_path`.
 - `output` is a temporary workspace area.
 - If everything finishes successfully, `output` should ideally end up empty.
 
@@ -451,11 +454,14 @@ Example config fields:
 }
 ```
 
+The final optimized `.prproj` is stored next to the source `project_path`. During the batch, the program also keeps a temporary working `.prproj` inside `reports\temp_projects`, and cleanup may remove that temporary copy later.
+
+If an older config still points `output_project_path` into `reports`, the file name is preserved, but the persistent optimized project is still written next to `project_path`.
+
 In normal work, keep one project-specific batch config next to the template, for example `project_sequence_batch_slava_26_1.json`, and re-run the batch from that file instead of editing the template each time.
 
 After a successful batch run, `reports` typically contains:
 
-- the final combined optimized `.prproj`;
 - `batch_summary.json`;
 - `batch_summary.txt`;
 - `batch_transition_recommendations.txt`;
@@ -463,7 +469,9 @@ After a successful batch run, `reports` typically contains:
 - `*_structure.txt`;
 - `*_human_profile_report.txt` if personalized reporting was requested;
 - `*_transition_recommendations.txt`;
-- `temp_projects\*.prproj` intermediate projects.
+- `temp_projects\*.prproj` temporary working projects, including the last batch working copy.
+
+The persistent final optimized `.prproj` is stored in the same folder as the source Premiere project from `project_path`.
 
 To build personalized reports automatically inside the batch, enable both:
 
@@ -730,7 +738,7 @@ run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_202603
 - If you only need backgrounds, use `--skip-video` together with `--generate-source-background`.
 - If something goes wrong with Grok result saving, temporarily enable `--save-grok-debug-artifacts`.
 - If a stage failed, first check `error\output\<stage_id>\<stage_id>_error.txt`.
-- Open final optimized `.prproj` files from `reports`, not from `output`.
+- Open final optimized `.prproj` files from the same folder as the source `project_path`; `reports\temp_projects` only holds the temporary batch working copy.
 - If you changed an optimized sequence manually, rebuild reports with `main_sequence_reports.py`.
 - Before deleting old artifacts, run cleanup in dry-run mode first and preferably keep an archive copy.
 

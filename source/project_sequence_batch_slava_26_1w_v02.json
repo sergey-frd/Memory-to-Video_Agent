@@ -11,16 +11,12 @@
   "enable_subject_series_grouping": false,
   "sequence_jobs": [
     {
-      "source_sequence_name": "Vika_26_2A _1",
-      "new_sequence_name": "Vika_26_2A _1__optimized"
+      "source_sequence_name": "Slava_26_RUe_10",
+      "new_sequence_name": "Slava_26_RUo_10"
     },
     {
-      "source_sequence_name": "Vika_26_2A _2",
-      "new_sequence_name": "Vika_26_2A _2__optimized"
-    },
-    {
-      "source_sequence_name": "Vika_26_2A _4",
-      "new_sequence_name": "Vika_26_2A _4__optimized"
+      "source_sequence_name": "Slava_26_ILe_10",
+      "new_sequence_name": "Slava_26_ILo_10"
     }
   ]
 }

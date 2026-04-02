@@ -2204,23 +2204,30 @@ def test_run_project_sequence_batch_from_config_runs_and_writes_summary() -> Non
 
     summary_json_path, summary_txt_path = run_project_sequence_batch_from_config(config_path)
 
-    assert output_project.exists()
     assert summary_json_path.exists()
     assert summary_txt_path.exists()
     summary_payload = json.loads(summary_json_path.read_text(encoding="utf-8"))
-    assert summary_payload["output_project_path"] == str(output_project)
+    source_project_copy = project_path.parent / output_project.name
+    reports_temp_project = Path(str(summary_payload["reports_output_project_path"]))
+    assert summary_payload["configured_output_project_path"] == str(output_project)
+    assert summary_payload["output_project_path"] == str(source_project_copy)
+    assert summary_payload["source_project_output_project_path"] == str(source_project_copy)
     assert summary_payload["transition_mode"] == "disabled"
     assert summary_payload["enable_auto_transitions"] is False
     assert summary_payload["enable_subject_series_grouping"] is False
     assert summary_payload["generate_personalized_report"] is False
     assert summary_payload["human_detail_txt"] is None
     assert summary_payload["batch_transition_recommendations_txt"] is None
+    assert not output_project.exists()
+    assert source_project_copy.exists()
+    assert reports_temp_project.exists()
+    assert reports_temp_project.parent.name == "temp_projects"
     assert Path(str(summary_payload["sequence_jobs"][0]["structure_report_txt"])).exists()
     assert summary_payload["sequence_jobs"][0]["transition_recommendations_txt"] is None
     assert summary_payload["sequence_jobs"][0]["human_profile_report_txt"] is None
     assert summary_payload["sequence_jobs"][0]["new_sequence_name"] == "MainProjectSequence_optimized"
 
-    selected, optimized_clips = parse_premiere_project_sequence_clips(output_project, "MainProjectSequence_optimized")
+    selected, optimized_clips = parse_premiere_project_sequence_clips(source_project_copy, "MainProjectSequence_optimized")
     assert selected == "MainProjectSequence_optimized"
     assert [clip.name for clip in optimized_clips] == [
         "park morning_20260322_100002_video_1.mp4",
@@ -2349,22 +2356,26 @@ def test_run_project_sequence_batch_from_config_recommend_only_writes_transition
     summary_payload = json.loads(summary_json_path.read_text(encoding="utf-8"))
     recommendation_path = Path(str(summary_payload["sequence_jobs"][0]["transition_recommendations_txt"]))
     batch_recommendation_path = Path(str(summary_payload["batch_transition_recommendations_txt"]))
+    source_project_copy = project_path.parent / output_project.name
     recommendation_text = recommendation_path.read_text(encoding="utf-8")
     batch_recommendation_text = batch_recommendation_path.read_text(encoding="utf-8")
     summary_text = summary_txt_path.read_text(encoding="utf-8")
 
-    assert output_project.exists()
+    assert not output_project.exists()
+    assert source_project_copy.exists()
     assert summary_payload["transition_mode"] == "recommend_only"
     assert summary_payload["enable_auto_transitions"] is False
     assert recommendation_path.exists()
     assert batch_recommendation_path.exists()
     assert "TRANSITION RECOMMENDATIONS" in recommendation_text
+    assert f"Project: {source_project_copy}" in recommendation_text
     assert "Sequence: MainProjectSequence_optimized" in recommendation_text
     assert "Cross Dissolve (Legacy)" in recommendation_text
     assert "=== MainProjectSequence_optimized ===" in batch_recommendation_text
+    assert f"Final output project: {source_project_copy}" in summary_text
     assert "Batch transition recommendations:" in summary_text
 
-    output_root_xml = ET.fromstring(gzip.decompress(output_project.read_bytes()))
+    output_root_xml = ET.fromstring(gzip.decompress(source_project_copy.read_bytes()))
     generated_transition_nodes = [
         node
         for node in output_root_xml.iter("VideoTransitionTrackItem")
@@ -2410,17 +2421,23 @@ def test_run_project_sequence_batch_from_config_moves_legacy_output_reports_into
 
     summary_payload = json.loads(summary_json_path.read_text(encoding="utf-8"))
     delivered_project_path = Path(str(summary_payload["reports_output_project_path"]))
+    source_project_copy = project_path.parent / legacy_output_project.name
     delivered_recommendation_path = Path(str(summary_payload["sequence_jobs"][0]["transition_recommendations_txt"]))
     delivered_recommendation_text = delivered_recommendation_path.read_text(encoding="utf-8")
 
     assert summary_json_path.parent == expected_final_reports_dir
     assert summary_txt_path.parent == expected_final_reports_dir
     assert Path(str(summary_payload["reports_dir"])) == expected_final_reports_dir
-    assert summary_payload["output_project_path"] == str(legacy_output_project)
+    assert summary_payload["configured_output_project_path"] == str(legacy_output_project)
+    assert summary_payload["output_project_path"] == str(source_project_copy)
+    assert summary_payload["source_project_output_project_path"] == str(source_project_copy)
+    assert not legacy_output_project.exists()
     assert delivered_project_path.exists()
-    assert delivered_project_path.parent == expected_final_reports_dir
+    assert source_project_copy.exists()
+    assert delivered_project_path.parent == expected_final_reports_dir / "temp_projects"
     assert delivered_recommendation_path.exists()
-    assert f"Project: {delivered_project_path}" in delivered_recommendation_text
+    assert f"Project: {source_project_copy}" in delivered_recommendation_text
+    assert f"Project: {delivered_project_path}" not in delivered_recommendation_text
     assert f"Project: {legacy_output_project}" not in delivered_recommendation_text
     assert not legacy_reports_dir.exists()
     assert list(settings.output_dir.iterdir()) == []

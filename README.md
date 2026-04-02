@@ -4,10 +4,10 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.04.02.03`
-- Git tag: `v2026.04.02.03`
-- Last synchronized: `2026-04-02T12:42:14+02:00`
-- Source project: `source`
+- Publication version: `2026.04.02.04`
+- Git tag: `v2026.04.02.04`
+- Last synchronized: `2026-04-02T19:08:56+02:00`
+- Source project: `img-style-ag_1`
 - Python files: `82`
 - Test files: `25`
 - Entry points: `19`
@@ -59,8 +59,8 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/project_sequence_batch_maya_26_1.json`
 - `source/project_sequence_batch_nicol_26_T2.json`
 - `source/project_sequence_batch_slava_26_1.json`
+- `source/project_sequence_batch_slava_26_1w_v02.json`
 - `source/project_sequence_batch_template.json`
-- `source/project_sequence_batch_vika_26_1A.json`
 - `source/project_sequence_batch_vika_26_2w_v01.json`
 - `source/project_sequence_batch_yura_26_1.json`
 - `source/project_structure_registry.json`
