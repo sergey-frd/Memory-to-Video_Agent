@@ -1,0 +1,30 @@
+{
+  "project_path": "E:\\Git\\video_projects\\Igor\\Proj\\Igor26_1A.prproj",
+  "prin_path": "E:\\Git\\video_projects\\Igor\\Proj\\Igor26_1A.prin",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\regeneration_assets",
+  "output_project_path": "E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\reports\\Igor26_1A_with_optimized_sequences_safe_local.prproj",
+  "reports_dir": "E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\reports",
+  "engine": "heuristic",
+  "transition_mode": "recommend_only",
+  "enable_auto_transitions": false,
+  "allow_transition_handle_trimming": false,
+  "enable_subject_series_grouping": false,
+  "sequence_jobs": [
+    {
+      "source_sequence_name": "Igor26_baby_1",
+      "new_sequence_name": "Igor26_baby_1__optimized"
+    },
+    {
+      "source_sequence_name": "Igor26_before_1",
+      "new_sequence_name": "Igor26_before_1__optimized"
+    },
+    {
+      "source_sequence_name": "Igor26_boy_1",
+      "new_sequence_name": "Igor26_boy_1__optimized"
+    },
+    {
+      "source_sequence_name": "Igor26_otrih_1",
+      "new_sequence_name": "Igor26_otrih_1__optimized"
+    }
+  ]
+}

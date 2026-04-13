@@ -1,0 +1,66 @@
+{
+  "technical_preamble": "Тема: рыбалка летом на Волге в России.\nОтдых, красота, свобода, единение с природой.\nГлавный герой уже немолодой мужик Слава.",
+  "total_duration_seconds": 15,
+  "aspect_ratio": "16:9",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\DV_Slava_1\\DV_Slava\\2026\\regeneration_assets",
+  "references": [
+    {
+      "source_file": "Я---3.jpg",
+      "tag": "@image1"
+    },
+    {
+      "source_file": "Slava_25_Volga_2.00_04_47_12.Still014.jpg",
+      "tag": "@image2"
+    },
+    {
+      "source_file": "Фото015.jpg",
+      "tag": "@image3"
+    },
+    {
+      "source_file": "IMG-20240702-WA0001.jpg",
+      "tag": "@image4"
+    },
+    {
+      "source_file": "Slava_25_Volga_2.00_00_36_12.Still003.jpg",
+      "tag": "@image5"
+    },
+    {
+      "source_file": "IMG-20240702-WA0002.jpg",
+      "tag": "@image6"
+    },
+    {
+      "source_file": "IMG-20240702-WA0000.jpg",
+      "tag": "@image7"
+    },
+    {
+      "source_file": "Slava_25_Volga_2.00_02_07_18.Still007.jpg",
+      "tag": "@image8"
+    },
+    {
+      "source_file": "27092014013.jpg",
+      "tag": "@image9"
+    }
+  ],
+  "scenes": [
+    {
+      "duration_seconds": 3,
+      "description": "Слава @image1 едет на рыбалку на Волгу @image2 на автомобиле. Предвкушая рыбалку."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Слава забрасывает удочки. @image4 Восхищается природой. @image5"
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Слава ловит рыбу. @image6 Поймал уже много рыбы. @image7"
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Слава едет на лодке, ловит рыбу. @image8 Показывает большую рыбу, которую он поймал. @image9"
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Слава очень доволен. @image3"
+    }
+  ]
+}

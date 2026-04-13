@@ -1,0 +1,20 @@
+{
+  "project_path": "E:\\Git\\video_projects\\Maya\\Proj\\Maya26_w_v01.prproj",
+  "prin_path": "E:\\Git\\video_projects\\Maya\\Proj\\Maya26_w_v01.prin",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Maya\\2026\\regeneration_assets",
+  "output_project_path": "E:\\Git\\P_h_o_t_o\\Dv_Maya\\2026\\reports\\Maya26_o_v01.prproj",
+  "reports_dir": "E:\\Git\\P_h_o_t_o\\Dv_Maya\\2026\\reports",
+  "engine": "heuristic",
+  "transition_mode": "recommend_only",
+  "enable_auto_transitions": false,
+  "allow_transition_handle_trimming": false,
+  "enable_subject_series_grouping": false,
+  "generate_personalized_report": true,
+  "human_detail_txt": "E:\\Git\\AI_PIC_DEF\\def\\Detail_1\\Maya\\Maya_detail_260328_2.txt",
+  "sequence_jobs": [
+    {
+      "source_sequence_name": "Maya26_e03",
+      "new_sequence_name": "Maya26_o03"
+    }
+  ]
+}

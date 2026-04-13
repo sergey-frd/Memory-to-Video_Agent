@@ -1,0 +1,19 @@
+{
+  "generate_video": true,
+  "video_count": 1,
+  "camera_segments": 4,
+  "motion_source": "ai",
+  "motion_model": "gpt-4.1",
+  "generate_source_background": true,
+  "save_grok_debug_artifacts": false,
+  "final_videos_dir": "E:\\Git\\P_h_o_t_o\\Dv_Kira_Slaviansk\\2026\\Gen_Vd_AI",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Kira_Slaviansk\\2026\\regeneration_assets",
+  "continue_after_failure": true,
+  "write_description": true,
+  "generate_final_frames": false,
+  "read_input_list": true,
+  "generate_music": false,
+  "use_ai_optimal_then_identity_safe_framing": true,
+  "hide_phone_in_selfie": true,
+  "prefer_loving_kindness_tone": true
+}

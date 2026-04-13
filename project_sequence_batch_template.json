@@ -1,0 +1,20 @@
+{
+  "project_path": "E:\\Git\\video_projects\\<ProjectOwner>\\Proj\\<ProjectName>_w01.prproj",
+  "translation_results_path": "E:\\Git\\video_projects\\<ProjectOwner>\\Proj\\FCP Translation Results YYYY-MM-DD HH-MM.txt",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\<AssetsOwner>\\2026\\regeneration_assets",
+  "output_project_path": "E:\\Git\\video_projects\\<ProjectOwner>\\Proj\\<ProjectName>_o01.prproj",
+  "reports_dir": "E:\\Git\\P_h_o_t_o\\<AssetsOwner>\\2026\\reports",
+  "engine": "heuristic",
+  "transition_mode": "disabled",
+  "enable_auto_transitions": false,
+  "allow_transition_handle_trimming": false,
+  "enable_subject_series_grouping": false,
+  "generate_personalized_report": false,
+  "human_detail_txt": "E:\\Git\\AI_PIC_DEF\\def\\Detail_1\\<Hero>\\<Hero>_detail.txt",
+  "sequence_jobs": [
+    {
+      "source_sequence_name": "<SequenceName>_e01",
+      "new_sequence_name": "<SequenceName>_o01"
+    }
+  ]
+}

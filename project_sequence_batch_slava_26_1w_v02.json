@@ -1,0 +1,22 @@
+{
+  "project_path": "E:\\Git\\video_projects\\Slava\\Proj\\Slava_26_1w_v02.prproj",
+  "prin_path": "E:\\Git\\video_projects\\Slava\\Proj\\Slava_26_1w_v02.prin",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\DV_Slava_1\\DV_Slava\\2026\\regeneration_assets",
+  "output_project_path": "E:\\Git\\video_projects\\Slava\\Proj\\Slava_26_1o_v02.prproj",
+  "reports_dir": "E:\\Git\\P_h_o_t_o\\DV_Slava_1\\DV_Slava\\2026\\reports",
+  "engine": "heuristic",
+  "transition_mode": "recommend_only",
+  "enable_auto_transitions": false,
+  "allow_transition_handle_trimming": false,
+  "enable_subject_series_grouping": false,
+  "sequence_jobs": [
+    {
+      "source_sequence_name": "Slava_26_RUe_10",
+      "new_sequence_name": "Slava_26_RUo_10"
+    },
+    {
+      "source_sequence_name": "Slava_26_ILe_10",
+      "new_sequence_name": "Slava_26_ILo_10"
+    }
+  ]
+}

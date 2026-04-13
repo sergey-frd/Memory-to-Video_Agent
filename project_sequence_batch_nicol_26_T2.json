@@ -1,0 +1,18 @@
+{
+  "project_path": "E:\\Git\\video_projects\\Nicol\\Proj\\Nicol_26_T2.prproj",
+  "prin_path": "E:\\Git\\video_projects\\Nicol\\Proj\\Nicol_26_T2.prin",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Nicol_1\\Dv_Nicol\\2026\\regeneration_assets",
+  "output_project_path": "E:\\Git\\P_h_o_t_o\\Dv_Nicol_1\\Dv_Nicol\\2026\\reports\\Nicol_26_T2_with_optimized_sequences.prproj",
+  "reports_dir": "E:\\Git\\P_h_o_t_o\\Dv_Nicol_1\\Dv_Nicol\\2026\\reports",
+  "engine": "heuristic",
+  "sequence_jobs": [
+    {
+      "source_sequence_name": "Nicol_26_T2_1",
+      "new_sequence_name": "T2_1__optimized"
+    },
+    {
+      "source_sequence_name": "Nicol_26_T2_2",
+      "new_sequence_name": "T2_2__optimized"
+    }
+  ]
+}
