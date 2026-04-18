@@ -45,8 +45,10 @@ def synthesize_prompt_bundle_with_openai(
     framing_mode: VideoFramingMode = VideoFramingMode.IDENTITY_SAFE,
     hide_phone_in_selfie: bool = True,
     prefer_loving_kindness_tone: bool = True,
+    hybrid_ai_optimal_percent: int = 70,
     model: str | None = None,
 ) -> PromptBundle:
+    resolved_hybrid_percent = _normalize_hybrid_ai_optimal_percent(hybrid_ai_optimal_percent)
     client = _get_client()
     payload = {
         "stage_id": stage_id,
@@ -66,6 +68,8 @@ def synthesize_prompt_bundle_with_openai(
         "framing_mode": framing_mode.value,
         "hide_phone_in_selfie": hide_phone_in_selfie,
         "prefer_loving_kindness_tone": prefer_loving_kindness_tone,
+        "hybrid_ai_optimal_percent": resolved_hybrid_percent,
+        "hybrid_identity_safe_percent": 100 - resolved_hybrid_percent,
     }
     response = client.responses.create(
         model=model or DEFAULT_PROMPT_MODEL,
@@ -76,7 +80,7 @@ def synthesize_prompt_bundle_with_openai(
             },
             {
                 "role": "user",
-                "content": [{"type": "input_text", "text": _synthesizer_prompt(payload, framing_mode=framing_mode)}],
+                "content": [{"type": "input_text", "text": _synthesizer_prompt(payload, framing_mode=framing_mode, hybrid_ai_optimal_percent=resolved_hybrid_percent)}],
             },
         ],
     )
@@ -139,6 +143,7 @@ def _synthesizer_prompt(
     payload: dict[str, object],
     *,
     framing_mode: VideoFramingMode = VideoFramingMode.IDENTITY_SAFE,
+    hybrid_ai_optimal_percent: int = 70,
 ) -> str:
     schema = (
         '{"video_prompt": string, "video_prompt_ru": string, '
@@ -153,7 +158,7 @@ def _synthesizer_prompt(
         "3. Both video prompts must describe the same scene, characters, action, mood, background, and camera motions.\n"
         "4. The prompts must be specific to the exact scene and must noticeably differ for different frames with different people or actions.\n"
         "5. Tie the chosen camera motions to the content of the scene instead of listing them mechanically.\n"
-        f"{_framing_mode_prompt_requirements(framing_mode)}"
+        f"{_framing_mode_prompt_requirements(framing_mode, hybrid_ai_optimal_percent)}"
         "9. If hide_phone_in_selfie is true and the scene analysis indicates a selfie or self-portrait, preserve the selfie-authored feel but avoid showing the phone, smartphone, photo camera, video camera, their reflections, or any visible recording device whenever plausible. Reconstruct occluded details naturally.\n"
         "10. If prefer_loving_kindness_tone is true, and only where it naturally fits the source image, gently bias the prompts toward loving-kindness, friendliness, benevolence, and warm goodwill through light, color, background, and environmental atmosphere. Keep this delicate and scene-appropriate, not sentimental or forced.\n"
         "11. final_frame_prompt must stay in Russian and describe only the resulting image and required changes relative to frame A, without describing camera motion.\n"
@@ -164,7 +169,10 @@ def _synthesizer_prompt(
     )
 
 
-def _framing_mode_prompt_requirements(framing_mode: VideoFramingMode) -> str:
+def _framing_mode_prompt_requirements(
+    framing_mode: VideoFramingMode,
+    hybrid_ai_optimal_percent: int = 70,
+) -> str:
     if framing_mode == VideoFramingMode.FACE_CLOSEUP:
         return (
             "6. If visible people or faces are present, close facial framing is allowed and may be used as the main emotional anchor of the shot.\n"
@@ -172,9 +180,11 @@ def _framing_mode_prompt_requirements(framing_mode: VideoFramingMode) -> str:
             "8. When emotion matters, the prompts may express it directly through the face as well as through gesture, pose, and environment.\n"
         )
     if framing_mode == VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE:
+        optimal_percent = _normalize_hybrid_ai_optimal_percent(hybrid_ai_optimal_percent)
+        identity_safe_percent = 100 - optimal_percent
         return (
-            "6. Build one continuous video where the first half uses the strongest cinematic framing for the source image, but do not let the face become significantly enlarged or distorted.\n"
-            "7. In the second half, transition toward identity-safe framing: medium-wide or distant observation, side / top / low / drone-like or other spatial camera plans that reduce face-drift risk.\n"
+            f"6. Build one continuous video where roughly the first {optimal_percent}% uses the strongest cinematic framing for the source image, but do not let the face become significantly enlarged or distorted.\n"
+            f"7. In the final {identity_safe_percent}%, transition toward identity-safe framing: medium-wide or distant observation, side / top / low / drone-like or other spatial camera plans that reduce face-drift risk.\n"
             "8. Make the transition feel natural and continuous, as if the camera opens the scene and settles into a safer identity-preserving distance by the end.\n"
         )
     if framing_mode == VideoFramingMode.AI_OPTIMAL:
@@ -258,6 +268,10 @@ def _normalize_nullable_string(value: object) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _normalize_hybrid_ai_optimal_percent(value: int) -> int:
+    return max(1, min(99, int(value)))
 
 
 def _get_client() -> OpenAI:

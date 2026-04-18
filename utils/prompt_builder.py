@@ -44,6 +44,7 @@ class PromptBuilder:
         framing_mode: VideoFramingMode = VideoFramingMode.IDENTITY_SAFE,
         hide_phone_in_selfie: bool = True,
         prefer_loving_kindness_tone: bool = True,
+        hybrid_ai_optimal_percent: int = 70,
     ):
         self.metadata = metadata
         self.metadata_description = metadata.format_description
@@ -53,6 +54,7 @@ class PromptBuilder:
         self.framing_mode = framing_mode
         self.hide_phone_in_selfie = hide_phone_in_selfie
         self.prefer_loving_kindness_tone = prefer_loving_kindness_tone
+        self.hybrid_ai_optimal_percent = max(1, min(99, int(hybrid_ai_optimal_percent)))
 
     def build_video_prompt(
         self,
@@ -511,13 +513,14 @@ class PromptBuilder:
                 "- \u041a\u0430\u043c\u0435\u0440\u0430 \u043c\u043e\u0436\u0435\u0442 \u0432\u044b\u0431\u0440\u0430\u0442\u044c \u0431\u043e\u043b\u0435\u0435 \u0431\u043b\u0438\u0437\u043a\u0438\u0439 \u0438 \u0438\u043d\u0442\u0438\u043c\u043d\u044b\u0439 \u043c\u0430\u0441\u0448\u0442\u0430\u0431, \u0435\u0441\u043b\u0438 \u044d\u0442\u043e \u0432\u044b\u0440\u0430\u0437\u0438\u0442\u0435\u043b\u044c\u043d\u043e \u0434\u043b\u044f \u043a\u0430\u0434\u0440\u0430."
             ]
         if self.framing_mode == VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE:
+            optimal_percent, identity_safe_percent = self._hybrid_phase_percentages()
             if self._has_visible_people():
                 return [
-                    "- \u0412 \u043f\u0435\u0440\u0432\u043e\u0439 \u043f\u043e\u043b\u043e\u0432\u0438\u043d\u0435 \u0432\u0438\u0434\u0435\u043e \u0432\u044b\u0431\u0438\u0440\u0430\u0439 \u0441\u0430\u043c\u044b\u0439 \u0441\u0438\u043b\u044c\u043d\u044b\u0439 \u043a\u0438\u043d\u0435\u043c\u0430\u0442\u043e\u0433\u0440\u0430\u0444\u0438\u0447\u043d\u044b\u0439 \u0441\u043f\u043e\u0441\u043e\u0431 \u0440\u0430\u0441\u043a\u0440\u044b\u0442\u044c \u0441\u0446\u0435\u043d\u0443, \u043d\u043e \u043d\u0435 \u0443\u0432\u0435\u043b\u0438\u0447\u0438\u0432\u0430\u0439 \u043b\u0438\u0446\u043e \u0437\u043d\u0430\u0447\u0438\u0442\u0435\u043b\u044c\u043d\u043e \u0438 \u043d\u0435 \u0434\u043e\u043f\u0443\u0441\u043a\u0430\u0439 \u0438\u0441\u043a\u0430\u0436\u0435\u043d\u0438\u044f \u043f\u0440\u043e\u043f\u043e\u0440\u0446\u0438\u0439.",
-                    "- \u0412\u043e \u0432\u0442\u043e\u0440\u043e\u0439 \u043f\u043e\u043b\u043e\u0432\u0438\u043d\u0435 \u043f\u0435\u0440\u0435\u0432\u043e\u0434\u0438 \u043a\u0430\u043c\u0435\u0440\u0443 \u0432 identity-safe \u0440\u0435\u0436\u0438\u043c: \u0431\u043e\u043b\u0435\u0435 \u0434\u0430\u043b\u044c\u043d\u0438\u0439 \u0438\u043b\u0438 \u0441\u0440\u0435\u0434\u043d\u0435-\u043e\u0431\u0449\u0438\u0439 \u043f\u043b\u0430\u043d, \u0431\u043e\u043a\u043e\u0432\u043e\u0439, \u0432\u0435\u0440\u0445\u043d\u0438\u0439, \u043d\u0438\u0436\u043d\u0438\u0439, \u0432\u043e\u0437\u0434\u0443\u0448\u043d\u044b\u0439 \u0438\u043b\u0438 \u043c\u044f\u0433\u043a\u043e \u043f\u0440\u043e\u0441\u0442\u0440\u0430\u043d\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 \u0440\u0430\u043a\u0443\u0440\u0441 \u0432\u043c\u0435\u0441\u0442\u043e \u0430\u0433\u0440\u0435\u0441\u0441\u0438\u0432\u043d\u043e\u0433\u043e \u043b\u0438\u0446\u0435\u0432\u043e\u0433\u043e \u0443\u043a\u0440\u0443\u043f\u043d\u0435\u043d\u0438\u044f.",
+                    f"- В первых {optimal_percent}% длительности видео выбирай самый сильный кинематографичный способ раскрыть сцену, но не увеличивай лицо значительно и не допускай искажения пропорций.",
+                    f"- В финальных {identity_safe_percent}% длительности плавно переводи камеру в identity-safe режим: более дальний или средне-общий план, боковой, верхний, нижний, воздушный или мягко пространственный ракурс вместо агрессивного лицевого укрупнения.",
                 ]
             return [
-                "- \u0412 \u043f\u0435\u0440\u0432\u043e\u0439 \u043f\u043e\u043b\u043e\u0432\u0438\u043d\u0435 \u0432\u0438\u0434\u0435\u043e \u043a\u0430\u043c\u0435\u0440\u0430 \u0438\u0449\u0435\u0442 \u0441\u0430\u043c\u044b\u0439 \u0441\u0438\u043b\u044c\u043d\u044b\u0439 \u043a\u0438\u043d\u0435\u043c\u0430\u0442\u043e\u0433\u0440\u0430\u0444\u0438\u0447\u043d\u044b\u0439 \u0440\u0430\u043a\u0443\u0440\u0441, \u0430 \u0432\u043e \u0432\u0442\u043e\u0440\u043e\u0439 \u043f\u043e\u043b\u043e\u0432\u0438\u043d\u0435 \u0440\u0430\u0441\u043a\u0440\u044b\u0432\u0430\u0435\u0442 \u043f\u0440\u043e\u0441\u0442\u0440\u0430\u043d\u0441\u0442\u0432\u043e \u043c\u044f\u0433\u0447\u0435 \u0438 \u0434\u0430\u043b\u044c\u0448\u0435."
+                f"- В первых {optimal_percent}% длительности камера ищет самый сильный кинематографичный ракурс, а в финальных {identity_safe_percent}% мягче и дальше раскрывает пространство."
             ]
         if self.framing_mode == VideoFramingMode.AI_OPTIMAL:
             if self._has_visible_people():
@@ -541,13 +544,14 @@ class PromptBuilder:
                 "- The camera may choose a tighter and more intimate scale when that makes the frame more expressive."
             ]
         if self.framing_mode == VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE:
+            optimal_percent, identity_safe_percent = self._hybrid_phase_percentages()
             if self._has_visible_people():
                 return [
-                    "- In the first half of the video, choose the strongest cinematic way to reveal the scene, but do not let the face become significantly enlarged or distorted.",
-                    "- In the second half, transition into identity-safe framing: medium-wide or more distant scale, side, top, low, aerial, or gently spatial angles instead of aggressive facial enlargement.",
+                    f"- In the first {optimal_percent}% of the shot, choose the strongest cinematic way to reveal the scene, but do not let the face become significantly enlarged or distorted.",
+                    f"- In the final {identity_safe_percent}% of the shot, transition into identity-safe framing: medium-wide or more distant scale, side, top, low, aerial, or gently spatial angles instead of aggressive facial enlargement.",
                 ]
             return [
-                "- Let the first half find the most cinematic framing, then let the second half open the space more gently from a safer distance."
+                f"- Let the first {optimal_percent}% find the most cinematic framing, then let the final {identity_safe_percent}% open the space more gently from a safer distance."
             ]
         if self.framing_mode == VideoFramingMode.AI_OPTIMAL:
             if self._has_visible_people():
@@ -648,6 +652,17 @@ class PromptBuilder:
             return f"The camera then intensifies focus on {action_anchor} and the feeling of {emotion_anchor} without forcing risky facial enlargement."
         return f"The camera then shifts focus to {action_anchor} and intensifies the feeling of {emotion_anchor} without forcing a large facial close-up."
 
+    def _hybrid_phase_percentages(self) -> tuple[int, int]:
+        optimal_percent = self.hybrid_ai_optimal_percent
+        return optimal_percent, 100 - optimal_percent
+
+    def _hybrid_motion_split_index(self, motions: list[str]) -> int:
+        if len(motions) <= 1:
+            return 1
+        optimal_percent, _ = self._hybrid_phase_percentages()
+        split_index = round(len(motions) * optimal_percent / 100)
+        return max(1, min(len(motions) - 1, split_index))
+
     def _hybrid_camera_section_lines_ru(
         self,
         motions: list[str],
@@ -655,23 +670,24 @@ class PromptBuilder:
         action_anchor: str,
         emotion_anchor: str,
     ) -> list[str]:
+        optimal_percent, identity_safe_percent = self._hybrid_phase_percentages()
         if len(motions) == 1:
             return [
                 (
-                    f"- {motions[0]}. \u041a\u0430\u043c\u0435\u0440\u0430 \u043d\u0430\u0447\u0438\u043d\u0430\u0435\u0442 \u0441 \u043c\u0430\u043a\u0441\u0438\u043c\u0430\u043b\u044c\u043d\u043e \u0441\u0438\u043b\u044c\u043d\u043e\u0433\u043e \u043a\u0438\u043d\u0435\u043c\u0430\u0442\u043e\u0433\u0440\u0430\u0444\u0438\u0447\u043d\u043e\u0433\u043e \u0447\u0442\u0435\u043d\u0438\u044f \u043c\u0435\u0436\u0434\u0443 {context_anchor} "
-                    f"\u0438 {action_anchor}, \u0430 \u043a \u0444\u0438\u043d\u0430\u043b\u0443 \u043c\u044f\u0433\u043a\u043e \u0443\u0432\u043e\u0434\u0438\u0442 \u043b\u0438\u0446\u043e \u043d\u0430 \u0431\u043e\u043b\u0435\u0435 \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u0443\u044e \u0434\u0438\u0441\u0442\u0430\u043d\u0446\u0438\u044e, \u0441\u043e\u0445\u0440\u0430\u043d\u044f\u044f \u0447\u0443\u0432\u0441\u0442\u0432\u043e {emotion_anchor} "
-                    "\u0447\u0435\u0440\u0435\u0437 \u0436\u0435\u0441\u0442, \u043f\u043e\u0437\u0443 \u0438 \u043f\u0440\u043e\u0441\u0442\u0440\u0430\u043d\u0441\u0442\u0432\u043e \u0432\u043c\u0435\u0441\u0442\u043e \u0430\u0433\u0440\u0435\u0441\u0441\u0438\u0432\u043d\u043e\u0433\u043e \u0443\u043a\u0440\u0443\u043f\u043d\u0435\u043d\u0438\u044f."
+                    f"- {motions[0]}. В рамках одного движения первые примерно {optimal_percent}% времени камера раскрывает {context_anchor} "
+                    f"и {action_anchor} самым сильным кинематографичным способом, а финальные {identity_safe_percent}% мягко уводят лицо на более безопасную дистанцию, "
+                    f"сохраняя чувство {emotion_anchor} через жест, позу и пространство вместо агрессивного укрупнения."
                 )
             ]
 
-        split_index = max(1, len(motions) // 2)
+        split_index = self._hybrid_motion_split_index(motions)
         lines: list[str] = []
         for segment_index, motion in enumerate(motions, start=1):
             if segment_index <= split_index:
                 if segment_index == 1:
                     description = (
-                        f"\u041f\u0435\u0440\u0432\u0430\u044f \u043f\u043e\u043b\u043e\u0432\u0438\u043d\u0430 \u0432\u0438\u0434\u0435\u043e \u0440\u0430\u0441\u043a\u0440\u044b\u0432\u0430\u0435\u0442 {context_anchor} \u0441\u0430\u043c\u044b\u043c \u0441\u0438\u043b\u044c\u043d\u044b\u043c \u043a\u0438\u043d\u0435\u043c\u0430\u0442\u043e\u0433\u0440\u0430\u0444\u0438\u0447\u043d\u044b\u043c \u0441\u043f\u043e\u0441\u043e\u0431\u043e\u043c, "
-                        "\u043d\u043e \u0431\u0435\u0437 \u0437\u043d\u0430\u0447\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0433\u043e \u0443\u043a\u0440\u0443\u043f\u043d\u0435\u043d\u0438\u044f \u043b\u0438\u0446\u0430 \u0438 \u0431\u0435\u0437 \u0438\u0441\u043a\u0430\u0436\u0435\u043d\u0438\u044f \u0435\u0433\u043e \u043f\u0440\u043e\u043f\u043e\u0440\u0446\u0438\u0439."
+                        f"Первые {optimal_percent}% длительности видео раскрывают {context_anchor} самым сильным кинематографичным способом, "
+                        "но без значительного укрупнения лица и без искажения его пропорций."
                     )
                 else:
                     description = (
@@ -681,7 +697,7 @@ class PromptBuilder:
             else:
                 if segment_index == split_index + 1:
                     description = (
-                        "\u041f\u043e\u0441\u043b\u0435 \u0441\u0435\u0440\u0435\u0434\u0438\u043d\u044b \u0432\u0438\u0434\u0435\u043e \u043f\u0435\u0440\u0435\u0432\u043e\u0434\u0438 \u043a\u0430\u043c\u0435\u0440\u0443 \u0432 identity-safe \u0440\u0435\u0436\u0438\u043c: "
+                        f"В финальные {identity_safe_percent}% времени переводи камеру в identity-safe режим: "
                         "\u0441\u0440\u0435\u0434\u043d\u0435-\u043e\u0431\u0449\u0438\u0439 \u0438\u043b\u0438 \u0431\u043e\u043b\u0435\u0435 \u0434\u0430\u043b\u044c\u043d\u0438\u0439 \u043f\u043b\u0430\u043d, \u0431\u043e\u043a\u043e\u0432\u043e\u0439, \u0432\u0435\u0440\u0445\u043d\u0438\u0439, \u043d\u0438\u0436\u043d\u0438\u0439, \u0432\u043e\u0437\u0434\u0443\u0448\u043d\u044b\u0439 "
                         "\u0438\u043b\u0438 \u043c\u044f\u0433\u043a\u0438\u0439 \u043f\u0440\u043e\u0441\u0442\u0440\u0430\u043d\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 \u0440\u0430\u043a\u0443\u0440\u0441."
                     )
@@ -700,22 +716,23 @@ class PromptBuilder:
         action_anchor: str,
         emotion_anchor: str,
     ) -> list[str]:
+        optimal_percent, identity_safe_percent = self._hybrid_phase_percentages()
         if len(motions) == 1:
             return [
                 (
-                    f"- {motions[0]}. The camera starts with the strongest cinematic reading between {context_anchor} "
-                    f"and {action_anchor}, then eases the face into a safer distance by the end while carrying {emotion_anchor} "
+                    f"- {motions[0]}. Within this single move, spend roughly the first {optimal_percent}% on the strongest cinematic reading between {context_anchor} "
+                    f"and {action_anchor}, then use the final {identity_safe_percent}% to ease the face into a safer distance while carrying {emotion_anchor} "
                     "through gesture, posture, and space instead of aggressive enlargement."
                 )
             ]
 
-        split_index = max(1, len(motions) // 2)
+        split_index = self._hybrid_motion_split_index(motions)
         lines: list[str] = []
         for segment_index, motion in enumerate(motions, start=1):
             if segment_index <= split_index:
                 if segment_index == 1:
                     description = (
-                        f"The first half of the video reveals {context_anchor} in the strongest cinematic way, "
+                        f"The first {optimal_percent}% of the video reveals {context_anchor} in the strongest cinematic way, "
                         "without significantly enlarging or distorting the face."
                     )
                 else:
@@ -726,7 +743,7 @@ class PromptBuilder:
             else:
                 if segment_index == split_index + 1:
                     description = (
-                        "After the midpoint, transition into identity-safe framing: "
+                        f"In the final {identity_safe_percent}% of the shot, transition into identity-safe framing: "
                         "medium-wide or more distant scale, side, top, low, aerial, or gently spatial angles."
                     )
                 else:

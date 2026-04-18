@@ -18,8 +18,8 @@ BatchRunner = Callable[[argparse.Namespace], Path]
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run Grok video generation for all v_prompt files in output/.")
-    parser.add_argument("--prompt-dir", type=Path, default=None, help="Directory with v_prompt files. Defaults to output/.")
+    parser = argparse.ArgumentParser(description="Run Grok video generation for all v_prompt TXT or JSON prompt artifacts in output/.")
+    parser.add_argument("--prompt-dir", type=Path, default=None, help="Directory with v_prompt TXT or JSON prompt artifacts. Defaults to output/.")
     parser.add_argument("--input-dir", type=Path, default=None, help="Directory with source images. Defaults to input/.")
     parser.add_argument("--config-file", type=Path, default=None, help="Optional generation config JSON.")
     parser.add_argument("--profile-dir", type=Path, default=Path(".browser-profile/grok-web"), help="Persistent Chrome profile for Grok Web.")
@@ -75,7 +75,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def list_prompts(prompt_dir: Path) -> list[Path]:
-    return sorted(path for path in prompt_dir.glob("*_v_prompt_*.txt") if path.is_file())
+    candidates = list(prompt_dir.glob("*_v_prompt_*.txt")) + list(prompt_dir.glob("*_v_prompt_*.json"))
+    return sorted(path for path in candidates if path.is_file())
 
 
 def derive_image_stem(prompt_path: Path) -> str:
@@ -115,7 +116,7 @@ def run_batch(args: argparse.Namespace, settings: Settings | None = None, runner
     input_dir = args.input_dir or settings.input_dir
     prompts = list_prompts(prompt_dir)
     if not prompts:
-        raise FileNotFoundError(f"No v_prompt files found in: {prompt_dir}")
+        raise FileNotFoundError(f"No v_prompt prompt artifacts found in: {prompt_dir}")
 
     session_runner: GrokWebSessionRunner | None = None
     if runner is None:

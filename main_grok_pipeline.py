@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from api.grok_video import GrokVideoRequest, generate_video_with_grok
+from utils.grok_prompt_json import extract_prompt_text_from_artifact
 
 
 def parse_args() -> argparse.Namespace:
@@ -71,11 +72,11 @@ def run_pipeline(args: argparse.Namespace) -> Path:
 
     for step in steps:
         step_index = int(step["index"])
-        video_prompt_file = Path(step["video_prompt_file"])
+        video_prompt_file = Path(step.get("video_prompt_file") or step.get("v_prompt_file"))
         if not video_prompt_file.exists():
             raise FileNotFoundError(f"Video prompt file was not found: {video_prompt_file}")
         output_video = manifest_dir / f"{stage_id}_video_{step_index}.mp4"
-        prompt_text = video_prompt_file.read_text(encoding="utf-8")
+        prompt_text = extract_prompt_text_from_artifact(video_prompt_file)
 
         saved_path = generate_video_with_grok(
             GrokVideoRequest(

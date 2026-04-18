@@ -80,8 +80,9 @@ def test_full_pipeline_processes_each_input_image_sequentially(monkeypatch, caps
         output.write_bytes(b"video")
         return [output]
 
-    def fake_remove_processed_input(image_path: Path, settings: Settings) -> None:
+    def fake_remove_processed_input(image_path: Path, settings: Settings) -> bool:
         removed_inputs.append(image_path.name)
+        return True
 
     monkeypatch.setattr(main_full_pipeline, "_run_generation", fake_run_generation)
     monkeypatch.setattr(main_full_pipeline, "write_pipeline_manifest", fake_manifest)
@@ -148,8 +149,9 @@ def test_full_pipeline_moves_failed_stage_to_error_and_continues(monkeypatch) ->
         failed_outputs.append(stage_id)
         return []
 
-    def fake_remove_processed_input(image_path: Path, settings: Settings) -> None:
+    def fake_remove_processed_input(image_path: Path, settings: Settings) -> bool:
         removed_inputs.append(image_path.name)
+        return True
 
     monkeypatch.setattr(main_full_pipeline, "_run_generation", fake_run_generation)
     monkeypatch.setattr(main_full_pipeline, "write_pipeline_manifest", fake_manifest)
@@ -170,3 +172,95 @@ def test_full_pipeline_moves_failed_stage_to_error_and_continues(monkeypatch) ->
     error_report = root / "error" / "output" / "broken_stage" / "broken_stage_error.txt"
     assert error_report.exists()
     assert "RuntimeError" in error_report.read_text(encoding="utf-8")
+
+
+def test_remove_processed_input_uses_retry_capable_remove_path(monkeypatch) -> None:
+    root = Path("test_runtime") / f"full_pipeline_{uuid4().hex}"
+    settings = _settings_for(root)
+    image_path = settings.input_dir / "frame_a.png"
+    image_path.write_bytes(b"a")
+
+    removed: list[Path] = []
+    original_exists = Path.exists
+
+    def fake_remove_path(path: Path) -> None:
+        removed.append(path)
+
+    def fake_exists(path: Path) -> bool:
+        if path == image_path:
+            return False
+        return original_exists(path)
+
+    monkeypatch.setattr(main_full_pipeline, "remove_path", fake_remove_path)
+    monkeypatch.setattr(Path, "exists", fake_exists)
+
+    assert main_full_pipeline._remove_processed_input(image_path, settings) is True
+
+    assert removed == [image_path]
+
+
+def test_remove_processed_input_ignores_files_outside_input_queue(monkeypatch) -> None:
+    root = Path("test_runtime") / f"full_pipeline_{uuid4().hex}"
+    settings = _settings_for(root)
+    external_path = root / "elsewhere" / "frame_a.png"
+    external_path.parent.mkdir(parents=True, exist_ok=True)
+    external_path.write_bytes(b"a")
+
+    called = {"value": False}
+
+    def fake_remove_path(path: Path) -> None:
+        called["value"] = True
+
+    monkeypatch.setattr(main_full_pipeline, "remove_path", fake_remove_path)
+
+    assert main_full_pipeline._remove_processed_input(external_path, settings) is True
+
+    assert called["value"] is False
+    assert external_path.exists()
+
+
+def test_full_pipeline_retries_processed_input_cleanup_after_grok_closes(monkeypatch) -> None:
+    root = Path("test_runtime") / f"full_pipeline_{uuid4().hex}"
+    settings = _settings_for(root)
+    (root / "config.json").write_text('{"read_input_list": true, "continue_after_failure": false}', encoding="utf-8")
+
+    image_path = settings.input_dir / "frame_a.png"
+    image_path.write_bytes(b"a")
+
+    cleanup_attempts: list[str] = []
+
+    monkeypatch.setattr(main_full_pipeline, "stage_identifier", lambda provided, image: f"{image.stem}_stage")
+
+    def fake_run_generation(run_args, generation_config, settings=None, **kwargs):
+        prompt_path = settings.output_dir / f"{run_args.stage_id}_v_prompt_1.json"
+        prompt_path.write_text("[]", encoding="utf-8")
+        return SimpleNamespace()
+
+    def fake_manifest(settings, stage_id, image_path, generation_config, **kwargs):
+        manifest_path = settings.output_dir / f"{stage_id}_api_pipeline_manifest.json"
+        manifest_path.write_text("manifest", encoding="utf-8")
+        return manifest_path
+
+    def fake_sync(settings, generation_config, stage_id, **kwargs):
+        return []
+
+    def fake_run_batch(run_args, settings=None, runner=None):
+        output = settings.output_dir / "frame_a_stage_video_1.mp4"
+        output.write_bytes(b"video")
+        return [output]
+
+    def fake_remove_processed_input(image_path: Path, settings: Settings) -> bool:
+        cleanup_attempts.append(image_path.name)
+        return len(cleanup_attempts) > 1
+
+    monkeypatch.setattr(main_full_pipeline, "_run_generation", fake_run_generation)
+    monkeypatch.setattr(main_full_pipeline, "write_pipeline_manifest", fake_manifest)
+    monkeypatch.setattr(main_full_pipeline, "sync_stage_non_video_assets", fake_sync)
+    monkeypatch.setattr(main_full_pipeline, "run_batch", fake_run_batch)
+    monkeypatch.setattr(main_full_pipeline, "_remove_processed_input", fake_remove_processed_input)
+    monkeypatch.setattr(main_full_pipeline, "clear_directory_contents", lambda _directory: None)
+
+    outputs = main_full_pipeline.run_full_pipeline(_args(root), settings=settings)
+
+    assert outputs == [settings.output_dir / "frame_a_stage_video_1.mp4"]
+    assert cleanup_attempts == ["frame_a.png", "frame_a.png"]

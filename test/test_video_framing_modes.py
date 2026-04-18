@@ -52,6 +52,7 @@ def test_run_generation_creates_two_prompt_variants_in_dual_framing_mode() -> No
         framing_mode = kwargs["framing_mode"]
         assert isinstance(framing_mode, VideoFramingMode)
         seen_modes.append(framing_mode)
+        assert kwargs["hybrid_ai_optimal_percent"] == 70
         return PromptBundle(
             video_prompt=f"mode={framing_mode.value}",
             video_prompt_ru=f"mode={framing_mode.value}",
@@ -316,6 +317,7 @@ def test_write_pipeline_manifest_tracks_hybrid_framing_mode() -> None:
 
     manifest = manifest_path.read_text(encoding="utf-8")
     assert '"use_ai_optimal_then_identity_safe_framing": true' in manifest
+    assert '"ai_optimal_then_identity_safe_ai_optimal_percent": 70' in manifest
     assert '"total_video_outputs": 1' in manifest
     assert '"framing_mode": "ai_optimal_then_identity_safe"' in manifest
 

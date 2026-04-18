@@ -226,7 +226,35 @@ def test_motion_selector_prompt_can_request_hybrid_ai_optimal_then_identity_safe
         video_count=1,
         camera_segments=4,
         framing_mode=VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE,
+        hybrid_ai_optimal_percent=70,
     )
 
-    assert "first half of each motion sequence should favor the strongest cinematic reading" in prompt_text
-    assert "second half should transition into identity-safe framing" in prompt_text
+    assert "first 70% of each motion sequence should favor the strongest cinematic reading" in prompt_text
+    assert "final 30% should transition into identity-safe framing" in prompt_text
+
+
+def test_motion_selector_prompt_can_request_custom_hybrid_ratio() -> None:
+    metadata = _build_metadata()
+    scene = SceneAnalysis(
+        summary="Adult portrait with one clearly visible face.",
+        people_count=1,
+        background="city street",
+        shot_type="medium shot",
+        main_action="the subject walks forward",
+        mood=["focus"],
+        relationships=[],
+    )
+
+    prompt_text = _motion_prompt(
+        metadata=metadata,
+        scene_analysis=scene,
+        video_count=1,
+        camera_segments=4,
+        framing_mode=VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE,
+        hybrid_ai_optimal_percent=50,
+    )
+
+    assert '"hybrid_ai_optimal_percent": 50' in prompt_text
+    assert '"hybrid_identity_safe_percent": 50' in prompt_text
+    assert "first 50% of each motion sequence" in prompt_text
+    assert "final 50% should transition into identity-safe framing" in prompt_text

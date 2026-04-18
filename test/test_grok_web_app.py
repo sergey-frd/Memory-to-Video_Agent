@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 from argparse import Namespace
@@ -96,6 +97,53 @@ def test_run_generation_builds_grok_config_and_calls_runner() -> None:
     assert output_path.exists()
 
 
+def test_run_generation_reads_prompt_text_from_json_artifact() -> None:
+    root = Path("test_runtime") / f"grok_web_json_{uuid4().hex}"
+    settings = _settings_for(root)
+
+    image_path = settings.input_dir / "frame_a.png"
+    image_path.write_bytes(b"img")
+    prompt_path = settings.output_dir / "frame_a_stage_v_prompt_1.json"
+    prompt_path.write_text(
+        json.dumps(
+            [
+                {
+                    "lang": "en",
+                    "prompt": "Shot 1: 0-2s. Start from @image1. Shot 2: 2-4s. Shift. Shot 3: 4-6s. Widen. Total: 6s / 3 shots / 16:9.",
+                }
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    captured = {}
+
+    def fake_runner(config) -> Path:
+        captured["config"] = config
+        config.output_path.write_bytes(b"video")
+        return config.output_path
+
+    args = Namespace(
+        image=image_path,
+        prompt=prompt_path,
+        output_video=None,
+        config_file=None,
+        profile_dir=root / ".browser-profile" / "grok-web",
+        target_url="https://grok.com/",
+        chrome_exe=None,
+        result_timeout=123.0,
+        launch_timeout=45.0,
+        upload_timeout=67.0,
+        no_submit=False,
+    )
+
+    output_path = run_generation(args, settings=settings, runner=fake_runner)
+
+    assert captured["config"].prompt_text.startswith("Shot 1: 0-2s.")
+    assert output_path == settings.output_dir / "frame_a_stage_video_1.mp4"
+
+
 def test_resolve_single_image_from_input_directory() -> None:
     root = Path("test_runtime") / f"grok_web_{uuid4().hex}"
     settings = _settings_for(root)
@@ -168,6 +216,21 @@ def test_run_generation_without_arguments_uses_latest_v_prompt_pair() -> None:
     assert config.prompt_text == "new"
     assert config.output_path == settings.output_dir / "frame_b_20260311_130000_video_1.mp4"
     assert output_path.exists()
+
+
+def test_resolve_prompt_path_can_find_json_prompt_artifacts() -> None:
+    root = Path("test_runtime") / f"grok_web_json_prompt_{uuid4().hex}"
+    settings = _settings_for(root)
+
+    image_path = settings.input_dir / "frame_a.png"
+    image_path.write_bytes(b"img")
+    prompt_path = settings.output_dir / "frame_a_20260311_120000_v_prompt_1.json"
+    prompt_path.write_text(
+        json.dumps([{"lang": "en", "prompt": "Shot 1: 0-2s. @image1. Shot 2: 2-4s. Shot 3: 4-6s. Total: 6s / 3 shots / 16:9."}]),
+        encoding="utf-8",
+    )
+
+    assert resolve_prompt_path(None, image_path, settings) == prompt_path
 
 
 def test_run_generation_creates_background_image_before_video_when_enabled(monkeypatch) -> None:

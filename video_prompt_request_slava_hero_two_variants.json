@@ -1,0 +1,79 @@
+{
+  "technical_preamble": "Technical Preamble:\nТема: рыбалка летом в России.\nОтдых, красота, свобода, единение с природой.\nГлавный герой уже немолодой мужик Герой видео.\nНе использовать имя Слава в итоговом prompt. Использовать только neutral hero, the video hero, the man, the older man.\nНе использовать название Волга в итоговом prompt. Использовать только river, big river, Russian river.\nВ первой сцене герой находится в Израиле и думает о России и рыбалке.",
+  "total_duration_seconds": 15,
+  "max_prompt_chars": 2500,
+  "aspect_ratio": "16:9",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\DV_Slava_1\\DV_Slava\\2026\\regeneration_assets",
+  "references": [
+    {
+      "source_file": "IMG-20210321-WA0025-spr-Enhanced.png",
+      "tag": "@image1"
+    },
+    {
+      "source_file": "Slava_25_Volga_3.00_00_22_20.Still001.jpg",
+      "tag": "@image2"
+    },
+    {
+      "source_file": "Slava_25_Volga_3.00_00_11_00.Still008.jpg",
+      "tag": "@image3"
+    },
+    {
+      "source_file": "Slava_25_Volga_3.00_00_20_15.Still005.jpg",
+      "tag": "@image4"
+    },
+    {
+      "source_file": "Slava_25_Volga_2.00_01_19_04.Still004.jpg",
+      "tag": "@image5"
+    },
+    {
+      "source_file": "Slava_25_Volga_2.00_02_20_02.Still001.jpg",
+      "tag": "@image6"
+    },
+    {
+      "source_file": "IMG-20210322-WA0004.jpg",
+      "tag": "@image7"
+    },
+    {
+      "source_file": "Slava_25_Volga_2.00_03_06_07.Still012.jpg",
+      "tag": "@image8"
+    },
+    {
+      "source_file": "Slava_25_Volga_2.00_00_00_00.Still002.jpg",
+      "tag": "@image9"
+    }
+  ],
+  "scenes": [
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео @image1, находясь в Израиле, думает о России @image9 и о рыбалке @image2."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео думает о рыбе @image3. Плывет на лодке @image4."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео любуется красивым пейзажем вокруг @image5."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео ловит рыбу @image6."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео держит рыбу в руках @image7. Чистит рыбу @image8."
+    }
+  ],
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1",
+      "instruction": "Create the most likely, most suitable, and most coherent cinematic interpretation. Keep the story grounded, emotionally clear, realistic, and smooth. Build a warm summer memory arc from Israel to imagined Russian fishing scenes with natural transitions and strong continuity."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2",
+      "instruction": "Create a fully distinct alternative interpretation. Use a more associative, dreamlike, and contrast-driven montage structure with clearly different camera logic, transitions, and emotional pacing. Keep the same story facts, timings, and scene order, but make the visual concept substantially different from Variant 1."
+    }
+  ]
+}

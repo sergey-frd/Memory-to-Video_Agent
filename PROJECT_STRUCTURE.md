@@ -29,8 +29,8 @@
 | --- | --- | --- | --- |
 | Конфигурация и пути | `config.py`, `config.json`, `config_BASE.json`, `config_*.json` | Описание флагов, валидация, canonical paths | `GenerationConfig`, `Settings` |
 | Анализ изображения и сцены | `utils/image_analysis.py`, `api/openai_scene.py`, `models/scene_analysis.py`, `main_scene.py` | Извлечение визуальных признаков и scene payload | `*_scene_analysis.json`, scene summary |
-| Синтез prompts | `utils/prompt_builder.py`, `api/openai_prompt_synthesizer.py`, `api/openai_motion_selector.py`, `utils/camera_movements.py` | Формирование video/background/final-frame/music prompts и motion selection | `*_v_prompt_*.txt`, `*_bg_prompt.txt`, `*_assoc_bg_prompt.txt`, `*_final_frame_prompt_*.txt`, `*_m_prompt.txt` |
-| Компоновщик многосценных video prompts | `main_video_prompt_composer.py`, `api/openai_video_prompt_composer.py`, `utils/video_prompt_composer.py`, `services/Seedance_2.0_Director.md` | Сборка одного EN/RU prompt и Seedance JSON prompt по сценам, `@imageN` ссылкам и stage-описаниям из `regeneration_assets_dir` | `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt`, `Gen_Video_Seedance_<ts>.json` |
+| Синтез prompts | `utils/prompt_builder.py`, `utils/grok_prompt_json.py`, `api/openai_prompt_synthesizer.py`, `api/openai_motion_selector.py`, `utils/camera_movements.py` | Формирование video/background/final-frame/music prompts, Grok multiscene JSON prompts и motion selection | `*_v_prompt_*.txt`, `*_v_prompt_*.json`, `*_bg_prompt.txt`, `*_assoc_bg_prompt.txt`, `*_final_frame_prompt_*.txt`, `*_m_prompt.txt` |
+| Компоновщик многосценных video prompts | `main_video_prompt_composer.py`, `api/openai_video_prompt_composer.py`, `utils/video_prompt_composer.py`, `services/Seedance_2.0_Director.md` | Сборка одного EN/RU prompt, Seedance EN JSON и Seedance RU control JSON по сценам, `@imageN` ссылкам и stage-описаниям из `regeneration_assets_dir`, включая несколько scenario variants | `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt`, `Gen_Video_Seedance_<VariantId>_<ts>.json`, `Gen_Video_Seedance_RU_<VariantId>_<ts>.json` |
 | Основной generation pipeline | `main.py` | Склеивает image analysis, scene analysis, motion, prompt generation, optional final frames | полный набор stage-артефактов в `output/` |
 | API final-frame pipeline | `main_desktop_pipeline.py` | Многокадровый pipeline с manifest и синхронизацией не-видео артефактов | `*_api_pipeline_manifest.json`, final-frame outputs |
 | Grok single-stage runtime | `api/grok_web.py`, `main_grok_web.py` | Генерация background image и/или video для одной prompt-пары | `*_bg_image_16x9.png`, `*_video_*.mp4` |
@@ -55,7 +55,7 @@
 
 ### 3.2 Grok-runtime поток
 
-1. `main_grok_web.py` берет исходное изображение и `*_v_prompt_*.txt`.
+1. `main_grok_web.py` берет исходное изображение и `*_v_prompt_*.txt` или `*_v_prompt_*.json`.
 2. При включенном `generate_source_background` сначала строится background image.
 3. Затем Grok генерирует видео.
 4. `utils/project_delivery.py` копирует медиа в `final_videos_dir`.
@@ -82,11 +82,11 @@
 
 ### 3.5 Multi-scene prompt-composer поток
 
-1. `main_video_prompt_composer.py` читает JSON-запрос с общей темой, длительностью, аспектом, списком reference-файлов и сценами по порядку.
+1. `main_video_prompt_composer.py` читает JSON-запрос с общей темой, длительностью, аспектом, лимитом длины, списком reference-файлов, сценами по порядку и, при необходимости, несколькими `scenario_variants`.
 2. `utils/video_prompt_composer.py` находит последние stage-папки в `regeneration_assets_dir`, извлекает `description` и обе версии scene-analysis.
 3. `api/openai_video_prompt_composer.py` строит один EN prompt и один RU prompt с явными `Shot N:` для всех сцен.
 4. При включенном `--seedance-json` тот же контекст пропускается через требования `services/Seedance_2.0_Director.md`.
-5. Итоги сохраняются как `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt` и, при необходимости, `Gen_Video_Seedance_<ts>.json`.
+5. Итоги сохраняются как `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt` и, при необходимости, набор variant-aware файлов `Gen_Video_Seedance_<VariantId>_<ts>.json` вместе с `Gen_Video_Seedance_RU_<VariantId>_<ts>.json` для ручного контроля.
 
 ### 3.5 Карта запуска: batch -> программа -> параметры
 
@@ -141,7 +141,9 @@ flowchart LR
 - Одновременно можно включать только один framing-режим:
   - `prefer_face_closeups`
   - `use_ai_optimal_framing`
+  - `use_ai_optimal_then_identity_safe_framing`
   - `generate_dual_framing_videos`
+- `ai_optimal_then_identity_safe_ai_optimal_percent` не включает новый режим, а только задает пропорцию hybrid-видео; по умолчанию `70 / 30`.
 
 ### 4.2 Артефактные инварианты
 

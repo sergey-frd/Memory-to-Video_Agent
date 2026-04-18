@@ -142,15 +142,16 @@ Behavior:
 - if `generate_video = false` and `generate_source_background = true`, the pipeline generates only background images;
 - if `generate_video = false` and `generate_source_background = false`, the stage fails because there is nothing to generate.
 
-When visible people are present, `*_v_prompt_*.txt` and `*_v_prm_ru_*.txt` now prefer identity-safe camera language: more distant or medium-wide framing, side / top / low / drone-like angles, and less aggressive facial enlargement. The goal is to reduce face drift in generated videos.
+When visible people are present, `*_v_prompt_*.(txt|json)` and `*_v_prm_ru_*.(txt|json)` now prefer identity-safe camera language: more distant or medium-wide framing, side / top / low / drone-like angles, and less aggressive facial enlargement. The goal is to reduce face drift in generated videos.
 
-This identity-safe behavior is now the default, but it is configurable through five optional JSON flags:
+This identity-safe behavior is now the default, but it is configurable through six framing-mode flags plus one ratio key:
 
 ```json
 {
   "prefer_face_closeups": false,
   "use_ai_optimal_framing": false,
   "use_ai_optimal_then_identity_safe_framing": false,
+  "ai_optimal_then_identity_safe_ai_optimal_percent": 70,
   "generate_dual_framing_videos": false,
   "generate_identity_safe_closeup_videos": false,
   "generate_triple_framing_videos": false
@@ -161,7 +162,8 @@ Framing mode rules:
 - if all six flags are `false`, the pipeline keeps the default identity-safe framing and tries to avoid aggressive face enlargement;
 - if `prefer_face_closeups = true`, close facial framing may be preferred and the video prompt may move into a tighter portrait scale;
 - if `use_ai_optimal_framing = true`, the AI chooses the most effective cinematic framing for the source image without letting the face become significantly enlarged or distorted;
-- if `use_ai_optimal_then_identity_safe_framing = true`, one video is generated from one source image, but inside that single video the first half uses AI-optimal framing and the second half transitions into identity-safe framing from a safer distance;
+- if `use_ai_optimal_then_identity_safe_framing = true`, one video is generated from one source image, but inside that single video the first `ai_optimal_then_identity_safe_ai_optimal_percent` percent uses AI-optimal framing and the remaining percent transitions into identity-safe framing from a safer distance;
+- if `ai_optimal_then_identity_safe_ai_optimal_percent` is omitted, the default ratio is `70 / 30`; for example, `50` means `50%` AI-optimal and `50%` identity-safe.
 - if `generate_dual_framing_videos = true`, the pipeline builds two branches from the same source frame: one identity-safe branch and one AI-optimal branch.
 - if `generate_identity_safe_closeup_videos = true`, the pipeline builds two branches from the same source frame: one identity-safe branch and one face-closeup branch.
 - if `generate_triple_framing_videos = true`, the pipeline builds three branches from the same source frame: identity-safe, face-closeup, and AI-optimal.
@@ -170,7 +172,41 @@ Dual-mode output count:
 - with `video_count = 1`, dual mode produces `2` videos;
 - with `video_count = N`, dual mode produces `2 x N` videos.
 
-Only one of these five framing flags can be enabled at a time.
+Only one of these six framing flags can be enabled at a time. The percentage key is not a separate mode flag; it only refines the hybrid mode.
+
+### `generate_grok_multiscene_json_prompt`
+
+Controls a special Grok prompt mode where the usual `*_v_prompt_*.txt` file is replaced by a JSON prompt artifact.
+
+In `config.json`:
+
+```json
+{
+  "generate_grok_multiscene_json_prompt": true,
+  "grok_multiscene_prompt_size": 2000
+}
+```
+
+Behavior:
+- the pipeline writes `*_v_prompt_*.json` in English and `*_v_prm_ru_*.json` in Russian instead of TXT prompt files;
+- each JSON file is a one-item array with a `prompt` field, similar in spirit to `Gen_Video_Seedance`;
+- Grok reads the English `prompt` text from that JSON automatically, so batch execution still works through the normal Grok runners;
+- the prompt is treated as a compact three-shot video plan built from one input image, where `@image1` is the input image itself.
+
+Current fixed layout:
+- `Shot 1`, `0-2s`: strongest current AI-optimal cinematic interpretation;
+- `Shot 2`, `2-4s`: alternative AI-optimal interpretation with a clearly different camera solution;
+- `Shot 3`, `4-6s`: safer distance / angle view with wider spatial reveal.
+
+Current limits:
+- total duration is fixed at `6s`;
+- aspect ratio is fixed at `16:9`;
+- the English prompt is validated against the configured `grok_multiscene_prompt_size` in characters, and the word budget is derived automatically as approximately `size / 5`.
+
+Prompt-size parameter:
+- `grok_multiscene_prompt_size` — default `1000`, which gives about `200` words;
+- `2000` gives about `400` words and allows a more detailed JSON video prompt for Grok;
+- the builder still keeps the prompt concise, but may preserve more scene detail when the size is increased.
 
 When to use `--skip-video`:
 - when you only need background images;
@@ -250,6 +286,8 @@ When to enable it:
 All current `GenerationConfig` fields:
 
 - `generate_video` — default `true`; generate video prompts and run the video stage.
+- `generate_grok_multiscene_json_prompt` — default `false`; write Grok-ready EN/RU JSON prompt artifacts instead of TXT video prompt files, using a fixed three-shot `6s` layout built from one input image.
+- `grok_multiscene_prompt_size` — default `1000`; maximum prompt size for Grok multiscene JSON mode in approximate characters. The word budget is derived automatically, for example `1000 -> 200 words`, `2000 -> 400 words`.
 - `video_count` — default `2`; how many videos to build from one source frame for each active framing mode.
 - `camera_segments` — default `1`; how many motion segments are planned inside one video prompt.
 - `motion_source` — default `table`; choose camera motions from the local table or from AI (`ai`).
@@ -265,7 +303,8 @@ All current `GenerationConfig` fields:
 - `generate_music` — default `false`; generate a music prompt after the last processed image.
 - `prefer_face_closeups` — default `false`; allow and prefer closer facial framing when that matches the source image.
 - `use_ai_optimal_framing` — default `false`; let AI choose the strongest cinematic framing, but do not significantly enlarge or distort the face.
-- `use_ai_optimal_then_identity_safe_framing` — default `false`; generate one video where the first half uses AI-optimal framing and the second half transitions into identity-safe distance / angles.
+- `use_ai_optimal_then_identity_safe_framing` — default `false`; generate one video where the first part uses AI-optimal framing and the remaining part transitions into identity-safe distance / angles.
+- `ai_optimal_then_identity_safe_ai_optimal_percent` — default `70`; only for `use_ai_optimal_then_identity_safe_framing = true`; how much of the video duration is reserved for the AI-optimal part. Valid range: `1..99`. The identity-safe remainder is calculated automatically as `100 - value`.
 - `generate_dual_framing_videos` — default `false`; generate both identity-safe and AI-optimal framing branches from the same source frame.
 - `generate_identity_safe_closeup_videos` — default `false`; generate both identity-safe and face-closeup framing branches from the same source frame.
 - `generate_triple_framing_videos` — default `false`; generate identity-safe, face-closeup, and AI-optimal framing branches from the same source frame.
@@ -758,6 +797,8 @@ Use `main_video_prompt_composer.py` when you already have `regeneration_assets` 
 Input contract:
 
 - JSON request with `technical_preamble`, `total_duration_seconds`, `aspect_ratio`, `regeneration_assets_dir`, `references`, and ordered `scenes`.
+- Optional `max_prompt_chars` controls the prompt length limit; default is `2000`.
+- Optional `scenario_variants` lets one scenario produce multiple alternative JSON generation tasks from the same scene list.
 - Each reference item maps a source file to a stable `@imageN` tag.
 - Each scene contains `duration_seconds` and a short scene description that may reference one or more `@imageN` tags.
 
@@ -766,12 +807,25 @@ Outputs in `regeneration_assets_dir`:
 - `Gen_Video_<timestamp>.txt` - English prompt.
 - `Gen_Video_RU_<timestamp>.txt` - Russian translation.
 - `Gen_Video_Seedance_<timestamp>.json` - Seedance 2.0 JSON prompt when `--seedance-json` is enabled.
+- `Gen_Video_Seedance_RU_<timestamp>.json` - Russian control JSON for manual review of the same Seedance prompt.
+- `Gen_Video_Seedance_<VariantId>_<timestamp>.json` and `Gen_Video_Seedance_RU_<VariantId>_<timestamp>.json` - per-variant outputs when `scenario_variants` contains more than one scenario branch.
 
 Typical command:
 
 ```powershell
 .\.venv\Scripts\python.exe -u .\main_video_prompt_composer.py --request-file .\video_prompt_request_slava_volga_example.json --seedance-json
 ```
+
+Seedance JSON only:
+
+```powershell
+.\.venv\Scripts\python.exe -u .\main_video_prompt_composer.py --request-file .\video_prompt_request_slava_volga_example.json --seedance-json --seedance-json-only
+```
+
+Variant rule:
+
+- `Variant_1` should be the most likely, most suitable, and most coherent interpretation.
+- `Variant_2` should be a fully distinct alternative interpretation based on the same scenario facts.
 
 Seedance notes:
 

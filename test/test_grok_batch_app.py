@@ -1,4 +1,5 @@
 from argparse import Namespace
+import json
 from pathlib import Path
 from uuid import uuid4
 
@@ -30,6 +31,47 @@ def test_resolve_image_for_prompt_matches_input_file() -> None:
 
     resolved = resolve_image_for_prompt(prompt_path, settings.input_dir)
     assert resolved == image_path
+
+
+def test_run_batch_accepts_json_prompt_artifacts() -> None:
+    root = Path("test_runtime") / f"grok_batch_json_{uuid4().hex}"
+    settings = _settings_for(root)
+
+    image_path = settings.input_dir / "frame_a.png"
+    image_path.write_bytes(b"a")
+    prompt_path = settings.output_dir / "frame_a_20260311_081437_v_prompt_1.json"
+    prompt_path.write_text(
+        json.dumps([{"lang": "en", "prompt": "Shot 1: 0-2s. @image1. Shot 2: 2-4s. Shot 3: 4-6s. Total: 6s / 3 shots / 16:9."}]),
+        encoding="utf-8",
+    )
+
+    observed_prompts: list[Path] = []
+
+    def fake_runner(run_args: Namespace) -> Path:
+        observed_prompts.append(run_args.prompt)
+        run_args.output_video.write_bytes(b"video")
+        return run_args.output_video
+
+    args = Namespace(
+        prompt_dir=settings.output_dir,
+        input_dir=settings.input_dir,
+        config_file=None,
+        profile_dir=root / ".browser-profile" / "grok-web",
+        target_url="https://grok.com/imagine",
+        chrome_exe=None,
+        result_timeout=600.0,
+        launch_timeout=60.0,
+        upload_timeout=180.0,
+        generate_source_background=None,
+        no_submit=False,
+        skip_existing=False,
+        keep_workdirs=True,
+    )
+
+    outputs = run_batch(args, settings=settings, runner=fake_runner)
+
+    assert outputs == [settings.output_dir / "frame_a_20260311_081437_video_1.mp4"]
+    assert observed_prompts == [prompt_path]
 
 
 def test_run_batch_processes_all_prompts() -> None:

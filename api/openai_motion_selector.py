@@ -30,8 +30,10 @@ def select_motion_sequences_with_openai(
     video_count: int,
     camera_segments: int,
     framing_mode: VideoFramingMode = VideoFramingMode.IDENTITY_SAFE,
+    hybrid_ai_optimal_percent: int = 70,
     model: str | None = None,
 ) -> list[list[str]]:
+    resolved_hybrid_percent = _normalize_hybrid_ai_optimal_percent(hybrid_ai_optimal_percent)
     client = _get_client()
     response = client.responses.create(
         model=model or DEFAULT_MOTION_MODEL,
@@ -54,7 +56,7 @@ def select_motion_sequences_with_openai(
             },
             {
                 "role": "system",
-                "content": [{"type": "input_text", "text": _system_prompt_override(framing_mode)}],
+                "content": [{"type": "input_text", "text": _system_prompt_override(framing_mode, resolved_hybrid_percent)}],
             },
             {
                 "role": "user",
@@ -67,6 +69,7 @@ def select_motion_sequences_with_openai(
                             video_count=video_count,
                             camera_segments=camera_segments,
                             framing_mode=framing_mode,
+                            hybrid_ai_optimal_percent=resolved_hybrid_percent,
                         ),
                     }
                 ],
@@ -87,7 +90,9 @@ def _motion_prompt(
     video_count: int,
     camera_segments: int,
     framing_mode: VideoFramingMode = VideoFramingMode.IDENTITY_SAFE,
+    hybrid_ai_optimal_percent: int = 70,
 ) -> str:
+    resolved_hybrid_percent = _normalize_hybrid_ai_optimal_percent(hybrid_ai_optimal_percent)
     payload = {
         "format_description": metadata.format_description,
         "scene_summary": scene_analysis.summary,
@@ -101,9 +106,11 @@ def _motion_prompt(
         "video_count": video_count,
         "camera_segments": camera_segments,
         "framing_mode": framing_mode.value,
+        "hybrid_ai_optimal_percent": resolved_hybrid_percent,
+        "hybrid_identity_safe_percent": 100 - resolved_hybrid_percent,
     }
     if framing_mode != VideoFramingMode.IDENTITY_SAFE:
-        return _motion_prompt_for_mode(payload, framing_mode)
+        return _motion_prompt_for_mode(payload, framing_mode, resolved_hybrid_percent)
     return (
         "На основе описания кадра выбери движения камеры для каждого видеопромпта. "
         "Верни строгий JSON формата "
@@ -122,16 +129,18 @@ def _motion_prompt(
     )
 
 
-def _system_prompt_override(framing_mode: VideoFramingMode) -> str:
+def _system_prompt_override(framing_mode: VideoFramingMode, hybrid_ai_optimal_percent: int = 70) -> str:
     if framing_mode == VideoFramingMode.FACE_CLOSEUP:
         return (
             "Override any default identity-safe bias. "
             "Close facial framing is allowed and may be preferred when it is the strongest cinematic reading of the image."
         )
     if framing_mode == VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE:
+        identity_safe_percent = 100 - _normalize_hybrid_ai_optimal_percent(hybrid_ai_optimal_percent)
         return (
-            "The first half of the shot should use the strongest cinematic framing for the image without significantly enlarging or distorting the face. "
-            "The second half should transition into identity-safe framing from a safer distance or more oblique spatial angle."
+            f"The first {_normalize_hybrid_ai_optimal_percent(hybrid_ai_optimal_percent)}% of the shot should use the strongest cinematic framing for the image "
+            "without significantly enlarging or distorting the face. "
+            f"The final {identity_safe_percent}% should transition into identity-safe framing from a safer distance or more oblique spatial angle."
         )
     if framing_mode == VideoFramingMode.AI_OPTIMAL:
         return (
@@ -141,7 +150,11 @@ def _system_prompt_override(framing_mode: VideoFramingMode) -> str:
     return SYSTEM_PROMPT
 
 
-def _motion_prompt_for_mode(payload: dict[str, object], framing_mode: VideoFramingMode) -> str:
+def _motion_prompt_for_mode(
+    payload: dict[str, object],
+    framing_mode: VideoFramingMode,
+    hybrid_ai_optimal_percent: int = 70,
+) -> str:
     return (
         "Based on the frame analysis, choose camera motions for each video prompt. "
         'Return strict JSON with schema {"sequences":[{"video_index":1,"motions":["..."]}]}. '
@@ -153,12 +166,15 @@ def _motion_prompt_for_mode(payload: dict[str, object], framing_mode: VideoFrami
         "4. If there are multiple videos, each sequence must reveal the scene in a meaningfully different way.\n"
         "5. The first motion of each following video should feel like a natural continuation of the last motion from the previous video, without a jarring visual reset.\n"
         "6. Do not use motion-table placeholders or generic labels like 'AI-motion N'.\n"
-        f"{_framing_mode_requirements(framing_mode)}"
+        f"{_framing_mode_requirements(framing_mode, hybrid_ai_optimal_percent)}"
         f"Input JSON:\n{json.dumps(payload, ensure_ascii=False, indent=2)}"
     )
 
 
-def _framing_mode_requirements(framing_mode: VideoFramingMode) -> str:
+def _framing_mode_requirements(
+    framing_mode: VideoFramingMode,
+    hybrid_ai_optimal_percent: int = 70,
+) -> str:
     if framing_mode == VideoFramingMode.FACE_CLOSEUP:
         return (
             "7. If people are visible, close facial framing is allowed and may be preferred when it strengthens the shot.\n"
@@ -166,9 +182,11 @@ def _framing_mode_requirements(framing_mode: VideoFramingMode) -> str:
             "9. Let the face carry emotion directly when that is the strongest reading of the source image.\n"
         )
     if framing_mode == VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE:
+        optimal_percent = _normalize_hybrid_ai_optimal_percent(hybrid_ai_optimal_percent)
+        identity_safe_percent = 100 - optimal_percent
         return (
-            "7. The first half of each motion sequence should favor the strongest cinematic reading of the image, but without significantly enlarging or distorting the face.\n"
-            "8. The second half should transition into identity-safe framing: medium-wide or distant scale, side / top / low / drone-like or other spatially safer angles.\n"
+            f"7. Roughly the first {optimal_percent}% of each motion sequence should favor the strongest cinematic reading of the image, but without significantly enlarging or distorting the face.\n"
+            f"8. The final {identity_safe_percent}% should transition into identity-safe framing: medium-wide or distant scale, side / top / low / drone-like or other spatially safer angles.\n"
             "9. Make the transition feel smooth and intentional, ending with the face at a safer distance and lower drift risk.\n"
         )
     return (
@@ -228,6 +246,10 @@ def _extract_json_object(raw_text: str) -> dict[str, object]:
         if isinstance(payload, dict):
             return payload
     raise ValueError("Motion selector response does not contain a valid JSON object.")
+
+
+def _normalize_hybrid_ai_optimal_percent(value: int) -> int:
+    return max(1, min(99, int(value)))
 
 
 def _get_client() -> OpenAI:

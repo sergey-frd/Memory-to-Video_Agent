@@ -1,0 +1,92 @@
+{
+  // Рабочий расширенный образец для Nicole.
+  // Этот файл документирующий: он показывает все доступные параметры и пояснения к ним.
+  // Для запуска используется обычный JSON без комментариев: config_Nicol.json.
+
+  // Включает создание финальных видеофайлов.
+  "generate_video": true,
+
+  // Включает новый JSON-формат prompt для Grok:
+  // на выходе создаются *_v_prompt_1.json и *_v_prm_ru_1.json.
+  "generate_grok_multiscene_json_prompt": true,
+
+  // Сколько видео-веток строить на один framing-mode.
+  // При hybrid-режиме обычно оставляем 1.
+  "video_count": 1,
+
+  // Сколько смысловых сегментов движения просить у motion selector.
+  "camera_segments": 4,
+
+  // Источник выбора движения:
+  // "table" = из заранее заданных таблиц,
+  // "ai" = выбирает AI-модель.
+  "motion_source": "ai",
+
+  // Текстовая модель для выбора движения, если motion_source = "ai".
+  "motion_model": "gpt-4.1",
+
+  // Создавать фон/подложку 16:9 через Grok перед генерацией видео.
+  "generate_source_background": true,
+
+  // Сохранять ли debug-артефакты Grok в output/.
+  // Обычно false, чтобы не засорять рабочие папки.
+  "save_grok_debug_artifacts": false,
+
+  // Куда складывать готовые финальные видео.
+  "final_videos_dir": "E:\\Git\\P_h_o_t_o\\Dv_Nicol_1\\Dv_Nicol\\2026\\Gen_Vd_AI",
+
+  // Куда складывать stage-артефакты regeneration_assets.
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Nicol_1\\Dv_Nicol\\2026\\regeneration_assets",
+
+  // Продолжать ли batch после ошибки на одном из входных файлов.
+  "continue_after_failure": true,
+
+  // Записывать ли description и scene_analysis для каждого stage.
+  "write_description": true,
+
+  // Генерировать ли final frame через image API.
+  // Для текущего Grok-пайплайна Nicole оставляем false.
+  "generate_final_frames": false,
+
+  // Читать ли все входные изображения списком из папки input.
+  "read_input_list": true,
+
+  // Создавать ли музыкальный prompt.
+  "generate_music": false,
+
+  // Ниже идут взаимоисключающие режимы кадрирования.
+  // Ровно один из них может быть true, либо все false для identity-safe по умолчанию.
+
+  // Предпочитать более близкие портретные планы.
+  "prefer_face_closeups": false,
+
+  // Дать AI выбрать один лучший кадр без hybrid-разбиения.
+  "use_ai_optimal_framing": false,
+
+  // Hybrid-режим: одно видео состоит из двух частей.
+  // Сначала AI-optimal, потом identity-safe/дистанция-ракурс.
+  "use_ai_optimal_then_identity_safe_framing": true,
+
+  // Сколько процентов длительности отдаём AI-optimal части.
+  // Остаток автоматически идёт на identity-safe часть.
+  "ai_optimal_then_identity_safe_ai_optimal_percent": 70,
+
+  // Максимальный размер JSON prompt для Grok примерно в символах.
+  // Производное ограничение по словам считается автоматически: size / 5.
+  "grok_multiscene_prompt_size": 2000,
+
+  // Две отдельные видео-ветки: identity-safe и ai-optimal.
+  "generate_dual_framing_videos": false,
+
+  // Две отдельные видео-ветки: identity-safe и face-closeup.
+  "generate_identity_safe_closeup_videos": false,
+
+  // Три отдельные видео-ветки: identity-safe, face-closeup и ai-optimal.
+  "generate_triple_framing_videos": false,
+
+  // При selfie стараться скрывать телефон, если он мешает кадру.
+  "hide_phone_in_selfie": true,
+
+  // Мягко сдвигать тональность prompt в сторону тёплой, доброжелательной атмосферы.
+  "prefer_loving_kindness_tone": true
+}

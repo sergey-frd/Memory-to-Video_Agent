@@ -29,6 +29,7 @@ class ConfigValidationError(ValueError):
 
 CONFIG_BOOL_FIELDS = {
     "generate_video",
+    "generate_grok_multiscene_json_prompt",
     "generate_source_background",
     "save_grok_debug_artifacts",
     "continue_after_failure",
@@ -48,6 +49,8 @@ CONFIG_BOOL_FIELDS = {
 CONFIG_INT_FIELDS = {
     "video_count",
     "camera_segments",
+    "ai_optimal_then_identity_safe_ai_optimal_percent",
+    "grok_multiscene_prompt_size",
 }
 CONFIG_STR_FIELDS = {
     "motion_model",
@@ -99,6 +102,15 @@ def _validate_config_data(data: Dict[str, Any], path: Path | None) -> None:
             raise ConfigValidationError(
                 f"Config key '{field_name}' in {location} must be >= 1."
             )
+        if field_name == "ai_optimal_then_identity_safe_ai_optimal_percent" and value > 99:
+            raise ConfigValidationError(
+                "Config key 'ai_optimal_then_identity_safe_ai_optimal_percent' "
+                f"in {location} must be between 1 and 99."
+            )
+        if field_name == "grok_multiscene_prompt_size" and value < 200:
+            raise ConfigValidationError(
+                f"Config key 'grok_multiscene_prompt_size' in {location} must be >= 200."
+            )
 
     for field_name in CONFIG_STR_FIELDS:
         if field_name not in data:
@@ -141,6 +153,7 @@ def _validate_config_data(data: Dict[str, Any], path: Path | None) -> None:
 @dataclass
 class GenerationConfig:
     generate_video: bool = True
+    generate_grok_multiscene_json_prompt: bool = False
     video_count: int = 2
     camera_segments: int = 1
     motion_source: MotionSource = field(default_factory=lambda: MotionSource.TABLE)
@@ -157,6 +170,8 @@ class GenerationConfig:
     prefer_face_closeups: bool = False
     use_ai_optimal_framing: bool = False
     use_ai_optimal_then_identity_safe_framing: bool = False
+    ai_optimal_then_identity_safe_ai_optimal_percent: int = 70
+    grok_multiscene_prompt_size: int = 1000
     generate_dual_framing_videos: bool = False
     generate_identity_safe_closeup_videos: bool = False
     generate_triple_framing_videos: bool = False
@@ -164,6 +179,15 @@ class GenerationConfig:
     prefer_loving_kindness_tone: bool = True
 
     def __post_init__(self) -> None:
+        if not 1 <= self.ai_optimal_then_identity_safe_ai_optimal_percent <= 99:
+            raise ConfigValidationError(
+                "Config key 'ai_optimal_then_identity_safe_ai_optimal_percent' "
+                "must be between 1 and 99."
+            )
+        if self.grok_multiscene_prompt_size < 200:
+            raise ConfigValidationError(
+                "Config key 'grok_multiscene_prompt_size' must be >= 200."
+            )
         enabled = [
             flag
             for flag, active in (
@@ -190,6 +214,10 @@ class GenerationConfig:
         motion_source = MotionSource(motion_value)
         return cls(
             generate_video=data.get("generate_video", default.generate_video),
+            generate_grok_multiscene_json_prompt=data.get(
+                "generate_grok_multiscene_json_prompt",
+                default.generate_grok_multiscene_json_prompt,
+            ),
             video_count=data.get("video_count", default.video_count),
             camera_segments=data.get("camera_segments", default.camera_segments),
             motion_source=motion_source,
@@ -208,6 +236,14 @@ class GenerationConfig:
             use_ai_optimal_then_identity_safe_framing=data.get(
                 "use_ai_optimal_then_identity_safe_framing",
                 default.use_ai_optimal_then_identity_safe_framing,
+            ),
+            ai_optimal_then_identity_safe_ai_optimal_percent=data.get(
+                "ai_optimal_then_identity_safe_ai_optimal_percent",
+                default.ai_optimal_then_identity_safe_ai_optimal_percent,
+            ),
+            grok_multiscene_prompt_size=data.get(
+                "grok_multiscene_prompt_size",
+                default.grok_multiscene_prompt_size,
             ),
             generate_dual_framing_videos=data.get(
                 "generate_dual_framing_videos",
@@ -231,6 +267,7 @@ class GenerationConfig:
     def override(self, **kwargs: Any) -> "GenerationConfig":
         values = {
             "generate_video": self.generate_video,
+            "generate_grok_multiscene_json_prompt": self.generate_grok_multiscene_json_prompt,
             "video_count": self.video_count,
             "camera_segments": self.camera_segments,
             "motion_source": self.motion_source,
@@ -247,6 +284,8 @@ class GenerationConfig:
             "prefer_face_closeups": self.prefer_face_closeups,
             "use_ai_optimal_framing": self.use_ai_optimal_framing,
             "use_ai_optimal_then_identity_safe_framing": self.use_ai_optimal_then_identity_safe_framing,
+            "ai_optimal_then_identity_safe_ai_optimal_percent": self.ai_optimal_then_identity_safe_ai_optimal_percent,
+            "grok_multiscene_prompt_size": self.grok_multiscene_prompt_size,
             "generate_dual_framing_videos": self.generate_dual_framing_videos,
             "generate_identity_safe_closeup_videos": self.generate_identity_safe_closeup_videos,
             "generate_triple_framing_videos": self.generate_triple_framing_videos,
@@ -257,6 +296,14 @@ class GenerationConfig:
         if isinstance(values["motion_source"], str):
             values["motion_source"] = MotionSource(values["motion_source"])
         return GenerationConfig(**values)
+
+    @property
+    def ai_optimal_then_identity_safe_identity_safe_percent(self) -> int:
+        return 100 - self.ai_optimal_then_identity_safe_ai_optimal_percent
+
+    @property
+    def grok_multiscene_prompt_max_words(self) -> int:
+        return max(1, self.grok_multiscene_prompt_size // 5)
 
     def framing_modes(self) -> list[VideoFramingMode]:
         if self.generate_triple_framing_videos:

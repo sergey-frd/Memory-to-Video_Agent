@@ -1,0 +1,79 @@
+{
+  "technical_preamble": "Technical Preamble:\nТема: Герой видео — молодой мужчина. Героиня видео — молодая женщина. Герой видео — активный молодой человек, веселый, оптимистичный, склонный к приключениям, играет на гитаре. Герой видео собирается жениться. Он встречается с друзьями, они весело провожают его и желают счастья в личной жизни. Затем герой видео и героиня видео идут в ЗАГС, где проходит церемония бракосочетания. Все благополучно завершается, друзья отмечают это радостное событие. Герой видео становится счастливым мужчиной, затем солидным успешным мужчиной, и благодаря счастливому браку живет благополучно и процветает.\nНе использовать личные имена в итоговом prompt. Использовать только neutral labels: the young man, the bride, the groom, the young woman, friends, guests, newlyweds. Вариант 1 должен быть наиболее вероятным, наиболее подходящим и наиболее цельным. Вариант 2 должен быть полностью альтернативным по визуальной драматургии, монтажной логике, переходам и эмоциональному рисунку, но сохранять те же факты сценария, тот же порядок сцен и те же тайминги.",
+  "total_duration_seconds": 15,
+  "max_prompt_chars": 2500,
+  "aspect_ratio": "16:9",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\DV_Slava_1\\DV_Slava\\2026\\regeneration_assets",
+  "references": [
+    {
+      "source_file": "5 (1)-spr.jpeg",
+      "tag": "@image1"
+    },
+    {
+      "source_file": "slava_cojr_220220_1-1c.jpeg",
+      "tag": "@image2"
+    },
+    {
+      "source_file": "color.jpg",
+      "tag": "@image3"
+    },
+    {
+      "source_file": "color (3)-spr-1.jpeg",
+      "tag": "@image4"
+    },
+    {
+      "source_file": "color (2).jpg",
+      "tag": "@image5"
+    },
+    {
+      "source_file": "color (1)-spr-1-1.jpeg",
+      "tag": "@image6"
+    },
+    {
+      "source_file": "improved_photo (10)-spr.jpeg",
+      "tag": "@image7"
+    },
+    {
+      "source_file": "IMG-20210321-WA0024.jpg",
+      "tag": "@image8"
+    },
+    {
+      "source_file": "IMG-20180501-WA0014-spr.jpeg",
+      "tag": "@image9"
+    }
+  ],
+  "scenes": [
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео — молодой мужчина @image1. Героиня видео — молодая женщина. Герой видео — активный молодой человек, он молод, весел, склонен к приключениям, играет на гитаре @image2."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео — веселый, оптимистичный, собирается жениться. Он встречается с друзьями @image3, они весело провожают его и желают счастья в личной жизни."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Молодые люди, герой и героиня @image4, идут в ЗАГС."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Проходит церемония @image5 бракосочетания @image6, друзья отмечают это радостное событие @image8."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео становится счастливым мужчиной @image7, затем солидным мужчиной @image9, и благодаря счастливому браку успешно живет и процветает."
+    }
+  ],
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1",
+      "instruction": "Create the most likely, most suitable, and most coherent cinematic interpretation. Keep the emotional arc realistic, warm, celebratory, and continuous from youthful energy to farewell with friends, registry wedding, celebration, and stable prosperous married life."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2",
+      "instruction": "Create a fully distinct alternative interpretation. Use a more dynamic, contrast-driven, montage-heavy wedding arc with a different camera strategy, transition logic, and emotional emphasis. Preserve the same scene order, same timings, same characters, and same story facts, but make the cinematic design substantially different from Variant 1."
+    }
+  ]
+}

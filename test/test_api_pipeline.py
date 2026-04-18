@@ -50,3 +50,42 @@ def test_write_pipeline_manifest_tracks_generated_files() -> None:
     assert '"m_prompt":' in manifest
     assert '"prompt_model": "gpt-4.1-mini"' in manifest
     assert '"motion_model": "gpt-4.1-mini"' in manifest
+
+
+def test_write_pipeline_manifest_uses_json_prompt_paths_for_grok_multiscene_mode() -> None:
+    tmp_path = Path("test_runtime") / f"api_pipeline_grok_json_{uuid4().hex}"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+
+    settings = Settings()
+    settings.output_dir = tmp_path / "output"
+    settings.output_dir.mkdir(parents=True, exist_ok=True)
+
+    stage_id = "stage_test"
+    image_path = tmp_path / "frame_a.png"
+    image_path.write_bytes(b"img")
+
+    manifest_path = write_pipeline_manifest(
+        settings,
+        stage_id,
+        image_path,
+        GenerationConfig(
+            video_count=1,
+            camera_segments=1,
+            motion_source=MotionSource.TABLE,
+            generate_grok_multiscene_json_prompt=True,
+        ),
+        generate_final_frames=False,
+        generate_styled_images=False,
+        generate_video=True,
+        model_name="dall-e-2",
+        prompt_model="gpt-4.1-mini",
+        motion_model="gpt-4.1-mini",
+    )
+
+    manifest = manifest_path.read_text(encoding="utf-8")
+    assert '"v_prompt_file":' in manifest
+    assert '_v_prompt_1.json' in manifest
+    assert '"video_prompt_format": "json"' in manifest
+    assert '"generate_grok_multiscene_json_prompt": true' in manifest
+    assert '"grok_multiscene_prompt_size": 1000' in manifest
+    assert '"grok_multiscene_prompt_max_words": 200' in manifest

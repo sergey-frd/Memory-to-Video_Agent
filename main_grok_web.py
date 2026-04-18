@@ -11,9 +11,11 @@ from PIL import Image, ImageChops, ImageEnhance, ImageFilter, ImageOps, ImageSta
 
 from api.grok_web import GrokWebAgent, GrokWebConfig, GrokWebError
 from config import ConfigValidationError, GenerationConfig, Settings, load_generation_config
+from utils.grok_prompt_json import extract_prompt_text_from_artifact
 from utils.project_delivery import sync_final_media_file, sync_stage_non_video_assets, sync_video_file
 
 SUPPORTED_INPUT_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+SUPPORTED_PROMPT_SUFFIXES = (".txt", ".json")
 PROMPT_NAME_RE = re.compile(r"^(?P<image_stem>.+)_\d{8}_\d{6}_v_prompt_(?P<index>\d+)$")
 BACKGROUND_IDENTICAL_RMS_THRESHOLD = 8.0
 
@@ -22,9 +24,9 @@ AgentRunner = Callable[[GrokWebConfig], Path]
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate a video in Chrome Grok from an input image and an output v_prompt file.")
+    parser = argparse.ArgumentParser(description="Generate a video in Chrome Grok from an input image and an output v_prompt prompt artifact.")
     parser.add_argument("--image", "-i", type=Path, default=None, help="Input image path or file name from input/.")
-    parser.add_argument("--prompt", "-p", type=Path, default=None, help="v_prompt file path or file name from output/.")
+    parser.add_argument("--prompt", "-p", type=Path, default=None, help="v_prompt TXT or JSON file path or file name from output/.")
     parser.add_argument("--output-video", "-o", type=Path, default=None, help="Optional target MP4 path. Defaults to output/<stage>_video_<N>.mp4.")
     parser.add_argument("--config-file", type=Path, default=None, help="Optional generation config JSON.")
     parser.add_argument("--profile-dir", type=Path, default=Path(".browser-profile/grok-web"), help="Persistent Chrome profile for Grok Web.")
@@ -127,20 +129,20 @@ def resolve_prompt_path(prompt_arg: Path | None, image_path: Path, settings: Set
         candidate = settings.output_dir / prompt_arg
         if candidate.exists():
             return candidate
-        raise FileNotFoundError(f"v_prompt file was not found: {prompt_arg}")
+        raise FileNotFoundError(f"v_prompt prompt artifact was not found: {prompt_arg}")
 
-    matching = sorted(settings.output_dir.glob(f"*{image_path.stem}*_v_prompt_*.txt"))
+    matching = _prompt_candidates_for_image(image_path, settings)
     if len(matching) == 1:
         return matching[0]
     if len(matching) > 1:
         return max(matching, key=lambda path: path.stat().st_mtime)
 
-    prompts = sorted(settings.output_dir.glob("*_v_prompt_*.txt"))
+    prompts = _all_prompt_candidates(settings)
     if len(prompts) == 1:
         return prompts[0]
     if not prompts:
-        raise FileNotFoundError(f"No v_prompt files found in output/: {settings.output_dir}")
-    raise ValueError("More than one v_prompt file is available. Use --prompt to choose one.")
+        raise FileNotFoundError(f"No v_prompt prompt artifacts found in output/: {settings.output_dir}")
+    raise ValueError("More than one v_prompt prompt artifact is available. Use --prompt to choose one.")
 
 
 def resolve_prompt_path_without_image(prompt_arg: Path | None, settings: Settings) -> Path:
@@ -150,11 +152,11 @@ def resolve_prompt_path_without_image(prompt_arg: Path | None, settings: Setting
         candidate = settings.output_dir / prompt_arg
         if candidate.exists():
             return candidate
-        raise FileNotFoundError(f"v_prompt file was not found: {prompt_arg}")
+        raise FileNotFoundError(f"v_prompt prompt artifact was not found: {prompt_arg}")
 
-    prompts = sorted((path for path in settings.output_dir.glob("*_v_prompt_*.txt") if path.is_file()), key=lambda path: path.stat().st_mtime)
+    prompts = sorted(_all_prompt_candidates(settings), key=lambda path: path.stat().st_mtime)
     if not prompts:
-        raise FileNotFoundError(f"No v_prompt files found in output/: {settings.output_dir}")
+        raise FileNotFoundError(f"No v_prompt prompt artifacts found in output/: {settings.output_dir}")
     return prompts[-1]
 
 
@@ -165,6 +167,20 @@ def default_output_video_path(prompt_path: Path, settings: Settings) -> Path:
     else:
         stem = f"{stem}_video"
     return settings.output_dir / f"{stem}.mp4"
+
+
+def _prompt_candidates_for_image(image_path: Path, settings: Settings) -> list[Path]:
+    candidates: list[Path] = []
+    for suffix in SUPPORTED_PROMPT_SUFFIXES:
+        candidates.extend(settings.output_dir.glob(f"*{image_path.stem}*_v_prompt_*{suffix}"))
+    return sorted(path for path in candidates if path.is_file())
+
+
+def _all_prompt_candidates(settings: Settings) -> list[Path]:
+    candidates: list[Path] = []
+    for suffix in SUPPORTED_PROMPT_SUFFIXES:
+        candidates.extend(settings.output_dir.glob(f"*_v_prompt_*{suffix}"))
+    return sorted(path for path in candidates if path.is_file())
 
 
 def load_runtime_config(config_path: Path | None, settings: Settings) -> GenerationConfig:
@@ -491,7 +507,7 @@ def run_generation(args: argparse.Namespace, settings: Settings | None = None, r
     image_path = resolve_image_path(args.image, settings, prompt_path=prompt_path)
     prompt_path = prompt_path or resolve_prompt_path(args.prompt, image_path, settings)
     output_video = args.output_video if args.output_video is not None else default_output_video_path(prompt_path, settings)
-    prompt_text = prompt_path.read_text(encoding="utf-8")
+    prompt_text = extract_prompt_text_from_artifact(prompt_path)
     stage_id = _stage_id_from_prompt(prompt_path)
 
     config = GrokWebConfig(

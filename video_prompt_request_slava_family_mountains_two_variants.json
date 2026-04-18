@@ -1,0 +1,79 @@
+{
+  "technical_preamble": "Technical Preamble:\nТема: Герой видео — немолодой мужчина, вместе с родственниками и близкими думает погулять по природе. Сначала он катается на велосипеде. Потом герой идет в лес. Затем приглашает родственников, близких и внучку пойти в горы. Там они поднимаются высоко вверх, открываются красивые пейзажи. Они страхуются с помощью веревки, делают опасные подъемы. Прогулка приносит большое удовольствие, хотя все очень устают. В конце герой усталый, но довольный, возвращается домой.\nНе использовать личные имена в итоговом prompt. Использовать только neutral hero, the video hero, the man, the older man, relatives, loved ones, granddaughter.\nВариант 1 должен быть наиболее вероятным, наиболее подходящим и цельным. Вариант 2 должен быть полностью альтернативным по драматургии, монтажной логике и визуальному решению, но сохранять те же факты сценария.",
+  "total_duration_seconds": 15,
+  "max_prompt_chars": 2500,
+  "aspect_ratio": "16:9",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\DV_Slava_1\\DV_Slava\\2026\\regeneration_assets",
+  "references": [
+    {
+      "source_file": "IMG-20210322-WA0000.jpg",
+      "tag": "@image1"
+    },
+    {
+      "source_file": "IMG-20210322-WA0007.jpg",
+      "tag": "@image2"
+    },
+    {
+      "source_file": "IMG-20210324-WA0002-spr.jpeg",
+      "tag": "@image3"
+    },
+    {
+      "source_file": "IMG-20210324-WA0014-spr.jpeg",
+      "tag": "@image4"
+    },
+    {
+      "source_file": "IMG-20210323-WA0006-spr.jpeg",
+      "tag": "@image5"
+    },
+    {
+      "source_file": "IMG-20210324-WA0023-spr.jpeg",
+      "tag": "@image6"
+    },
+    {
+      "source_file": "IMG-20210324-WA0013-spr.jpeg",
+      "tag": "@image7"
+    },
+    {
+      "source_file": "IMG-20210324-WA0018-spr.jpeg",
+      "tag": "@image8"
+    },
+    {
+      "source_file": "IMG-20210324-WA0003.jpg",
+      "tag": "@image9"
+    }
+  ],
+  "scenes": [
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео — немолодой мужчина, вместе с родственниками и близкими думает погулять по природе. Сначала он катается на велосипеде @image1. Потом герой идет в лес @image2."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео приглашает всех родственников, близких и внучку пойти в горы @image3."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео и семья поднимаются высоко вверх по горам @image7, открываются красивые пейзажи @image4."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео и близкие страхуются с помощью веревки @image6, делают опасные подъемы @image5."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой видео и все участники прогулки испытывают большое удовольствие @image8, хотя очень устали @image9. Герой усталый, но довольный, возвращается домой."
+    }
+  ],
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1",
+      "instruction": "Create the most likely, most suitable, and most coherent interpretation. Keep the family outing realistic, emotionally warm, physically grounded, and continuous from bicycle to forest, mountains, rope-protected ascent, shared joy, and tired but satisfied return."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2",
+      "instruction": "Create a fully distinct alternative interpretation. Use a more contrast-driven, adventurous, and montage-heavy structure with different camera logic, transitions, and dramatic emphasis. Keep the same scenario facts, same scene order, same timings, and the same characters, but make the cinematic concept substantially different from Variant 1."
+    }
+  ]
+}

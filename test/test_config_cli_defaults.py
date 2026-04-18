@@ -16,6 +16,9 @@ def test_generation_config_defaults_match_requested_values() -> None:
     assert config.generate_final_frames is False
     assert config.read_input_list is True
     assert config.generate_music is False
+    assert config.generate_grok_multiscene_json_prompt is False
+    assert config.grok_multiscene_prompt_size == 1000
+    assert config.grok_multiscene_prompt_max_words == 200
     assert config.motion_model == "gpt-4.1"
     assert config.generate_source_background is False
     assert config.save_grok_debug_artifacts is False
@@ -25,6 +28,7 @@ def test_generation_config_defaults_match_requested_values() -> None:
     assert config.prefer_face_closeups is False
     assert config.use_ai_optimal_framing is False
     assert config.use_ai_optimal_then_identity_safe_framing is False
+    assert config.ai_optimal_then_identity_safe_ai_optimal_percent == 70
     assert config.generate_dual_framing_videos is False
     assert config.generate_identity_safe_closeup_videos is False
     assert config.generate_triple_framing_videos is False
@@ -149,6 +153,69 @@ def test_generation_config_ai_optimal_then_identity_safe_mode_keeps_single_outpu
 
     assert config.framing_modes() == [VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE]
     assert config.total_video_outputs() == 1
+    assert config.ai_optimal_then_identity_safe_identity_safe_percent == 30
+
+
+def test_generation_config_ai_optimal_then_identity_safe_percent_can_be_overridden() -> None:
+    config = GenerationConfig.from_dict(
+        {
+            "use_ai_optimal_then_identity_safe_framing": True,
+            "ai_optimal_then_identity_safe_ai_optimal_percent": 50,
+        }
+    )
+
+    assert config.ai_optimal_then_identity_safe_ai_optimal_percent == 50
+    assert config.ai_optimal_then_identity_safe_identity_safe_percent == 50
+
+
+def test_load_generation_config_rejects_invalid_hybrid_percent() -> None:
+    root = Path("test_runtime") / f"hybrid_percent_invalid_{uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    config_path = root / "config.json"
+    config_path.write_text(
+        '{\n'
+        '  "use_ai_optimal_then_identity_safe_framing": true,\n'
+        '  "ai_optimal_then_identity_safe_ai_optimal_percent": 100\n'
+        '}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ConfigValidationError,
+        match="ai_optimal_then_identity_safe_ai_optimal_percent",
+    ):
+        load_generation_config(config_path)
+
+
+def test_load_generation_config_rejects_too_small_grok_multiscene_prompt_size() -> None:
+    root = Path("test_runtime") / f"grok_prompt_size_invalid_{uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    config_path = root / "config.json"
+    config_path.write_text(
+        '{\n'
+        '  "generate_grok_multiscene_json_prompt": true,\n'
+        '  "grok_multiscene_prompt_size": 199\n'
+        '}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ConfigValidationError,
+        match="grok_multiscene_prompt_size",
+    ):
+        load_generation_config(config_path)
+
+
+def test_generation_config_derives_extended_grok_multiscene_word_budget() -> None:
+    config = GenerationConfig.from_dict(
+        {
+            "generate_grok_multiscene_json_prompt": True,
+            "grok_multiscene_prompt_size": 2000,
+        }
+    )
+
+    assert config.grok_multiscene_prompt_size == 2000
+    assert config.grok_multiscene_prompt_max_words == 400
 
 
 def test_generation_config_triple_mode_triples_total_outputs() -> None:

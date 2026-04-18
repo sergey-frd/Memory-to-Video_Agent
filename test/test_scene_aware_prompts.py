@@ -6,6 +6,11 @@ from PIL import Image, ImageDraw
 from config import VideoFramingMode
 from models.scene_analysis import PersonInFrame, SceneAnalysis
 from utils.image_analysis import analyze_image
+from utils.grok_prompt_json import (
+    build_grok_multiscene_json_bundle,
+    extract_prompt_text_from_json_text,
+    validate_grok_prompt_json_text,
+)
 from utils.prompt_builder import PromptBuilder
 
 
@@ -225,6 +230,7 @@ def test_prompt_builder_can_use_hybrid_ai_optimal_then_identity_safe_framing() -
         "stage_hybrid",
         scene_analysis=scene,
         framing_mode=VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE,
+        hybrid_ai_optimal_percent=70,
     ).build_video_prompt(
         prompt_index=1,
         total_videos=1,
@@ -232,6 +238,98 @@ def test_prompt_builder_can_use_hybrid_ai_optimal_then_identity_safe_framing() -
         motion_sequence=["slow arc left", "gentle push", "rise wider", "soft pullback"],
     )
 
-    assert "first half of the video" in bundle.video_prompt
-    assert "second half" in bundle.video_prompt
+    assert "first 70% of the video" in bundle.video_prompt
+    assert "final 30% of the shot" in bundle.video_prompt
     assert "identity-safe framing" in bundle.video_prompt
+
+
+def test_prompt_builder_can_use_custom_hybrid_ratio() -> None:
+    root = Path("test_runtime") / f"scene_prompt_hybrid_custom_{uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    image_path = root / "portrait.png"
+
+    image = Image.new("RGB", (240, 160), (90, 78, 88))
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((70, 20, 170, 140), fill=(220, 180, 160))
+    image.save(image_path)
+
+    metadata = analyze_image(image_path)
+    scene = SceneAnalysis(
+        summary="Single adult portrait.",
+        people_count=1,
+        people=[PersonInFrame(label="woman")],
+        background="park background",
+        shot_type="medium shot",
+        main_action="the subject turns and smiles",
+        mood=["warmth"],
+        relationships=[],
+    )
+
+    bundle = PromptBuilder(
+        metadata,
+        "stage_hybrid_custom",
+        scene_analysis=scene,
+        framing_mode=VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE,
+        hybrid_ai_optimal_percent=50,
+    ).build_video_prompt(
+        prompt_index=1,
+        total_videos=1,
+        initial_frame_description="frame A (source frame)",
+        motion_sequence=["slow arc left", "gentle push", "rise wider", "soft pullback"],
+    )
+
+    assert "first 50% of the video" in bundle.video_prompt
+    assert "final 50% of the shot" in bundle.video_prompt
+
+
+def test_build_grok_multiscene_json_bundle_creates_valid_en_and_ru_json() -> None:
+    root = Path("test_runtime") / f"scene_prompt_grok_json_{uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    image_path = root / "portrait.png"
+
+    image = Image.new("RGB", (240, 160), (90, 78, 88))
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((70, 20, 170, 140), fill=(220, 180, 160))
+    image.save(image_path)
+
+    metadata = analyze_image(image_path)
+    scene_en = SceneAnalysis(
+        summary="An older man stands in a park and looks ahead.",
+        people_count=1,
+        people=[PersonInFrame(label="man")],
+        background="green park path",
+        shot_type="medium shot",
+        main_action="the man holds still and turns slightly",
+        mood=["calm", "hopeful"],
+        relationships=[],
+    )
+    scene_ru = SceneAnalysis(
+        summary="Немолодой мужчина стоит в парке и смотрит вперед.",
+        people_count=1,
+        people=[PersonInFrame(label="мужчина")],
+        background="зеленая парковая дорожка",
+        shot_type="средний план",
+        main_action="мужчина слегка поворачивается",
+        mood=["спокойствие", "надежда"],
+        relationships=[],
+    )
+
+    bundle = build_grok_multiscene_json_bundle(
+        metadata=metadata,
+        scene_analysis_en=scene_en,
+        scene_analysis_ru=scene_ru,
+        motion_sequence=["slow push in", "soft side arc", "rise wider"],
+        max_chars=2000,
+        max_words=400,
+    )
+
+    prompt_en = extract_prompt_text_from_json_text(bundle.video_prompt_json_en)
+    prompt_ru = extract_prompt_text_from_json_text(bundle.video_prompt_json_ru)
+
+    assert validate_grok_prompt_json_text(bundle.video_prompt_json_en, expected_lang="en", max_chars=2000, max_words=400) == []
+    assert validate_grok_prompt_json_text(bundle.video_prompt_json_ru, expected_lang="ru", max_chars=2000, max_words=400) == []
+    assert "Shot 1:" in prompt_en
+    assert "@image1" in prompt_en
+    assert "Total: 6s / 3 shots / 16:9" in prompt_ru
+    assert len(prompt_en) <= 2000
+    assert len(prompt_en.split()) <= 400
