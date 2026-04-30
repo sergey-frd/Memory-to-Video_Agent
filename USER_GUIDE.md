@@ -34,6 +34,8 @@ This project is used to prepare prompt files, generate background images and vid
 - `error\input` - source images for stages that failed.
 - `error\output` - prompt files, manifests, and error reports for failed stages.
 - `.browser-profile\grok-web` - Chrome automation profile used for Grok.
+- `styles` - reusable style lists for portrait/style workflows.
+- `output\chatgpt_portraits` - generated portrait PNG files from the ChatGPT portrait batch workflow.
 
 Example Windows paths in `config.json`:
 
@@ -115,6 +117,52 @@ run_full_grok_pipeline.bat --upload-timeout 300
 run_full_grok_pipeline.bat --skip-video --generate-source-background --upload-timeout 300
 run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300
 ```
+
+## ChatGPT Artistic Portrait Batch
+
+This workflow generates finished artistic portraits from every supported image in `input`.
+It uses the already-open ChatGPT web UI in Chrome, not the OpenAI API.
+
+Main files:
+- `main_chatgpt_portrait_batch.py` - builds portrait jobs from images and styles.
+- `api/chatgpt_desktop_v2.py` - desktop automation for the existing ChatGPT window.
+- `run_chatgpt_portrait_batch_existing.bat` - recommended launcher for an already-open ChatGPT session.
+- `chatgpt_portrait_config.json` - short working style set, currently watercolor and pastel.
+- `chatgpt_portrait_base_config.json` - full base style bank for artistic portraits.
+- `styles\art_styles_Prompt_list.txt` - source human-readable style prompt list.
+
+The base config currently contains 10 artistic portrait styles:
+Rembrandt, Renaissance, Impressionist, Van Gogh post-impressionism, Klimt art nouveau, Art Deco, Karsh black-and-white studio portrait, Pop Art, Cubist, and Chagall poetic modernism.
+
+Output:
+- generated PNG files are written to `output\chatgpt_portraits`;
+- file names use `<image_stem>_<style_slug>.png`, for example `IMG-001_rembrandt.png`;
+- `--skip-existing` lets the batch restart safely and skip already saved portraits.
+
+Recommended automatic command:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Short working set command:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --skip-existing
+```
+
+Manual focus fallback:
+- keep an already verified ChatGPT window open in Chrome;
+- run the bat file without `--desktop-reactivate-delay 0`;
+- during each countdown, click inside the ChatGPT message box;
+- the script then attaches the source image, pastes the prompt, submits it, waits for a generated result, and saves the image.
+
+Important:
+- the automation does not bypass ChatGPT human checks or CAPTCHA prompts; pass them manually in the browser first;
+- do not run two portrait batches at the same time;
+- if Chrome has several ChatGPT windows, keep the active portrait-generation window visible and close unrelated empty ChatGPT windows if selection becomes unstable;
+- after saving, ChatGPT may leave the last generated image open on screen. This is acceptable if the batch continues;
+- if the batch stops, rerun the same command with `--skip-existing`.
 
 ## New Generation Flags
 
@@ -749,6 +797,18 @@ Grok batch only for already prepared prompt files:
 run_grok_automation_all.bat --upload-timeout 300
 ```
 
+ChatGPT artistic portrait batch from all images in `input` using the full base style bank:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+ChatGPT short watercolor/pastel portrait batch:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --skip-existing
+```
+
 Premiere sequence optimization batch:
 
 ```powershell
@@ -789,14 +849,23 @@ run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_202603
 - Open final optimized `.prproj` files from the same folder as the source `project_path`; `reports\temp_projects` only holds the temporary batch working copy.
 - If you changed an optimized sequence manually, rebuild reports with `main_sequence_reports.py`.
 - Before deleting old artifacts, run cleanup in dry-run mode first and preferably keep an archive copy.
+- For ChatGPT portrait batches, keep only one automation run active and always use `--skip-existing` when resuming after a UI failure.
 
 ## Multi-Scene Video Prompt Composer
 
 Use `main_video_prompt_composer.py` when you already have `regeneration_assets` for a set of source images and want one combined multi-scene prompt from ordered scene notes and `@imageN` references.
 
+Mandatory bilingual rule for video-generation tasks:
+
+- Any task that produces final video-generation prompt artifacts through `main_video_prompt_composer.py` must emit both English and Russian outputs in the same run.
+- This rule applies to combined TXT prompts and to Seedance JSON generation tasks, including every item produced through `scenario_variants`.
+- The English artifact is the production prompt, and the Russian artifact is the required control/review companion.
+- A video-generation task is considered incomplete if the matching RU output file is missing.
+
 Input contract:
 
 - JSON request with `technical_preamble`, `total_duration_seconds`, `aspect_ratio`, `regeneration_assets_dir`, `references`, and ordered `scenes`.
+- Alternatively, you can use `--config-file` with one full JSON/JSONC config that contains both the scenario payload and the Seedance/TXT generation settings.
 - Optional `max_prompt_chars` controls the prompt length limit; default is `2000`.
 - Optional `scenario_variants` lets one scenario produce multiple alternative JSON generation tasks from the same scene list.
 - Each reference item maps a source file to a stable `@imageN` tag.
@@ -816,6 +885,12 @@ Typical command:
 .\.venv\Scripts\python.exe -u .\main_video_prompt_composer.py --request-file .\video_prompt_request_slava_volga_example.json --seedance-json
 ```
 
+Config-file command:
+
+```powershell
+.\.venv\Scripts\python.exe -u .\main_video_prompt_composer.py --config-file .\video_prompt_config_maya_africa_home_two_variants.json
+```
+
 Seedance JSON only:
 
 ```powershell
@@ -830,8 +905,12 @@ Variant rule:
 Seedance notes:
 
 - Requirements are loaded from `services\Seedance_2.0_Director.md`.
-- The JSON output is a strict one-item array: `[{"lang":"en","prompt":"..."}]`.
+- The English Seedance JSON output is a strict one-item array: `[{"lang":"en","prompt":"..."}]`.
+- The paired Russian control JSON output is a strict one-item array: `[{"lang":"ru","prompt":"..."}]`.
 - The generated prompt is validated for `Shot N:` labels, `Total:` footer, aspect ratio, required `@imageN` tags, and 2000-character limit.
+- The generator must avoid extreme remote aerial/drone/bird's-eye framing that turns characters into tiny figures; wide shots are allowed only when people remain clearly legible and consistent with the reference-image scale.
+- Full reusable config examples live in `video_prompt_composer_config_example.jsonc` and `video_prompt_config_*.json`.
+- `seedance_json_only: true` automatically implies `seedance_json: true`.
 
 ## Documentation Sync Rule
 

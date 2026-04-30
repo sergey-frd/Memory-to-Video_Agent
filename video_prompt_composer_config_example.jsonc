@@ -1,0 +1,78 @@
+{
+  // Полный конфиг для main_video_prompt_composer.py.
+  // Можно использовать как .jsonc с комментариями.
+
+  // Основной сценарный контекст.
+  "technical_preamble": "Technical Preamble:\nDescribe the couple, emotional atmosphere, and any stable story facts here.",
+
+  // Общая длительность видео в секундах.
+  "total_duration_seconds": 15,
+
+  // Лимит длины итогового prompt.
+  // По умолчанию в коде: 2000.
+  "max_prompt_chars": 2000,
+
+  // Соотношение сторон.
+  // По умолчанию в коде: 16:9.
+  "aspect_ratio": "16:9",
+
+  // Корневая папка regeneration_assets, где уже лежат stage-описания.
+  "regeneration_assets_dir": "E:\\Git\\Project\\2026\\regeneration_assets",
+
+  // Ссылки между исходными файлами и стабильными тегами @imageN.
+  "references": [
+    {
+      "source_file": "IMG-0001.jpg",
+      "tag": "@image1"
+    },
+    {
+      "source_file": "IMG-0002.jpg",
+      "tag": "@image2"
+    }
+  ],
+
+  // Сцены в порядке появления.
+  "scenes": [
+    {
+      "duration_seconds": 3,
+      "description": "The couple @image1 walks through the mountains."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "The couple @image2 arrives home tired and happy."
+    }
+  ],
+
+  // Альтернативные трактовки одного и того же сценария.
+  // Если блок убрать, автоматически используется только Variant_1.
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1",
+      "instruction": "Create the most likely, most suitable, and most coherent interpretation."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2",
+      "instruction": "Create a fully distinct alternative interpretation while preserving the same scene order, durations, and story facts."
+    }
+  ],
+
+  // Необязательная текстовая модель OpenAI.
+  // null = использовать дефолт из кода.
+  "model": null,
+
+  // Куда писать готовые prompt-файлы.
+  // null = использовать regeneration_assets_dir.
+  "output_dir": null,
+
+  // Для Seedance-конфига обычно включаем true.
+  "seedance_json": true,
+
+  // true = создавать только Seedance EN/RU JSON без TXT prompt-файлов.
+  "seedance_json_only": true,
+
+  // Путь к director-правилам Seedance.
+  // По умолчанию в коде: services\\Seedance_2.0_Director.md
+  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+}

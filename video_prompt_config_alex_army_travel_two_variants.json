@@ -1,0 +1,84 @@
+{
+  "technical_preamble": "Technical Preamble:\nГерой видео закончил школу, призвался в армию, служил там в боевых войсках, потом по окончании армии путешествовал и приехал домой. Герой должен оставаться узнаваемым на всех этапах жизни. При генерации учитывать описание каждой фотографии: черты лица, прическу, выражение лица, одежду, позу, окружение и общее настроение кадра.",
+  "total_duration_seconds": 15,
+  "max_prompt_chars": 3500,
+  "aspect_ratio": "16:9",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Alex_1\\Dv_Alex\\2026\\regeneration_assets",
+  "references": [
+    {
+      "source_file": "N_Young_1.00_00_58_12.Still001.jpg",
+      "tag": "@image1"
+    },
+    {
+      "source_file": "150302N_897.JPG",
+      "tag": "@image2"
+    },
+    {
+      "source_file": "Image6d1es (2).jpg",
+      "tag": "@image3"
+    },
+    {
+      "source_file": "Alex_25_Story_2.00_00_20_24.Still005.jpg",
+      "tag": "@image4"
+    },
+    {
+      "source_file": "Image6c.jpg",
+      "tag": "@image5"
+    },
+    {
+      "source_file": "Alex_25_Story_2.00_00_25_12.Still006.jpg",
+      "tag": "@image6"
+    },
+    {
+      "source_file": "Alex_25_Story_2.00_00_37_06.Still008.jpg",
+      "tag": "@image7"
+    },
+    {
+      "source_file": "Alex_25_Story_2.00_00_31_06.Still007.jpg",
+      "tag": "@image8"
+    },
+    {
+      "source_file": "IMG-20160808-WA0012.jpg",
+      "tag": "@image9"
+    }
+  ],
+  "scenes": [
+    {
+      "duration_seconds": 3,
+      "description": "До армии. Герой в допризывный период на основе @image1. Показать молодого героя сразу после окончания школы: более юные черты лица, естественную открытость, гражданскую одежду, спокойную атмосферу до начала службы."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Начало службы в армии на основе @image2 и @image3. Показать переход героя в армейскую жизнь: первые дни службы, более собранное выражение лица, армейскую дисциплину, ощущение нового этапа и внутренней мобилизации."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Боевая служба в армии на основе @image4 и @image5. Показать героя во время активной армейской службы: более взрослый и серьезный взгляд, уверенность, выдержку, боевую обстановку и ощущение ответственности."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Тяжелая служба в армии и ее завершение на основе @image6. Показать усталость, закаленность и взросление героя к концу службы, ощущение пройденного сложного этапа, завершение армейского периода и внутреннюю зрелость."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Поездка, путешествие в Америку и возвращение домой на основе @image7, @image8 и @image9. Показать героя после армии: движение, дорогу, свободу путешествия, новый мир, а затем теплое возвращение домой с ощущением завершенного большого жизненного этапа."
+    }
+  ],
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1",
+      "instruction": "Create the most likely, most suitable, and most coherent interpretation. Keep the story realistic, emotionally clear, and chronologically readable: school to early army, combat service, hard service, travel, and return home."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2",
+      "instruction": "Create a fully distinct alternative interpretation while preserving the same timeline, same references, same scene order, and the same hero. Use a stronger contrast between civilian life, military service, and post-army travel, but keep the character recognizable and realistic."
+    }
+  ],
+  "model": null,
+  "output_dir": "E:\\Git\\P_h_o_t_o\\Dv_Alex_1\\Dv_Alex\\2026\\regeneration_assets",
+  "seedance_json": true,
+  "seedance_json_only": true,
+  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+}

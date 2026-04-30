@@ -1,0 +1,58 @@
+{
+  "portrait_styles": [
+    {
+      "name": "Rembrandt classical oil portrait",
+      "slug": "rembrandt",
+      "prompt": "Transform the photo into a classical oil portrait in the style of Rembrandt.\n\nKeep the exact facial identity of the person from the original photograph:\nsame face structure, same eyes, same expression, same proportions.\n\nWarm baroque lighting, deep chiaroscuro shadows, dark background,\ngolden-brown color palette, highly detailed oil painting texture,\nmuseum-quality portrait, dramatic soft light illuminating the face.\n\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people."
+    },
+    {
+      "name": "Renaissance portrait painting",
+      "slug": "renaissance",
+      "prompt": "Transform the photo into a renaissance portrait painting.\n\nPreserve the exact facial identity from the original photo,\ndo not change the person's face structure or expression.\n\nBalanced classical composition, soft sfumato lighting,\ncalm noble expression, realistic skin tones,\nItalian renaissance oil painting, museum quality.\n\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people."
+    },
+    {
+      "name": "Impressionist portrait painting",
+      "slug": "impressionist",
+      "prompt": "Transform the photo into an impressionist portrait painting.\n\nPreserve the exact face and identity from the original photograph.\n\nSoft natural light, loose impressionist brush strokes,\nluminous color palette, outdoor daylight atmosphere,\nstyle inspired by Renoir and Monet,\npainterly texture, warm and lively portrait.\n\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people."
+    },
+    {
+      "name": "Post-impressionist Van Gogh portrait",
+      "slug": "post_impressionist_van_gogh",
+      "prompt": "Transform the photo into an expressive post-impressionist portrait.\n\nPreserve the exact facial identity from the original photo.\n\nDynamic brush strokes, textured oil paint,\nvivid but natural colors, emotional artistic atmosphere,\nstyle inspired by Vincent van Gogh,\nswirling painterly texture, expressive portrait.\n\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people."
+    },
+    {
+      "name": "Art nouveau Klimt portrait",
+      "slug": "art_nouveau_klimt",
+      "prompt": "Transform the photo into an art nouveau portrait in the style of Gustav Klimt.\n\nPreserve the exact face identity and proportions from the original photo.\n\nElegant decorative background, golden ornamental patterns,\nsymbolic shapes, refined portrait composition,\nrich gold tones, decorative art nouveau painting.\n\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people."
+    },
+    {
+      "name": "Art Deco portrait illustration",
+      "slug": "art_deco",
+      "prompt": "Transform the photo into an Art Deco portrait illustration.\n\nPreserve the exact facial identity from the original photograph.\n\nElegant geometric composition, smooth stylized lines,\nluxurious colors, polished surfaces,\n1920s art deco portrait style, cinematic lighting.\n\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people."
+    },
+    {
+      "name": "Black and white Karsh studio portrait",
+      "slug": "black_and_white_karsh",
+      "prompt": "Transform the photo into a powerful black and white studio portrait.\n\nPreserve the exact face identity from the original photo.\n\nHigh contrast lighting, dramatic shadows,\nclassic photographic portrait style inspired by Yousuf Karsh,\nstrong character expression, timeless photography.\n\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people."
+    },
+    {
+      "name": "Pop-art portrait illustration",
+      "slug": "pop_art",
+      "prompt": "Transform the photo into a pop-art portrait illustration.\n\nPreserve the exact face and identity from the original photograph.\n\nBold flat colors, graphic shapes,\nhigh contrast pop-art palette,\ninspired by Andy Warhol,\nmodern vibrant artistic portrait.\n\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people."
+    },
+    {
+      "name": "Cubist portrait artwork",
+      "slug": "cubist",
+      "prompt": "Transform the photo into a cubist portrait artwork.\n\nPreserve the recognizable identity of the person from the original photo.\n\nGeometric forms, fragmented planes,\nmultiple perspectives combined into one portrait,\ninspired by Pablo Picasso cubism,\nartistic modern painting.\n\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people."
+    },
+    {
+      "name": "Poetic modernist Chagall portrait",
+      "slug": "poetic_modernism_chagall",
+      "prompt": "Transform the photo into a dreamlike modernist portrait.\n\nPreserve the exact face identity from the original photograph.\n\nSoft poetic atmosphere, expressive colors,\nslightly surreal composition,\ninspired by Marc Chagall,\nromantic artistic portrait with symbolic elements.\n\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people."
+    }
+  ],
+  "prompt_template": "Generate a new portrait image based on the attached source image.\nStyle: {style}.\nPreserve the person's identity, facial structure, approximate age, expression, and natural features.\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people.",
+  "output_dir": "output/chatgpt_portraits",
+  "save_response_text": false,
+  "new_chat_per_job": true
+}

@@ -56,6 +56,52 @@ SEEDANCE_CONTROL_RU_SYSTEM_PROMPT = (
     "You translate Seedance 2.0 prompts into Russian for human review. "
     "Return only a JSON array with one object in Russian."
 )
+CYRILLIC_TEXT_RE = re.compile(r"[А-Яа-яЁё]")
+EXCESSIVE_DISTANCE_PATTERNS = (
+    (
+        re.compile(r"\bbird'?s-eye\b", re.IGNORECASE),
+        "bird's-eye viewpoints are too remote for reference-grounded character detail.",
+    ),
+    (
+        re.compile(r"\b(?:drone|aerial)\b[^.]{0,80}\bhigh above\b", re.IGNORECASE),
+        "drone/aerial viewpoints cannot place the camera high above the subjects.",
+    ),
+    (
+        re.compile(r"\bhigh above\b[^.]{0,80}\b(?:drone|aerial)\b", re.IGNORECASE),
+        "drone/aerial viewpoints cannot place the camera high above the subjects.",
+    ),
+    (
+        re.compile(
+            r"\b(?:tiny|miniature|barely visible|distant specks?|small silhouettes?)\b",
+            re.IGNORECASE,
+        ),
+        "subjects cannot be described as tiny, miniature, barely visible, or distant specks.",
+    ),
+    (
+        re.compile(r"\b(?:from|seen from|viewed from)\b[^.]{0,50}\b(?:airplane|aircraft|plane)\b", re.IGNORECASE),
+        "camera viewpoints cannot read like airplane-height observation.",
+    ),
+    (
+        re.compile(r"\bfar below\b", re.IGNORECASE),
+        "camera viewpoints cannot push characters far below the camera.",
+    ),
+    (
+        re.compile(r"вид\s+с\s+высот[ыа]\s+птичьего\s+полета", re.IGNORECASE),
+        "bird's-eye viewpoints are too remote for reference-grounded character detail.",
+    ),
+    (
+        re.compile(r"(?:дрон|аэро)[^.]{0,80}слишком\s+высоко", re.IGNORECASE),
+        "drone/aerial viewpoints cannot place the camera too high above the subjects.",
+    ),
+    (
+        re.compile(r"крошечн\w+\s+(?:фигур\w+|силуэт\w+|персонаж\w+|люд\w+)", re.IGNORECASE),
+        "subjects cannot be reduced to tiny figures or silhouettes.",
+    ),
+    (
+        re.compile(r"(?:с|как\s+с)\s+высоты\s+(?:самолет\w+|авиалайнер\w+)", re.IGNORECASE),
+        "camera viewpoints cannot read like airplane-height observation.",
+    ),
+)
 
 
 def synthesize_multiscene_video_prompt_with_openai(
@@ -306,9 +352,11 @@ def _composer_prompt(payload: dict[str, object]) -> str:
         "9. Every mention of a character or subject derived from a reference image must include its @image tag inline every time it appears.\n"
         "10. Use the regeneration_assets reference context to ground age, clothing, environment, action, background, mood, and identity cues.\n"
         "11. Favor the strongest cinematic framing, but avoid significant facial enlargement, facial distortion, or risky close framing.\n"
-        f"12. Keep each prompt at or under {payload['max_prompt_chars']} characters.\n"
-        "13. Write concrete direction suitable for direct video generation.\n"
-        "14. Do not output markdown fences or any prose outside JSON.\n"
+        "12. Do not use extreme remote viewpoints, airplane-height aerials, or drone-like overhead shots that make characters tiny, barely readable, or speculative in detail.\n"
+        "13. Wide shots are allowed only when the subjects remain clearly legible human figures and the camera distance stays comparable to the source-reference framing.\n"
+        f"14. Keep each prompt at or under {payload['max_prompt_chars']} characters.\n"
+        "15. Write concrete direction suitable for direct video generation.\n"
+        "16. Do not output markdown fences or any prose outside JSON.\n"
         "Input JSON:\n"
         f"{json.dumps(payload, ensure_ascii=False, indent=2)}"
     )
@@ -325,6 +373,8 @@ def _seedance_composer_prompt(payload: dict[str, object], director_requirements_
         "Variant rule: Variant 1 must be the most likely, most suitable, most coherent cinematic interpretation. "
         "Variant 2 must be a clearly alternative interpretation that is fully distinct in visual logic, camera plan, "
         "transitions, and dramatic emphasis while preserving the same scene order, durations, and core story facts. "
+        "Do not use extreme remote aerials, bird's-eye shots, or camera heights that make the subjects tiny in frame. "
+        "If a shot is wide, the people must still read as clearly legible human figures rather than distant specks. "
         "Include the exact Seedance technical preamble core string below once at the start of the prompt, "
         "then append the specific fishing/location context.\n"
         f"Required technical preamble core:\n{SEEDANCE_TECHNICAL_PREAMBLE_CORE}\n\n"
@@ -342,7 +392,8 @@ def _seedance_control_ru_prompt(seedance_payload_en: list[object]) -> str:
         '[{"lang":"ru","prompt":"..."}]. '
         "Preserve every @image tag exactly. Preserve every Shot N: label exactly in English. "
         "Preserve the Total: footer exactly in English. Preserve timings, numbers, aspect ratio, and scene order. "
-        "Translate the prose into natural Russian, but do not translate @image tags, Shot labels, or Total:. "
+        "Translate all descriptive prose into natural Russian, but do not translate @image tags, Shot labels, or Total:. "
+        "Each shot body after every Shot N: label must contain Russian Cyrillic text; leaving any shot body in English is invalid. "
         "Do not add or remove scenes. Do not output markdown fences.\n"
         "Input JSON:\n"
         f"{json.dumps(seedance_payload_en, ensure_ascii=False, indent=2)}"
@@ -362,7 +413,8 @@ def _repair_prompt(
     return (
         "Repair the JSON prompt bundle below and return JSON only with schema "
         f"{schema}. "
-        "Fix every listed issue while keeping the same story, scene order, reference tags, durations, and aspect ratio.\n"
+        "Fix every listed issue while keeping the same story, scene order, reference tags, durations, and aspect ratio. "
+        "If any shot is too distant, pull the camera closer until the characters stay clearly legible.\n"
         "Issues:\n"
         f"{json.dumps(validation_errors, ensure_ascii=False, indent=2)}\n"
         "Original input:\n"
@@ -382,7 +434,7 @@ def _seedance_repair_prompt(
         "Repair the Seedance JSON output below. Return ONLY a JSON array with one object "
         '[{"lang":"en","prompt":"..."}]. '
         "Fix every listed issue while preserving the same story, scene order, durations, aspect ratio, "
-        "and @image tags.\n"
+        "and @image tags. Keep wide shots grounded, but never let the subjects become tiny in frame.\n"
         "Issues:\n"
         f"{json.dumps(validation_errors, ensure_ascii=False, indent=2)}\n"
         "Required technical preamble core:\n"
@@ -405,7 +457,8 @@ def _seedance_control_ru_repair_prompt(
         "Repair the Russian control JSON below. Return ONLY a JSON array with one object "
         '[{"lang":"ru","prompt":"..."}]. '
         "Preserve every @image tag, every Shot N: label, and the Total: footer exactly. "
-        "Fix every listed issue without changing scene order.\n"
+        "Fix every listed issue without changing scene order. "
+        "Every shot body must be translated into Russian Cyrillic prose.\n"
         "Issues:\n"
         f"{json.dumps(validation_errors, ensure_ascii=False, indent=2)}\n"
         "Original English JSON:\n"
@@ -470,6 +523,7 @@ def _validate_seedance_json_prompt(seedance_json_text: str, request: VideoPrompt
     for tag in used_image_tags(request):
         if tag not in prompt_text:
             errors.append(f"Seedance prompt is missing required image tag {tag}.")
+    errors.extend(_validate_subject_scale(prompt_text, label="Seedance prompt"))
     return errors
 
 
@@ -499,9 +553,17 @@ def _validate_seedance_control_json_prompt(seedance_json_text: str, request: Vid
         errors.append("Seedance RU control JSON object is missing a non-empty prompt.")
         return errors
 
+    if not _contains_cyrillic_text(prompt_text):
+        errors.append("Seedance RU control prompt must contain Russian Cyrillic text.")
+
     for scene in request.scenes:
         if f"Shot {scene.index}:" not in prompt_text:
             errors.append(f"Seedance RU control prompt is missing 'Shot {scene.index}:'.")
+        shot_body = _extract_seedance_shot_body(prompt_text, scene.index)
+        if shot_body and not _contains_cyrillic_text(shot_body):
+            errors.append(
+                f"Seedance RU control prompt Shot {scene.index} body does not appear translated into Russian."
+            )
     total_marker = f"Total: {_format_seconds(request.total_duration_seconds)}s /"
     if total_marker not in prompt_text:
         errors.append(f"Seedance RU control prompt is missing total footer marker '{total_marker}'.")
@@ -510,6 +572,7 @@ def _validate_seedance_control_json_prompt(seedance_json_text: str, request: Vid
     for tag in used_image_tags(request):
         if tag not in prompt_text:
             errors.append(f"Seedance RU control prompt is missing required image tag {tag}.")
+    errors.extend(_validate_subject_scale(prompt_text, label="Seedance RU control prompt"))
     return errors
 
 
@@ -535,6 +598,7 @@ def _validate_generated_prompt_bundle(
         for tag in used_tags:
             if tag not in prompt_text:
                 errors.append(f"{label} is missing required image tag {tag}.")
+        errors.extend(_validate_subject_scale(prompt_text, label=label))
     return errors
 
 
@@ -659,3 +723,33 @@ def _sanitize_control_prompt_text(text: str) -> str:
     sanitized = text.translate(ASCII_PUNCT_TRANSLATION)
     sanitized = re.sub(r"\s+", " ", sanitized).strip()
     return sanitized
+
+
+def _contains_cyrillic_text(text: str) -> bool:
+    return bool(CYRILLIC_TEXT_RE.search(text))
+
+
+def _extract_seedance_shot_body(prompt_text: str, shot_index: int) -> str:
+    marker = f"Shot {shot_index}:"
+    start = prompt_text.find(marker)
+    if start < 0:
+        return ""
+    body_start = start + len(marker)
+    next_shot = re.search(rf"Shot\s+{shot_index + 1}\s*:", prompt_text[body_start:])
+    total_marker = prompt_text.find("Total:", body_start)
+
+    body_end_candidates = [len(prompt_text)]
+    if next_shot is not None:
+        body_end_candidates.append(body_start + next_shot.start())
+    if total_marker >= 0:
+        body_end_candidates.append(total_marker)
+    body_end = min(body_end_candidates)
+    return prompt_text[body_start:body_end].strip()
+
+
+def _validate_subject_scale(prompt_text: str, *, label: str) -> list[str]:
+    errors: list[str] = []
+    for pattern, reason in EXCESSIVE_DISTANCE_PATTERNS:
+        if pattern.search(prompt_text):
+            errors.append(f"{label} uses an excessively distant viewpoint: {reason}")
+    return errors

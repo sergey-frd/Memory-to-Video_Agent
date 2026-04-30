@@ -87,6 +87,7 @@ Hard rendering constraints of the Seedance 2.0 engine:
 - **Avoid reflection shots** (in blades, puddles, mirrors) — Seedance breaks scene geography when rendering reflections.
 - **Only describe what can be seen or heard.** ❌ "The air smells of pine." ✅ "Pine needles covering the ground, wind moving through branches."
 - **Micro-expressions work when described as physics.** ✅ "jaw clenches, nostrils flare." ❌ "looks angry."
+- **Avoid extreme remote viewpoints.** Wide shots are allowed, but do not place the camera so far away or so high above that people become tiny, barely readable figures. No airplane-height views, no bird's-eye distance, no drone-like altitude unless the user explicitly asks for it and the reference framing supports it.
 
 ---
 

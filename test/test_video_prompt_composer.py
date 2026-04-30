@@ -9,6 +9,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
 
+from api.openai_video_prompt_composer import (
+    _validate_generated_prompt_bundle,
+    _validate_seedance_control_json_prompt,
+    _validate_seedance_json_prompt,
+)
 from utils.video_prompt_composer import (
     GeneratedSeedanceJsonBundle,
     GeneratedVideoPromptBundle,
@@ -318,3 +323,164 @@ def test_write_generated_seedance_prompt_files_includes_variant_suffix_in_names(
 
         assert "Variant_2" in en_path.name
         assert "Variant_2" in ru_path.name
+
+
+def test_validate_seedance_control_json_prompt_rejects_english_shot_bodies() -> None:
+    with _temporary_test_root(f"video_prompt_seedance_ru_validation_{uuid4().hex}_") as root:
+        regeneration_assets_dir = root / "regeneration_assets"
+        regeneration_assets_dir.mkdir(parents=True, exist_ok=True)
+        request = load_video_prompt_request(
+            json.dumps(
+                {
+                    "technical_preamble": "Theme: travel story.",
+                    "total_duration_seconds": 6,
+                    "aspect_ratio": "16:9",
+                    "regeneration_assets_dir": str(regeneration_assets_dir),
+                    "references": [{"source_file": "source_frame.jpg", "tag": "@image1"}],
+                    "scenes": [
+                        {"duration_seconds": 3, "description": "The man @image1 walks."},
+                        {"duration_seconds": 3, "description": "The man @image1 returns home."},
+                    ],
+                }
+            )
+        )
+        seedance_json_ru = json.dumps(
+            [
+                {
+                    "lang": "ru",
+                    "prompt": (
+                        "\u043c\u043e\u043d\u0442\u0430\u0436, \u0434\u043e\u0440\u043e\u0433\u0430. "
+                        "Shot 1: Wide aerial shot of the man @image1 walking in the mountains. "
+                        "Shot 2: Wide shot of the man @image1 returning home. "
+                        "Total: 6s / 2 shots / 16:9"
+                    ),
+                }
+            ],
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+
+        errors = _validate_seedance_control_json_prompt(seedance_json_ru, request)
+
+        assert (
+            "Seedance RU control prompt Shot 1 body does not appear translated into Russian."
+            in errors
+        )
+        assert (
+            "Seedance RU control prompt Shot 2 body does not appear translated into Russian."
+            in errors
+        )
+
+
+def test_validate_seedance_control_json_prompt_accepts_russian_shot_bodies() -> None:
+    with _temporary_test_root(f"video_prompt_seedance_ru_ok_{uuid4().hex}_") as root:
+        regeneration_assets_dir = root / "regeneration_assets"
+        regeneration_assets_dir.mkdir(parents=True, exist_ok=True)
+        request = load_video_prompt_request(
+            json.dumps(
+                {
+                    "technical_preamble": "Theme: travel story.",
+                    "total_duration_seconds": 6,
+                    "aspect_ratio": "16:9",
+                    "regeneration_assets_dir": str(regeneration_assets_dir),
+                    "references": [{"source_file": "source_frame.jpg", "tag": "@image1"}],
+                    "scenes": [
+                        {"duration_seconds": 3, "description": "The man @image1 walks."},
+                        {"duration_seconds": 3, "description": "The man @image1 returns home."},
+                    ],
+                }
+            )
+        )
+        seedance_json_ru = json.dumps(
+            [
+                {
+                    "lang": "ru",
+                    "prompt": (
+                        "\u043c\u043e\u043d\u0442\u0430\u0436, \u0434\u043e\u0440\u043e\u0433\u0430. "
+                        "Shot 1: \u041c\u0443\u0436\u0447\u0438\u043d\u0430 @image1 \u0438\u0434\u0435\u0442 \u043f\u043e "
+                        "\u0433\u043e\u0440\u0430\u043c. "
+                        "Shot 2: \u041c\u0443\u0436\u0447\u0438\u043d\u0430 @image1 \u0432\u043e\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044f "
+                        "\u0434\u043e\u043c\u043e\u0439. "
+                        "Total: 6s / 2 shots / 16:9"
+                    ),
+                }
+            ],
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+
+        errors = _validate_seedance_control_json_prompt(seedance_json_ru, request)
+
+        assert errors == []
+
+
+def test_validate_seedance_json_prompt_rejects_excessive_distance_viewpoints() -> None:
+    with _temporary_test_root(f"video_prompt_seedance_distance_{uuid4().hex}_") as root:
+        regeneration_assets_dir = root / "regeneration_assets"
+        regeneration_assets_dir.mkdir(parents=True, exist_ok=True)
+        request = load_video_prompt_request(
+            json.dumps(
+                {
+                    "technical_preamble": "Theme: travel story.",
+                    "total_duration_seconds": 3,
+                    "aspect_ratio": "16:9",
+                    "regeneration_assets_dir": str(regeneration_assets_dir),
+                    "references": [{"source_file": "source_frame.jpg", "tag": "@image1"}],
+                    "scenes": [
+                        {"duration_seconds": 3, "description": "The man @image1 walks in the mountains."},
+                    ],
+                }
+            )
+        )
+        seedance_json_en = json.dumps(
+            [
+                {
+                    "lang": "en",
+                    "prompt": (
+                        "montage, multi-shot action Hollywood movie, Don't use one camera angle or single cut, "
+                        "cinematic lighting, photorealistic, 35mm film quality, professional color grading, "
+                        "sharp focus, high detail texture, film grain, depth of field mastery, ARRI ALEXA aesthetic. "
+                        "Shot 1: Wide aerial establishing shot, stabilized drone pulls high above the man @image1 as he "
+                        "becomes a tiny figure in the mountains. Total: 3s / 1 shots / 16:9"
+                    ),
+                }
+            ],
+            separators=(",", ":"),
+        )
+
+        errors = _validate_seedance_json_prompt(seedance_json_en, request)
+
+        assert any("excessively distant viewpoint" in error for error in errors)
+
+
+def test_validate_generated_prompt_bundle_rejects_excessive_distance_viewpoints() -> None:
+    with _temporary_test_root(f"video_prompt_bundle_distance_{uuid4().hex}_") as root:
+        regeneration_assets_dir = root / "regeneration_assets"
+        regeneration_assets_dir.mkdir(parents=True, exist_ok=True)
+        request = load_video_prompt_request(
+            json.dumps(
+                {
+                    "technical_preamble": "Theme: travel story.",
+                    "total_duration_seconds": 3,
+                    "aspect_ratio": "16:9",
+                    "regeneration_assets_dir": str(regeneration_assets_dir),
+                    "references": [{"source_file": "source_frame.jpg", "tag": "@image1"}],
+                    "scenes": [
+                        {"duration_seconds": 3, "description": "The man @image1 walks in the mountains."},
+                    ],
+                }
+            )
+        )
+        bundle = GeneratedVideoPromptBundle(
+            video_prompt_en=(
+                "Shot 1: (0-3s / 3s, 3s total, 16:9) Wide aerial shot from far above, the man @image1 is a tiny "
+                "figure in the landscape."
+            ),
+            video_prompt_ru=(
+                "Shot 1: (0-3s / 3s, 3s total, 16:9) Мужчина @image1 идет по горной тропе."
+            ),
+        )
+
+        errors = _validate_generated_prompt_bundle(bundle, request)
+
+        assert any("video_prompt_en uses an excessively distant viewpoint" in error for error in errors)

@@ -30,7 +30,7 @@
 | Конфигурация и пути | `config.py`, `config.json`, `config_BASE.json`, `config_*.json` | Описание флагов, валидация, canonical paths | `GenerationConfig`, `Settings` |
 | Анализ изображения и сцены | `utils/image_analysis.py`, `api/openai_scene.py`, `models/scene_analysis.py`, `main_scene.py` | Извлечение визуальных признаков и scene payload | `*_scene_analysis.json`, scene summary |
 | Синтез prompts | `utils/prompt_builder.py`, `utils/grok_prompt_json.py`, `api/openai_prompt_synthesizer.py`, `api/openai_motion_selector.py`, `utils/camera_movements.py` | Формирование video/background/final-frame/music prompts, Grok multiscene JSON prompts и motion selection | `*_v_prompt_*.txt`, `*_v_prompt_*.json`, `*_bg_prompt.txt`, `*_assoc_bg_prompt.txt`, `*_final_frame_prompt_*.txt`, `*_m_prompt.txt` |
-| Компоновщик многосценных video prompts | `main_video_prompt_composer.py`, `api/openai_video_prompt_composer.py`, `utils/video_prompt_composer.py`, `services/Seedance_2.0_Director.md` | Сборка одного EN/RU prompt, Seedance EN JSON и Seedance RU control JSON по сценам, `@imageN` ссылкам и stage-описаниям из `regeneration_assets_dir`, включая несколько scenario variants | `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt`, `Gen_Video_Seedance_<VariantId>_<ts>.json`, `Gen_Video_Seedance_RU_<VariantId>_<ts>.json` |
+| Компоновщик многосценных video prompts | `main_video_prompt_composer.py`, `video_prompt_config.py`, `api/openai_video_prompt_composer.py`, `utils/video_prompt_composer.py`, `services/Seedance_2.0_Director.md`, `video_prompt_composer_config_example.jsonc`, `video_prompt_config_*.json` | Сборка одного EN/RU prompt, Seedance EN JSON и Seedance RU control JSON по сценам, `@imageN` ссылкам и stage-описаниям из `regeneration_assets_dir`, включая несколько scenario variants и полноформатные конфиги запуска | `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt`, `Gen_Video_Seedance_<VariantId>_<ts>.json`, `Gen_Video_Seedance_RU_<VariantId>_<ts>.json` |
 | Основной generation pipeline | `main.py` | Склеивает image analysis, scene analysis, motion, prompt generation, optional final frames | полный набор stage-артефактов в `output/` |
 | API final-frame pipeline | `main_desktop_pipeline.py` | Многокадровый pipeline с manifest и синхронизацией не-видео артефактов | `*_api_pipeline_manifest.json`, final-frame outputs |
 | Grok single-stage runtime | `api/grok_web.py`, `main_grok_web.py` | Генерация background image и/или video для одной prompt-пары | `*_bg_image_16x9.png`, `*_video_*.mp4` |
@@ -40,6 +40,7 @@
 | Sequence optimization | `main_sequence_optimizer.py`, `utils/sequence_optimizer.py`, `utils/sequence_optimizer_runtime.py`, `utils/premiere_xml.py`, `utils/premiere_project.py`, `utils/premiere_xml_export.py`, `utils/premiere_project_export.py`, `models/video_sequence.py` | Анализ монтажной последовательности и выдача рекомендованного порядка | optimized JSON/TXT/XML/PRPROJ |
 | Sequence reports и batch orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/fcp_translation_results.py` | Построение отчетов, batch-доставка, human-profile overlays, transition recommendations | reports, batch summaries, transition reports |
 | Desktop/web automation | `main_desktop.py`, `api/chatgpt_desktop.py`, `api/chatgpt_desktop_v2.py`, `api/chatgpt_web.py` | Автоматизация desktop/web-взаимодействия для prompt-driven задач | отправка prompts во внешние UI |
+| ChatGPT portrait-style batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `styles/art_styles_Prompt_list.txt`, `run_chatgpt_portrait_batch_existing.bat` | Пакетная генерация художественных портретов из `input/` через уже открытое окно ChatGPT; поддержка коротких и базовых наборов стилей, restart через `--skip-existing` | `output/chatgpt_portraits/<image_stem>_<style_slug>.png` |
 
 ## 3. Главные потоки данных
 
@@ -82,13 +83,25 @@
 
 ### 3.5 Multi-scene prompt-composer поток
 
-1. `main_video_prompt_composer.py` читает JSON-запрос с общей темой, длительностью, аспектом, лимитом длины, списком reference-файлов, сценами по порядку и, при необходимости, несколькими `scenario_variants`.
+1. `main_video_prompt_composer.py` читает либо JSON-запрос, либо полный `--config-file` в формате JSON/JSONC с общей темой, длительностью, аспектом, лимитом длины, списком reference-файлов, сценами по порядку и, при необходимости, несколькими `scenario_variants`.
 2. `utils/video_prompt_composer.py` находит последние stage-папки в `regeneration_assets_dir`, извлекает `description` и обе версии scene-analysis.
-3. `api/openai_video_prompt_composer.py` строит один EN prompt и один RU prompt с явными `Shot N:` для всех сцен.
+3. `video_prompt_config.py` валидирует конфиг, применяет дефолты (`max_prompt_chars=2000`, `aspect_ratio=16:9`, `Variant_1` по умолчанию), а затем `api/openai_video_prompt_composer.py` строит один EN prompt и один RU prompt с явными `Shot N:` для всех сцен.
 4. При включенном `--seedance-json` тот же контекст пропускается через требования `services/Seedance_2.0_Director.md`.
 5. Итоги сохраняются как `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt` и, при необходимости, набор variant-aware файлов `Gen_Video_Seedance_<VariantId>_<ts>.json` вместе с `Gen_Video_Seedance_RU_<VariantId>_<ts>.json` для ручного контроля.
+6. Для всех задач этого потока, которые создают задания на генерацию видео, двуязычный вывод обязателен: EN-артефакт и соответствующий RU control/review артефакт должны появляться в одном запуске.
 
-### 3.5 Карта запуска: batch -> программа -> параметры
+### 3.6 ChatGPT portrait-style batch поток
+
+1. `main_chatgpt_portrait_batch.py` читает изображения из `input/` и конфиг стилей.
+2. Рабочий короткий конфиг — `chatgpt_portrait_config.json`; полный базовый банк художественных стилей — `chatgpt_portrait_base_config.json`, собранный из `styles/art_styles_Prompt_list.txt`.
+3. Для каждого изображения и каждого `portrait_styles[]` строится prompt и имя результата `<image_stem>_<style_slug>.png`.
+4. Desktop-режим использует `api/chatgpt_desktop_v2.py` и уже открытое/проверенное окно ChatGPT в Chrome. Автоматизация не обходит human-check/CAPTCHA; если ChatGPT требует проверку, ее проходит пользователь.
+5. `run_chatgpt_portrait_batch_existing.bat` запускает desktop-flow с вставкой изображения через Windows clipboard, отправкой prompt, ожиданием новой сгенерированной картинки и сохранением через browser context menu / `Save As`.
+6. `--skip-existing` является основным restart-контрактом: готовые PNG не пересоздаются, и batch можно безопасно перезапускать после падения UI-автоматизации.
+7. Детектор результата сравнивает не только прямоугольники UIA-изображений, но и легкий hash содержимого, чтобы новая картинка в том же месте не считалась старой.
+8. Сохранение результата проверяет, что выбранный image-кандидат видим внутри окна ChatGPT, чтобы правый клик не уходил на рабочий стол или в другое окно.
+
+### 3.7 Карта запуска: batch -> программа -> параметры
 
 Эта схема нужна для быстрого ответа на три вопроса: какой `.bat` что запускает, где живут основные параметры, и какая Python-программа реально делает работу.
 
@@ -99,12 +112,15 @@ flowchart LR
   B3A["run_project_sequence_batch_(project).bat"] --> B3["run_project_sequence_batch.bat"]
   B3 --> P3["main_project_sequence_batch.py"]
   B4["run_project_publication*.bat"] --> P4["main_project_publication_push.py"]
+  B5["run_chatgpt_portrait_batch_existing.bat"] --> P6["main_chatgpt_portrait_batch.py"]
 
   A1["CLI flags"] --> P1
   A2["CLI flags"] --> P2
+  A5["CLI flags\n--config-file\n--skip-existing\n--desktop-*"] --> P6
   C1["config.json / config.local.json / config_*.json"] --> G1["config.py / GenerationConfig"]
   G1 --> P1
   G1 --> P2
+  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nstyles/art_styles_Prompt_list.txt"] --> P6
 
   C3["project_sequence_batch_*.json"] --> P3
   P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
@@ -116,6 +132,7 @@ flowchart LR
   P2 --> O2["results:\n*_video_*.mp4\n*_bg_image_16x9.*\ngrok debug artifacts if enabled"]
   P5 --> O3["reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)"]
   P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
+  P6 --> O5["portrait results:\noutput/chatgpt_portraits/*_<style_slug>.png\noptional *_response.txt"]
 ```
 
 Левая часть схемы показывает запуск и источники параметров, правая часть показывает, какие отчеты и результаты появляются на выходе.
@@ -315,6 +332,8 @@ flowchart LR
 - `main_grok_web.py` и `api/grok_web.py`: влияют на реальное выполнение;
 - `main_full_pipeline.py`: может менять lifecycle входных файлов;
 - `utils/project_delivery.py`: влияет на сохранность и доставку результатов;
+- `api/chatgpt_desktop_v2.py`: UI-автоматизация ChatGPT чувствительна к фокусу окна, DPI/нескольким мониторам, локализации Chrome и поведению Save As;
+- `main_chatgpt_portrait_batch.py`: batch-контракт `input/` -> `output/chatgpt_portraits` и restart через `--skip-existing`;
 - naming contracts и `stage_id`;
 - `models/scene_analysis.py` и `models/video_sequence.py`: это data contracts для нескольких подсистем.
 
@@ -345,6 +364,13 @@ flowchart LR
 
 - `test\test_sequence_optimizer_app.py`
 - `test\test_project_delivery.py`
+
+### 8.5 ChatGPT portrait batch изменения
+
+- `test\test_chatgpt_portrait_batch.py`
+- синтаксическая проверка `api/chatgpt_desktop_v2.py` и `main_chatgpt_portrait_batch.py`
+- короткий dry-run/config-run с `--no-submit`, если меняется только сборка jobs/config
+- ручной интеграционный прогон одного изображения и одного стиля, если меняется desktop-save, submit, focus или result-detection логика
 
 ## 9. Машинно-читаемый реестр
 

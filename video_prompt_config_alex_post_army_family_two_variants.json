@@ -1,0 +1,84 @@
+{
+  "technical_preamble": "Technical Preamble:\nГерой видео после армии учился в институте, общался с друзьями, радовался жизни, духовно развивался, женился и стал отцом. Герой должен оставаться узнаваемым на всех этапах жизни. При генерации учитывать описание каждой фотографии: черты лица, прическу, выражение лица, одежду, позу, окружение и общее настроение кадра.",
+  "total_duration_seconds": 15,
+  "max_prompt_chars": 3500,
+  "aspect_ratio": "16:9",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Alex_1\\Dv_Alex\\2026\\regeneration_assets",
+  "references": [
+    {
+      "source_file": "IMG_9208.JPG",
+      "tag": "@image1"
+    },
+    {
+      "source_file": "20200411_181432 (2).jpg",
+      "tag": "@image2"
+    },
+    {
+      "source_file": "IMG_2537.JPG",
+      "tag": "@image3"
+    },
+    {
+      "source_file": "IMG-20191207-WA0025.jpg",
+      "tag": "@image4"
+    },
+    {
+      "source_file": "IMG_20160905_004100.jpg",
+      "tag": "@image5"
+    },
+    {
+      "source_file": "SmartSelectImage_2015-11-18-21-02-54.png",
+      "tag": "@image6"
+    },
+    {
+      "source_file": "IMG_2166.JPG",
+      "tag": "@image7"
+    },
+    {
+      "source_file": "IMG-20170427-WA0002.jpg",
+      "tag": "@image8"
+    },
+    {
+      "source_file": "20170429_172309.jpg",
+      "tag": "@image9"
+    }
+  ],
+  "scenes": [
+    {
+      "duration_seconds": 3,
+      "description": "Герой после армии на основе @image1 и учится в институте на основе @image2. Показать переход к мирной жизни после службы: молодой взрослый герой, учебная атмосфера, ощущение нового жизненного этапа, взросление через образование и открытость будущему."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой общается с друзьями на основе @image3 и работает на основе @image4. Показать активную социальную жизнь, дружескую среду, повседневный труд, более уверенную осанку, взрослеющий характер и устойчивость в обычной жизни."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой радуется жизни на основе @image5 и @image6. Показать светлый эмоциональный этап: удовольствие от жизни, свободу, внутреннюю легкость, живую энергетику и ощущение того, что герой нашел радость в повседневности."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой духовно развивается на основе @image7. Показать более глубокий внутренний этап жизни: сосредоточенность, спокойствие, осмысленный взгляд, созревание характера и ощущение личностного роста."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "Герой женится на основе @image8 и становится отцом на основе @image9. Показать завершение важного жизненного этапа: семейное счастье, теплую близость, зрелость, ответственность и эмоционально сильный финал истории."
+    }
+  ],
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1",
+      "instruction": "Create the most likely, most suitable, and most coherent interpretation. Keep the story realistic, emotionally warm, and chronologically clear: post-army study, friendships and work, joy of life, spiritual growth, marriage, and fatherhood."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2",
+      "instruction": "Create a fully distinct alternative interpretation while preserving the same timeline, same references, same scene order, and the same hero. Use stronger contrast between public life and inner growth, but keep the hero realistic, recognizable, and emotionally grounded."
+    }
+  ],
+  "model": null,
+  "output_dir": "E:\\Git\\P_h_o_t_o\\Dv_Alex_1\\Dv_Alex\\2026\\regeneration_assets",
+  "seedance_json": true,
+  "seedance_json_only": true,
+  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+}

@@ -1,0 +1,68 @@
+{
+  "technical_preamble": "Technical Preamble:\nЭто хронологическое видео о жизни одного и того же героя, показанного на последовательных фотографиях в разные периоды взросления. Все фотографии упорядочены по времени и сгруппированы по возрастным этапам. Внутри каждой сцены использовать последовательные фотографии героя одного возраста или близкого возрастного периода, чтобы показать живое, естественное развитие внутри этого этапа. Между сценами показать понятный переход к следующему возрасту, чтобы взросление воспринималось плавно, реалистично и эмоционально цельно. Герой должен оставаться узнаваемым на всех этапах жизни. При генерации учитывать описание каждой фотографии: черты лица, прическу, выражение лица, одежду, позу, окружение и общее настроение кадра.",
+  "total_duration_seconds": 15,
+  "max_prompt_chars": 2500,
+  "aspect_ratio": "16:9",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Alex_1\\Dv_Alex\\2026\\regeneration_assets",
+  "references": [
+    {
+      "source_file": "20200413_130954 (2).jpg",
+      "tag": "@image1"
+    },
+    {
+      "source_file": "20200413_131057 (2).jpg",
+      "tag": "@image2"
+    },
+    {
+      "source_file": "20200413_131105 (2).jpg",
+      "tag": "@image3"
+    },
+    {
+      "source_file": "20200413_131023 (2).jpg",
+      "tag": "@image4"
+    },
+    {
+      "source_file": "20200413_131147 (2).jpg",
+      "tag": "@image5"
+    },
+    {
+      "source_file": "20200413_131003 (2).jpg",
+      "tag": "@image6"
+    },
+    {
+      "source_file": "20200413_130726 (2).jpg",
+      "tag": "@image7"
+    }
+  ],
+  "scenes": [
+    {
+      "duration_seconds": 6,
+      "description": "Герой в раннем возрасте @image2, на основе последовательных фотографий @image1 @image3. Использовать описания этих фотографий, чтобы показать младший возраст героя: более детские черты лица, мягкую мимику, легкость в движении, атмосферу раннего этапа жизни. Внутри сцены показать плавное живое развитие внутри этого возраста, без резкого скачка к следующему периоду."
+    },
+    {
+      "duration_seconds": 4.5,
+      "description": "Герой в следующем, чуть более взрослом возрасте, на основе последовательных фотографий @image4 @image6. Использовать описания этих фотографий, чтобы показать переход к чуть более взрослому возрасту: черты лица становятся более определенными, взгляд более осознанным, движения и осанка более уверенными. Сцена должна восприниматься как следующий этап взросления того же героя."
+    },
+    {
+      "duration_seconds": 4.5,
+      "description": "Герой в более зрелом возрасте, на основе последовательных фотографий @image5 @image7. Использовать описания этих фотографий, чтобы показать более взрослую версию того же человека: сформировавшиеся черты лица, зрелое выражение, спокойствие, уверенность, завершенность образа. Финальная сцена должна ощущаться как естественное завершение хронологической линии взросления."
+    }
+  ],
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1",
+      "instruction": "Create the most likely, most suitable, and most coherent interpretation. Keep the chronology gentle, realistic, emotionally warm, and clearly readable as one boy growing older through three life stages."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2",
+      "instruction": "Create a fully distinct alternative interpretation while preserving the same age order, same scene order, same timings, and the same hero. Use a more contrast-driven montage logic with stronger transitions, but keep the growth believable and the hero consistently recognizable across ages."
+    }
+  ],
+  "model": null,
+  "output_dir": "E:\\Git\\P_h_o_t_o\\Dv_Alex_1\\Dv_Alex\\2026\\regeneration_assets",
+  "seedance_json": true,
+  "seedance_json_only": true,
+  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+}

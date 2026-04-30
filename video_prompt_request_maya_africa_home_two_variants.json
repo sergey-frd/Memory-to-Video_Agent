@@ -1,0 +1,79 @@
+{
+  "technical_preamble": "Technical Preamble:\nHero video is a 44-year-old man. Heroine video is a 40-year-old woman. They are a very good, warm couple who met several years ago and now live together. She teaches yoga, leads yoga groups, has lived in the USA, England, Europe, and India, works as a psychologist, and is finishing studies in Chinese medicine and acupuncture. They are very mobile, love travel, and used to spend much time hiking in the mountains. Now they are expecting a child. Their home atmosphere is warm, gentle, and pleasant. Use this only as emotional guidance and keep the final video grounded in the reference images without using personal names.",
+  "total_duration_seconds": 15,
+  "max_prompt_chars": 2500,
+  "aspect_ratio": "16:9",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Maya\\2026\\regeneration_assets",
+  "references": [
+    {
+      "source_file": "IMG-20210330-WA0011.jpg",
+      "tag": "@image1"
+    },
+    {
+      "source_file": "IMG-20210330-WA0016.jpg",
+      "tag": "@image2"
+    },
+    {
+      "source_file": "IMG-20250714-WA0002.jpg",
+      "tag": "@image3"
+    },
+    {
+      "source_file": "IMG-20250719-WA0004.jpg",
+      "tag": "@image4"
+    },
+    {
+      "source_file": "IMG-20230308-WA0009-Enhanced.png",
+      "tag": "@image5"
+    },
+    {
+      "source_file": "IMG-20250409-WA0013.jpg",
+      "tag": "@image6"
+    },
+    {
+      "source_file": "IMG-20250331-WA0003.jpg",
+      "tag": "@image7"
+    },
+    {
+      "source_file": "IMG-20250717-WA0006.jpg",
+      "tag": "@image8"
+    },
+    {
+      "source_file": "IMG-20230829-WA0007-Enh-SR.jpg",
+      "tag": "@image9"
+    }
+  ],
+  "scenes": [
+    {
+      "duration_seconds": 3,
+      "description": "The man and the woman @image1 walk in the Dead Sea mountains @image1."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "The man and the woman @image3 travel toward Africa."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "The man and the woman are in Africa @image4 by the sea @image8."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "The man and the woman @image5 are happy to be together @image6."
+    },
+    {
+      "duration_seconds": 3,
+      "description": "The man and the woman @image9 happily return home @image7, happy and tired @image5."
+    }
+  ],
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1",
+      "instruction": "Create the most likely, most suitable, and most coherent interpretation."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2",
+      "instruction": "Create a fully distinct alternative interpretation while preserving the same scene order, durations, and story facts."
+    }
+  ]
+}
