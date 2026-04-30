@@ -1,0 +1,21 @@
+{
+  "generate_video": true,
+  "video_count": 1,
+  "camera_segments": 4,
+  "motion_source": "ai",
+  "motion_model": "gpt-4.1",
+  "generate_source_background": true,
+  "save_grok_debug_artifacts": false,
+  "final_videos_dir": "<LOCAL_PATH>",
+  "regeneration_assets_dir": "<LOCAL_PATH>",
+  "continue_after_failure": true,
+  "write_description": true,
+  "generate_final_frames": false,
+  "read_input_list": true,
+  "generate_music": false,
+  "prefer_face_closeups": false,
+  "use_ai_optimal_framing": false,
+  "generate_dual_framing_videos": false,
+  "hide_phone_in_selfie": true,
+  "prefer_loving_kindness_tone": true
+}

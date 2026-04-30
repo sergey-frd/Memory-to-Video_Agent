@@ -7,6 +7,9 @@ models/__pycache__/
 test/__pycache__/
 tests/__pycache__/
 utils/__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 test_runtime/
 cleanup_archive/
 error/
@@ -15,5 +18,15 @@ input/
 final_project/
 project_publication/
 human_details_filtered/
+tmp/
+temp/
+tmp_pytest/
+tmp_pytest_run/
+tmp_pytest_auto/
+pytest-temp/
+*.pyc
+*.pyo
+*.tmp
+*.temp
 *.log
 *.pid

@@ -1,0 +1,22 @@
+{
+  "project_path": "<LOCAL_PATH>",
+  "prin_path": "<LOCAL_PATH>",
+  "regeneration_assets_dir": "<LOCAL_PATH>",
+  "output_project_path": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "engine": "heuristic",
+  "transition_mode": "recommend_only",
+  "enable_auto_transitions": false,
+  "allow_transition_handle_trimming": false,
+  "enable_subject_series_grouping": false,
+  "sequence_jobs": [
+    {
+      "source_sequence_name": "Slava_26_RUe_03",
+      "new_sequence_name": "Slava_26_RUo_03"
+    },
+    {
+      "source_sequence_name": "Slava_26_ILe_03",
+      "new_sequence_name": "Slava_26_ILo_03"
+    }
+  ]
+}
