@@ -40,7 +40,7 @@
 | Sequence optimization | `main_sequence_optimizer.py`, `utils/sequence_optimizer.py`, `utils/sequence_optimizer_runtime.py`, `utils/premiere_xml.py`, `utils/premiere_project.py`, `utils/premiere_xml_export.py`, `utils/premiere_project_export.py`, `models/video_sequence.py` | Анализ монтажной последовательности и выдача рекомендованного порядка | optimized JSON/TXT/XML/PRPROJ |
 | Sequence reports и batch orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/fcp_translation_results.py` | Построение отчетов, batch-доставка, human-profile overlays, transition recommendations | reports, batch summaries, transition reports |
 | Desktop/web automation | `main_desktop.py`, `api/chatgpt_desktop.py`, `api/chatgpt_desktop_v2.py`, `api/chatgpt_web.py` | Автоматизация desktop/web-взаимодействия для prompt-driven задач | отправка prompts во внешние UI |
-| ChatGPT portrait-style batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `styles/art_styles_Prompt_list.txt`, `run_chatgpt_portrait_batch_existing.bat` | Пакетная генерация художественных портретов из `input/` через уже открытое окно ChatGPT; поддержка коротких и базовых наборов стилей, restart через `--skip-existing` | `output/chatgpt_portraits/<image_stem>_<style_slug>.png` |
+| ChatGPT portrait-style batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `chatgpt_watercolor_scene_expansion_config.json`, `styles/art_styles_Prompt_list.txt`, `BATCH_RUN_HISTORY.md`, `run_chatgpt_portrait_batch_existing.bat` | Пакетная генерация художественных портретов и image-edit задач из `input/` через уже открытое single-tab окно ChatGPT; поддержка коротких, базовых и специальных наборов стилей, restart через `--skip-existing` | `output/chatgpt_portraits/<image_stem>_<style_slug>.png`, `output/chatgpt_watercolor_scene_expansion/<image_stem>_<style_slug>.png` |
 
 ## 3. Главные потоки данных
 
@@ -93,13 +93,15 @@
 ### 3.6 ChatGPT portrait-style batch поток
 
 1. `main_chatgpt_portrait_batch.py` читает изображения из `input/` и конфиг стилей.
-2. Рабочий короткий конфиг — `chatgpt_portrait_config.json`; полный базовый банк художественных стилей — `chatgpt_portrait_base_config.json`, собранный из `styles/art_styles_Prompt_list.txt`.
+2. Рабочий короткий конфиг — `chatgpt_portrait_config.json`; полный базовый банк художественных стилей и image-edit сервисов — `chatgpt_portrait_base_config.json`, собранный из `styles/art_styles_Prompt_list.txt` и дополненный style/service prompts вроде `watercolor`, `modern_color`, `colorize`, `face_enlargement`, `scene_expansion`.
 3. Для каждого изображения и каждого `portrait_styles[]` строится prompt и имя результата `<image_stem>_<style_slug>.png`.
 4. Desktop-режим использует `api/chatgpt_desktop_v2.py` и уже открытое/проверенное окно ChatGPT в Chrome. Автоматизация не обходит human-check/CAPTCHA; если ChatGPT требует проверку, ее проходит пользователь.
-5. `run_chatgpt_portrait_batch_existing.bat` запускает desktop-flow с вставкой изображения через Windows clipboard, отправкой prompt, ожиданием новой сгенерированной картинки и сохранением через browser context menu / `Save As`.
-6. `--skip-existing` является основным restart-контрактом: готовые PNG не пересоздаются, и batch можно безопасно перезапускать после падения UI-автоматизации.
-7. Детектор результата сравнивает не только прямоугольники UIA-изображений, но и легкий hash содержимого, чтобы новая картинка в том же месте не считалась старой.
-8. Сохранение результата проверяет, что выбранный image-кандидат видим внутри окна ChatGPT, чтобы правый клик не уходил на рабочий стол или в другое окно.
+5. Для защиты от путаницы между несколькими ChatGPT-окнами `run_chatgpt_portrait_batch_existing.bat` включает `--desktop-require-single-tab-window`: рабочим считается Chrome-окно ChatGPT с одной видимой вкладкой.
+6. `run_chatgpt_portrait_batch_existing.bat` запускает desktop-flow с вставкой изображения через Windows clipboard, отправкой prompt, ожиданием новой сгенерированной картинки и сохранением через browser context menu / `Save As`.
+7. `--skip-existing` является основным restart-контрактом: готовые PNG не пересоздаются, и batch можно безопасно перезапускать после падения UI-автоматизации.
+8. Детектор результата сравнивает не только прямоугольники UIA-изображений, но и легкий hash содержимого, чтобы новая картинка в том же месте не считалась старой.
+9. Сохранение результата проверяет, что выбранный image-кандидат видим внутри окна ChatGPT, чтобы правый клик не уходил на рабочий стол или в другое окно.
+10. `BATCH_RUN_HISTORY.md` хранит неповторяющиеся примеры запуска всех `.bat`-оболочек и текущие рабочие команды с параметрами.
 
 ### 3.7 Карта запуска: batch -> программа -> параметры
 
@@ -120,7 +122,7 @@ flowchart LR
   C1["config.json / config.local.json / config_*.json"] --> G1["config.py / GenerationConfig"]
   G1 --> P1
   G1 --> P2
-  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nstyles/art_styles_Prompt_list.txt"] --> P6
+  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_watercolor_scene_expansion_config.json\nstyles/art_styles_Prompt_list.txt\nBATCH_RUN_HISTORY.md"] --> P6
 
   C3["project_sequence_batch_*.json"] --> P3
   P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
@@ -132,7 +134,7 @@ flowchart LR
   P2 --> O2["results:\n*_video_*.mp4\n*_bg_image_16x9.*\ngrok debug artifacts if enabled"]
   P5 --> O3["reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)"]
   P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
-  P6 --> O5["portrait results:\noutput/chatgpt_portraits/*_<style_slug>.png\noptional *_response.txt"]
+  P6 --> O5["portrait / image-edit results:\noutput/chatgpt_portraits/*_<style_slug>.png\noutput/chatgpt_watercolor_scene_expansion/*_<style_slug>.png\noptional *_response.txt"]
 ```
 
 Левая часть схемы показывает запуск и источники параметров, правая часть показывает, какие отчеты и результаты появляются на выходе.

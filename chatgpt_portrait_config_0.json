@@ -3,6 +3,10 @@
     {
       "name": "watercolor portrait",
       "slug": "watercolor"
+    },
+    {
+      "name": "pastel portrait",
+      "slug": "pastel"
     }
   ],
   "prompt_template": "Generate a new portrait image based on the attached source image.\nStyle: {style}.\nPreserve the person's identity, facial structure, approximate age, expression, and natural features.\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people.",

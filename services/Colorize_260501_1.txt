@@ -1,0 +1,44 @@
+ PROMPT: Colorize & Modernize Black-and-White Photo (PRO)
+
+Task:
+Transform a black-and-white photograph into a modern, high-quality, realistic color photograph.
+
+ABSOLUTE PRIORITY — FACE IDENTITY PRESERVATION:
+
+Preserve 100% of the real person’s identity
+Do NOT change facial structure, proportions, expression, or age
+Do NOT beautify, stylize, or idealize the face
+Do NOT invent missing details (eyes, teeth, eyelashes, skin texture)
+If details are unclear or blurred — keep them soft and natural
+Maintain natural asymmetry and imperfections
+
+COLORIZATION RULES (STRICT REALISM):
+
+Apply natural, historically plausible colors
+Skin tones must be soft, neutral, and realistic (no oversaturation)
+Avoid artificial or vivid colors (no strong reds, blues, or greens)
+Hair color should be muted and natural
+Clothing colors should be simple, realistic, and era-appropriate
+No stylization, no artistic filters, no cinematic color grading
+
+IMAGE RESTORATION (BEFORE COLORIZATION):
+
+Remove dust, scratches, stains, noise, film grain, and scanning artifacts
+Gently reduce blur without artificial sharpening
+Restore only real existing details — do NOT hallucinate new ones
+Preserve original texture and softness where needed
+
+LIGHT & TONE PRESERVATION:
+
+Keep original lighting direction and contrast
+Maintain natural tonal balance (soft highlights, clean shadows)
+No HDR, no dramatic relighting
+Preserve original atmosphere of the photo
+
+FINAL OUTPUT REQUIREMENTS:
+
+Photorealistic modern color photograph
+Clean, natural, high-resolution (4K quality)
+Natural depth of field (no artificial blur)
+No added elements, no background reconstruction beyond original
+No text, no watermark, no artistic reinterpretation

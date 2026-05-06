@@ -119,6 +119,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--desktop-dialog-timeout", type=float, default=20.0, help="Seconds to wait for the Windows open-file dialog.")
     parser.add_argument("--desktop-new-chat-timeout", type=float, default=15.0, help="Seconds to wait while opening a new ChatGPT chat.")
     parser.add_argument("--desktop-active-window", action="store_true", help="Use the currently active window instead of searching Chrome windows/tabs.")
+    parser.add_argument("--desktop-prefer-single-tab-window", action="store_true", help="Prefer a ChatGPT Chrome window with exactly one visible tab when several ChatGPT windows are open.")
+    parser.add_argument("--desktop-require-single-tab-window", action="store_true", help="Only use a ChatGPT Chrome window with exactly one visible tab; fail fast if the selected window has extra tabs.")
     parser.add_argument("--desktop-new-chat", action="store_true", help="Try to open a new ChatGPT chat before every desktop job.")
     parser.add_argument("--desktop-clipboard-attach", action="store_true", help="Attach images by pasting the file from Windows clipboard into the active ChatGPT composer.")
     parser.add_argument("--desktop-capture-result", action="store_true", help="Capture a generated image from the desktop UI after submitting.")
@@ -139,6 +141,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--no-submit", action="store_true", help="Fill each ChatGPT request without submitting it.")
     parser.add_argument("--skip-existing", action="store_true", help="Skip portrait files that already exist.")
+    parser.add_argument(
+        "--continue-on-error",
+        action="store_true",
+        help="Log a failed job and continue with the next image/style pair.",
+    )
     parser.add_argument(
         "--save-response-text",
         action="store_true",
@@ -457,8 +464,11 @@ def _run_desktop_jobs(
             post_attach_delay_sec=getattr(args, "desktop_post_attach_delay", 3.0),
             min_result_wait_sec=getattr(args, "desktop_min_result_wait", 90.0),
             result_stable_sec=getattr(args, "desktop_result_stable_wait", 8.0),
-            open_new_chat_before_run=getattr(args, "desktop_new_chat", False),
+            open_new_chat_before_run=getattr(args, "desktop_new_chat", False)
+            or portrait_config.new_chat_per_job,
             use_active_window=getattr(args, "desktop_active_window", False),
+            prefer_single_tab_window=getattr(args, "desktop_prefer_single_tab_window", False),
+            require_single_tab_window=getattr(args, "desktop_require_single_tab_window", False),
             attach_via_clipboard=getattr(args, "desktop_clipboard_attach", False),
             skip_capture_result=not getattr(args, "desktop_capture_result", False),
             save_result_via_context_menu=getattr(args, "desktop_save_context_menu", False),
@@ -469,7 +479,22 @@ def _run_desktop_jobs(
             verbose=getattr(args, "desktop_verbose", False),
             submit=not args.no_submit,
         )
-        ChatGPTDesktopAgent(config).run()
+        try:
+            ChatGPTDesktopAgent(config).run()
+        except Exception as exc:
+            if _is_desktop_window_selection_error(exc):
+                print(
+                    f"Desktop window selection failed: {exc}",
+                    flush=True,
+                )
+                raise
+            if not getattr(args, "continue_on_error", False):
+                raise
+            print(
+                f"Desktop job failed: {job.image_path.name} / {job.style.name}: {exc}",
+                flush=True,
+            )
+            continue
         outputs.append(job.output_path)
         if args.no_submit:
             print(f"Existing ChatGPT window prepared: {job.image_path.name} / {job.style.name}")
@@ -478,6 +503,19 @@ def _run_desktop_jobs(
         if getattr(args, "pause_between_jobs", False):
             input("Save the generated result manually, then press Enter here to continue...")
     return outputs
+
+
+def _is_desktop_window_selection_error(exc: Exception) -> bool:
+    message = str(exc).casefold()
+    markers = (
+        "could not find a usable chatgpt browser window",
+        "could not find a chatgpt generation window",
+        "does not match the generation-window rule",
+        "is not the dedicated generation window",
+        "is not the chatgpt browser window",
+        "no matching chrome window",
+    )
+    return any(marker in message for marker in markers)
 
 
 def _run_local_jobs(args: argparse.Namespace, jobs: list[PortraitJob]) -> list[Path]:

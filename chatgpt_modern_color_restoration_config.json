@@ -1,0 +1,13 @@
+﻿{
+    "portrait_styles":  [
+                            {
+                                "name":  "MODERN_COLOR photo restoration and realistic colorization",
+                                "slug":  "modern_color",
+                                "prompt":  "Generate the restored image now from the attached source image. Do not answer with instructions, explanations, tips, or text. Use the image generation tool now. The output must be one single generated image.\n\nGoal: restore the entire attached photograph into a clean, realistic, modern-quality color photo while staying faithful to the original composition.\n\nPeople and identity rules:\n- If the photo contains several people, preserve every visible person.\n- Preserve each person\u0027s identity, facial structure, proportions, expression, approximate age, pose, and natural imperfections.\n- Do not beautify, stylize, idealize, or modernize any face.\n- Do not invent eyes, teeth, eyelashes, skin texture, facial features, clothing, objects, or background details.\n- If details are missing or blurred, keep them naturally soft instead of hallucinating them.\n\nRestoration:\n- Remove dust, scratches, stains, film grain, noise, scan artifacts, compression artifacts, and fading.\n- Improve clarity, contrast, tonal balance, and resolution naturally.\n- Reduce blur gently without artificial sharpening or plastic AI texture.\n- Preserve the original framing, composition, pose, light direction, shadows, background, and atmosphere.\n\nColor workflow:\n- If the image has old or inaccurate colorization, ignore that color first and rebuild a clean neutral black-and-white base.\n- Then apply realistic, historically plausible, muted natural color.\n- Use soft neutral skin tones and believable hair, clothing, object, and background colors.\n- Avoid bright, oversaturated, artificial, HDR, cinematic, or dramatic color.\n\nFinal image:\n- Photorealistic restored modern color photograph, clean high-quality 4K look, authentic documentary realism.\n- One complete restored photo, not a portrait crop unless the original is already a portrait.\n- No artistic filter, no collage, no text, no captions, no frame, no watermark."
+                            }
+                        ],
+    "prompt_template":  "{style}",
+    "output_dir":  "output/chatgpt_photo_restoration",
+    "save_response_text":  false,
+    "new_chat_per_job":  true
+}

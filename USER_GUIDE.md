@@ -128,11 +128,12 @@ Main files:
 - `api/chatgpt_desktop_v2.py` - desktop automation for the existing ChatGPT window.
 - `run_chatgpt_portrait_batch_existing.bat` - recommended launcher for an already-open ChatGPT session.
 - `chatgpt_portrait_config.json` - short working style set, currently watercolor and pastel.
-- `chatgpt_portrait_base_config.json` - full base style bank for artistic portraits.
+- `chatgpt_portrait_base_config.json` - full base style bank for artistic portraits and image-edit service styles.
+- `chatgpt_watercolor_scene_expansion_config.json` - special two-style config for `watercolor` and `scene_expansion`.
+- `BATCH_RUN_HISTORY.md` - non-repeating examples for all batch launchers and their parameters.
 - `styles\art_styles_Prompt_list.txt` - source human-readable style prompt list.
 
-The base config currently contains 10 artistic portrait styles:
-Rembrandt, Renaissance, Impressionist, Van Gogh post-impressionism, Klimt art nouveau, Art Deco, Karsh black-and-white studio portrait, Pop Art, Cubist, and Chagall poetic modernism.
+The base config contains the full portrait/style bank, including Rembrandt, Renaissance, Impressionist, Watercolor, Van Gogh post-impressionism, Klimt art nouveau, Art Deco, Karsh black-and-white studio portrait, Pop Art, Cubist, Chagall poetic modernism, plus service styles such as MODERN_COLOR, COLORIZE, FACE_ENLARGEMENT, and SCENE_EXPANSION.
 
 Output:
 - generated PNG files are written to `output\chatgpt_portraits`;
@@ -143,6 +144,12 @@ Recommended automatic command:
 
 ```bat
 .\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Watercolor + scene expansion command:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_watercolor_scene_expansion_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
 ```
 
 Short working set command:
@@ -160,7 +167,9 @@ Manual focus fallback:
 Important:
 - the automation does not bypass ChatGPT human checks or CAPTCHA prompts; pass them manually in the browser first;
 - do not run two portrait batches at the same time;
-- if Chrome has several ChatGPT windows, keep the active portrait-generation window visible and close unrelated empty ChatGPT windows if selection becomes unstable;
+- keep the generation ChatGPT in a dedicated Chrome window with exactly one visible tab; `run_chatgpt_portrait_batch_existing.bat` now requires this with `--desktop-require-single-tab-window`;
+- if Chrome has several ChatGPT windows, the single-tab generation window is the only safe target for the desktop batch;
+- desktop input is guarded: before clicks, paste, Enter, and save shortcuts, the script verifies that the foreground window is the selected ChatGPT window or a real `Save As`/`Open` dialog; if another app is foreground, the batch stops instead of sending input there;
 - after saving, ChatGPT may leave the last generated image open on screen. This is acceptable if the batch continues;
 - if the batch stops, rerun the same command with `--skip-existing`.
 
@@ -801,6 +810,12 @@ ChatGPT artistic portrait batch from all images in `input` using the full base s
 
 ```bat
 .\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+ChatGPT watercolor portrait + scene expansion batch:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_watercolor_scene_expansion_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
 ```
 
 ChatGPT short watercolor/pastel portrait batch:

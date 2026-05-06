@@ -1,0 +1,18 @@
+﻿{
+    "portrait_styles":  [
+                            {
+                                "name":  "FACE_ENLARGEMENT camera move-in portrait",
+                                "slug":  "face_enlargement",
+                                "prompt":  "Use ChatGPT image generation to create the final edited image now from the attached photo. Generate the actual image; do not answer with text. Do not write a prompt, description, explanation, checklist, or instructions. Return only one generated image file in the chat.\n\nFACE_ENLARGEMENT: make the result look as if the camera moved closer to the main subject. The face or main subject should be larger in the frame with a natural tighter portrait composition.\n\nKeep the same real identity, facial structure, expression, age, pose, lighting, color, atmosphere, and photo style. If several people are present, preserve the identities of the people who naturally remain in the tighter frame. Do not add new people, duplicate people, beautify faces, stylize the image, or invent missing facial details.\n\nThe result must look like a real high-quality photograph taken closer to the subject, not a low-quality digital crop. No collage, no text, no captions, no watermark, no border, no frame."
+                            },
+                            {
+                                "name":  "SCENE_EXPANSION camera pull-back scene",
+                                "slug":  "scene_expansion",
+                                "prompt":  "Use ChatGPT image generation to create the final edited image now from the attached photo. Generate the actual image; do not answer with text. Do not write a prompt, description, explanation, checklist, or instructions. Return only one generated image file in the chat.\n\nSCENE_EXPANSION: make the result look as if the camera moved farther away from the main subject. The original person, people, or main object should appear smaller in the frame while the surrounding scene is naturally expanded.\n\nPreserve every visible person\u0027s real identity, facial structure, expression, age, pose, lighting, color, atmosphere, and photo style. Keep the original subject recognizable. Do not add extra people, duplicate people, change faces, or invent new important objects.\n\nExpand only the surrounding environment that naturally belongs to the original photo: same location, same perspective, same lens feel, same shadows, same colors, and same atmosphere. The result must look like a real high-quality photograph taken from farther away. No fantasy, no cinematic style, no collage, no text, no captions, no watermark, no border, no frame."
+                            }
+                        ],
+    "prompt_template":  "{style}",
+    "output_dir":  "output/chatgpt_camera_transformations",
+    "save_response_text":  false,
+    "new_chat_per_job":  true
+}
