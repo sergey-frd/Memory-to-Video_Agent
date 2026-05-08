@@ -70,6 +70,41 @@ SAVE_DIALOG_EXCLUDED_TITLE_PARTS = (
     "google search",
 )
 SEND_BUTTON_PATTERNS = ("Send", "Submit", "Отправить")
+VOICE_BUTTON_PATTERNS = (
+    "voice",
+    "voice mode",
+    "microphone",
+    "mic",
+    "record",
+    "recording",
+    "dictate",
+    "dictation",
+    "audio",
+    "speech",
+    "speak",
+    "listen",
+    "голос",
+    "микроф",
+    "запис",
+    "диктов",
+    "аудио",
+    "речь",
+    "говор",
+    "слуш",
+)
+GENERATION_RUNNING_PATTERNS = (
+    "Stop",
+    "Stop generating",
+    "Cancel",
+    "Останов",
+    "Стоп",
+    "Отмен",
+)
+DEFAULT_CHATGPT_TAB_TITLE_RE = (
+    ".*(ChatGPT|New chat|Portrait Request|Image Generation Request|"
+    "Image Transformation Request|Image Expansion Request|Image Editing Request|"
+    "Restoration Request|Photo Restoration).*"
+)
 CHATGPT_WINDOW_TITLE_MARKERS = (
     "chatgpt",
     "portrait",
@@ -94,6 +129,8 @@ CHATGPT_WINDOW_TITLE_MARKERS = (
     "image editing request",
     "image generation request",
     "image transformation request",
+    "image expansion request",
+    "image expansion",
     "face enlargement",
     "scene expansion",
 )
@@ -504,7 +541,7 @@ class ChatGPTDesktopAgent:
             return False
         if any(marker in title for marker in CHATGPT_WINDOW_TITLE_MARKERS):
             return True
-        tab_re = self.config.browser_tab_title_re or ".*(ChatGPT|Portrait Request).*"
+        tab_re = self.config.browser_tab_title_re or DEFAULT_CHATGPT_TAB_TITLE_RE
         try:
             return self._find_tab(window, tab_re) is not None
         except Exception:
@@ -553,6 +590,8 @@ class ChatGPTDesktopAgent:
         if "image generation request" in title:
             score += 100
         if "image transformation request" in title:
+            score += 100
+        if "image expansion request" in title or "image expansion" in title:
             score += 100
         if "face enlargement" in title or "scene expansion" in title:
             score += 100
@@ -990,13 +1029,14 @@ class ChatGPTDesktopAgent:
             for target_x, target_y in self._manual_send_button_positions(window):
                 self._click_manual_send_button(window, target_x, target_y)
                 self._log("send arrow click attempted")
-                time.sleep(1.2)
-                if not self._composer_still_has_text(window):
-                    self._log("composer text is gone or not visible after send arrow click")
+                if self._submission_started(window):
+                    self._log("submission appears to have started after send-arrow click")
                     return
-                self._log("composer still has text after send arrow click; trying next send-arrow position")
-        send_button = self._find_button(window, SEND_BUTTON_PATTERNS)
-        if send_button is not None:
+                self._log("send-arrow click did not start the request; trying next send-arrow position")
+        for attempt in range(1, 6):
+            send_button = self._wait_for_send_button(window)
+            if send_button is None:
+                break
             self._log(f"clicking send button candidate: {self._control_label(send_button)!r}")
             if not self._click_wrapper_center(
                 send_button,
@@ -1005,19 +1045,160 @@ class ChatGPTDesktopAgent:
             ):
                 self._ensure_foreground_window(window, "click ChatGPT send button")
                 send_button.click_input()
-            time.sleep(1.2)
-            if not self._composer_still_has_text(window):
-                self._log("composer text is gone or not visible after send button click")
+            if self._submission_started(window):
+                self._log(f"submission appears to have started after send button click attempt {attempt}")
                 return
-            self._log(
-                "composer text is still visible after send button click; continuing to result wait "
-                "because ChatGPT image-generation requests can keep prompt text visible while running"
-            )
-            return
+            self._log(f"send button click attempt {attempt} did not start the request; retrying")
         raise DesktopAutomationError(
             "Could not find or activate the ChatGPT send button. "
-            "Stopping before keyboard submit so Enter cannot open the attached source image."
+            "Stopping before result wait so the batch does not wait forever after a missed send click."
         )
+
+    def _submission_started(self, window: BaseWrapper) -> bool:
+        deadline = time.time() + 7.0
+        while time.time() < deadline:
+            if not self._composer_still_has_text(window):
+                return True
+            if self._has_generation_running_indicator(window):
+                return True
+            time.sleep(0.5)
+        return False
+
+    def _has_generation_running_indicator(self, window: BaseWrapper) -> bool:
+        patterns = [pattern.casefold() for pattern in GENERATION_RUNNING_PATTERNS]
+        for wrapper in window.descendants(control_type="Button"):
+            try:
+                if not wrapper.is_visible() or not wrapper.is_enabled():
+                    continue
+                label = self._control_label(wrapper).casefold()
+                if any(pattern in label for pattern in patterns):
+                    return True
+            except Exception:
+                continue
+        return False
+
+    def _wait_for_send_button(self, window: BaseWrapper) -> Optional[BaseWrapper]:
+        deadline = time.time() + 25.0
+        geometry_candidate_logged = False
+        while time.time() < deadline:
+            button = self._find_button(window, SEND_BUTTON_PATTERNS)
+            if button is not None:
+                return button
+            button = self._find_send_button_by_geometry(window)
+            if button is not None:
+                if not geometry_candidate_logged:
+                    self._log(
+                        "send button was not found by label; using geometric candidate: "
+                        f"{self._wrapper_rect_text(button)}, title={self._control_label(button)!r}"
+                    )
+                    geometry_candidate_logged = True
+                return button
+            time.sleep(0.5)
+        return None
+
+    def _find_send_button_by_geometry(self, window: BaseWrapper) -> Optional[BaseWrapper]:
+        prompt_input = self._find_prompt_input(window)
+        try:
+            prompt_rect = prompt_input.rectangle() if prompt_input is not None else None
+            window_rect = window.rectangle()
+        except Exception:
+            return None
+
+        candidates: list[tuple[float, BaseWrapper]] = []
+        for wrapper in window.descendants(control_type="Button"):
+            try:
+                if not wrapper.is_visible() or not wrapper.is_enabled():
+                    continue
+                rect = wrapper.rectangle()
+                if rect.width() < 12 or rect.height() < 12:
+                    continue
+                if rect.width() > 110 or rect.height() > 110:
+                    continue
+                if rect.top < window_rect.top + window_rect.height() * 0.18:
+                    continue
+                if not self._rect_center_inside(rect, window_rect):
+                    continue
+
+                label = self._control_label(wrapper).casefold()
+                searchable = self._control_search_text(wrapper).casefold()
+                if self._looks_like_voice_button(wrapper):
+                    self._log(
+                        "blocked voice/microphone candidate while looking for send button: "
+                        f"{self._wrapper_rect_text(wrapper)}, label={self._control_label(wrapper)!r}, "
+                        f"search={self._control_search_text(wrapper)!r}"
+                    )
+                    continue
+                if label and not any(pattern.casefold() in searchable for pattern in SEND_BUTTON_PATTERNS):
+                    if any(part in searchable for part in ("button", "кноп", "system")):
+                        continue
+                if any(
+                    part in label
+                    for part in (
+                        "back",
+                        "forward",
+                        "reload",
+                        "close",
+                        "minimize",
+                        "maximize",
+                        "new project",
+                        "attach",
+                        "add photos",
+                        "add files",
+                        "добав",
+                        "прикреп",
+                        "новый проект",
+                        "закрыть",
+                        "свернуть",
+                        "развернуть",
+                    )
+                ):
+                    continue
+
+                center_x = rect.left + rect.width() // 2
+                center_y = rect.top + rect.height() // 2
+                if prompt_rect is not None:
+                    if center_x < prompt_rect.right - 60:
+                        continue
+                    if center_x > prompt_rect.right + 520:
+                        continue
+                    if center_y < prompt_rect.top - 80:
+                        continue
+                    if center_y > prompt_rect.bottom + 360:
+                        continue
+                    target_x = prompt_rect.right + 140
+                    target_y = prompt_rect.bottom + 150
+                    distance = abs(center_x - target_x) + abs(center_y - target_y)
+                    score = 10_000 - distance
+                    if center_x >= prompt_rect.right:
+                        score += 500
+                    if center_y >= prompt_rect.top:
+                        score += 250
+                else:
+                    if center_y < window_rect.top + window_rect.height() * 0.45:
+                        continue
+                    if center_x < window_rect.left + window_rect.width() * 0.45:
+                        continue
+                    score = center_x + center_y
+
+                # Prefer icon-sized square controls, which matches ChatGPT's send arrow.
+                score -= abs(rect.width() - rect.height()) * 2
+                candidates.append((score, wrapper))
+            except Exception:
+                continue
+
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: item[0])
+        if self.config.verbose:
+            self._log(
+                "geometric send candidates: "
+                f"{[(round(score, 1), self._wrapper_rect_text(wrapper), self._control_label(wrapper)) for score, wrapper in candidates[-5:]]}"
+            )
+        return candidates[-1][1]
+
+    def _looks_like_voice_button(self, wrapper: BaseWrapper) -> bool:
+        text = self._control_search_text(wrapper).casefold()
+        return any(pattern.casefold() in text for pattern in VOICE_BUTTON_PATTERNS)
 
     def _control_label(self, wrapper: BaseWrapper) -> str:
         try:
@@ -1029,6 +1210,18 @@ class ChatGPTDesktopAgent:
         except Exception:
             name = ""
         return title or name
+
+    def _control_search_text(self, wrapper: BaseWrapper) -> str:
+        parts = [self._control_label(wrapper)]
+        try:
+            info = wrapper.element_info
+            for attr in ("name", "automation_id", "class_name", "control_type"):
+                value = getattr(info, attr, "") or ""
+                if value:
+                    parts.append(str(value))
+        except Exception:
+            pass
+        return " ".join(part for part in parts if part)
 
     def _composer_still_has_text(self, window: BaseWrapper) -> bool:
         input_box = self._find_prompt_input(window)

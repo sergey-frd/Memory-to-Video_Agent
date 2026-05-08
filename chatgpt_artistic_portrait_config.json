@@ -1,0 +1,13 @@
+﻿{
+    "portrait_styles":  [
+                            {
+                                "name":  "ARTISTIC_PORTRAIT premium artistic portrait",
+                                "slug":  "artistic_portrait",
+                                "prompt":  "Use ChatGPT image generation to create the final edited image now from the attached photo. Generate the actual image; do not answer with text. Do not write a prompt, description, explanation, checklist, or instructions. Return only one generated image file in the chat.\n\nARTISTIC_PORTRAIT:\nCreate a premium artistic portrait based on the uploaded source photo.\r\n\r\nMain goal:\r\ncarefully isolate the main subject or subjects from the original image and transform them into a beautiful cinematic fine-art photograph that positively enhances the original scene while preserving its real emotional atmosphere.\r\n\r\nCRITICAL REQUIREMENTS:\r\n— strictly preserve the real identity of all people\r\n— keep the original facial structure, eyes, nose, lips, age, expression, hairstyle, and natural features\r\n— do NOT replace people with idealized AI faces\r\n— maintain 100% recognizability\r\n— preserve the emotional authenticity and spirit of the original photo\r\n\r\nStyle:\r\n— elegant artistic photography\r\n— cinematic composition\r\n— warm positive atmosphere\r\n— emotionally uplifting mood\r\n— realistic premium photography look\r\n— natural beauty and realism\r\n— visually rich but believable\r\n— soft cinematic lighting\r\n— subtle depth of field\r\n— realistic skin texture\r\n— expressive natural eyes\r\n— detailed hair and clothing\r\n— gentle professional retouching without plastic skin\r\n— natural colors with beautiful tonal balance\r\n— harmonious background separation with soft bokeh\r\n— museum-quality artistic portrait\r\n— DSLR photography aesthetic\r\n— ultra realistic\r\n— highly detailed\r\n— 8K quality\r\n\r\nIMPORTANT:\r\nEnhance the beauty, emotion, and artistic impact of the original photograph without changing the real people, their personalities, or the truthful feeling of the scene.\n\nFinal output: one finished premium artistic portrait image. No text, no watermark, no frame, no collage."
+                            }
+                        ],
+    "prompt_template":  "{style}",
+    "output_dir":  "output/chatgpt_artistic_portrait",
+    "save_response_text":  false,
+    "new_chat_per_job":  true
+}
