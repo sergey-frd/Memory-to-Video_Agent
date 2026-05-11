@@ -12,6 +12,7 @@ from main_chatgpt_portrait_batch import (
     list_input_images,
     load_portrait_config,
     run_batch,
+    _output_dir_for_backend,
 )
 
 
@@ -219,6 +220,37 @@ def test_run_batch_api_backend_prepares_without_browser() -> None:
     outputs = run_batch(args, settings=settings)
 
     assert outputs == [root / "portraits" / "first_pastel.png"]
+
+
+def test_service_backends_mirror_chatgpt_output_dirs() -> None:
+    root = Path("test_runtime") / f"portrait_service_output_{uuid4().hex}"
+    settings = _settings_for(root)
+
+    assert _output_dir_for_backend(root / "output" / "chatgpt_portraits", "gemini-desktop", settings) == (
+        root / "output" / "gemini_portraits"
+    )
+    assert _output_dir_for_backend(
+        root / "output" / "chatgpt_watercolor_scene_expansion",
+        "gemini",
+        settings,
+    ) == root / "output" / "gemini_watercolor_scene_expansion"
+    assert _output_dir_for_backend(root / "output" / "photo_restoration", "gemini", settings) == (
+        root / "output" / "gemini_photo_restoration"
+    )
+    assert _output_dir_for_backend(root / "output" / "chatgpt_portraits", "grok", settings) == (
+        root / "output" / "grok_portraits"
+    )
+    assert _output_dir_for_backend(
+        root / "output" / "chatgpt_watercolor_on_paper",
+        "grok-web",
+        settings,
+    ) == root / "output" / "grok_watercolor_on_paper"
+    assert _output_dir_for_backend(root / "output" / "photo_restoration", "grok", settings) == (
+        root / "output" / "grok_photo_restoration"
+    )
+    assert _output_dir_for_backend(root / "output" / "chatgpt_portraits", "desktop", settings) == (
+        root / "output" / "chatgpt_portraits"
+    )
 
 
 def test_run_batch_local_backend_writes_distinct_style_files() -> None:

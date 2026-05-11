@@ -20,6 +20,8 @@ from utils.image_analysis import analyze_image
 SUPPORTED_INPUT_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 DEFAULT_CONFIG_NAME = "chatgpt_portrait_config.json"
 DEFAULT_OUTPUT_SUBDIR = "chatgpt_portraits"
+CHATGPT_TARGET_URL = "https://chatgpt.com/"
+DEFAULT_CHATGPT_TAB_TITLE_RE = ".*ChatGPT.*"
 DEFAULT_PROMPT_TEMPLATE = "\n".join(
     [
         "Generate a new portrait image based on the attached source image.",
@@ -76,7 +78,7 @@ PortraitRunner = Callable[[ChatGPTWebConfig], Optional[Path]]
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate styled portraits in ChatGPT Web for all images from input/."
+        description="Generate styled portraits for all images from input/."
     )
     parser.add_argument("--input-dir", type=Path, default=None, help="Directory with source images. Defaults to input/.")
     parser.add_argument("--output-dir", type=Path, default=None, help="Directory for generated portraits.")
@@ -90,9 +92,9 @@ def parse_args() -> argparse.Namespace:
         "--profile-dir",
         type=Path,
         default=Path(".browser-profile/chatgpt-web"),
-        help="Persistent Chrome profile for ChatGPT Web.",
+        help="Persistent Chrome profile for the selected web service.",
     )
-    parser.add_argument("--target-url", type=str, default="https://chatgpt.com/", help="ChatGPT Web URL.")
+    parser.add_argument("--target-url", type=str, default=CHATGPT_TARGET_URL, help="Web URL for the selected service.")
     parser.add_argument("--chrome-exe", type=Path, default=None, help="Optional explicit Chrome executable path.")
     parser.add_argument(
         "--chrome-debug-port",
@@ -102,9 +104,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--backend",
-        choices=("web", "desktop", "api", "local"),
+        choices=("web", "desktop", "gemini-desktop", "gemini", "grok", "grok-web", "api", "local"),
         default="web",
-        help="Use ChatGPT Web automation, an already-open desktop Chrome/ChatGPT window, the official OpenAI Images API, or local stylization.",
+        help="Use ChatGPT Web automation, Grok Web automation, an already-open ChatGPT or Gemini desktop Chrome window, the official OpenAI Images API, or local stylization.",
     )
     parser.add_argument(
         "--api-model",
@@ -113,22 +115,26 @@ def parse_args() -> argparse.Namespace:
         help="OpenAI image edit model for --backend api, for example gpt-image-1.5 or dall-e-2.",
     )
     parser.add_argument("--result-timeout", type=float, default=300.0, help="Seconds to wait for each portrait.")
-    parser.add_argument("--launch-timeout", type=float, default=60.0, help="Seconds to wait for ChatGPT Web to open.")
+    parser.add_argument("--launch-timeout", type=float, default=60.0, help="Seconds to wait for the web service to open.")
+    parser.add_argument("--upload-timeout", type=float, default=180.0, help="Seconds to wait for source-image upload readiness in Grok.")
+    parser.add_argument("--grok-aspect-ratio", type=str, default=None, help="Optional Grok image aspect ratio, for example 1:1 or 16:9.")
+    parser.add_argument("--grok-orientation", type=str, default=None, help="Optional Grok image orientation, for example horizontal.")
+    parser.add_argument("--save-grok-debug-artifacts", action="store_true", help="Keep Grok screenshot/HTML/candidate debug artifacts when image saving fails.")
     parser.add_argument("--desktop-window-title-re", type=str, default=".*Google Chrome.*", help="Regex for the existing browser window.")
-    parser.add_argument("--desktop-browser-tab-title-re", type=str, default=".*ChatGPT.*", help="Regex for the existing ChatGPT browser tab.")
+    parser.add_argument("--desktop-browser-tab-title-re", type=str, default=DEFAULT_CHATGPT_TAB_TITLE_RE, help="Regex for the existing service browser tab.")
     parser.add_argument("--desktop-dialog-timeout", type=float, default=20.0, help="Seconds to wait for the Windows open-file dialog.")
-    parser.add_argument("--desktop-new-chat-timeout", type=float, default=15.0, help="Seconds to wait while opening a new ChatGPT chat.")
+    parser.add_argument("--desktop-new-chat-timeout", type=float, default=15.0, help="Seconds to wait while opening a new service chat.")
     parser.add_argument("--desktop-active-window", action="store_true", help="Use the currently active window instead of searching Chrome windows/tabs.")
-    parser.add_argument("--desktop-prefer-single-tab-window", action="store_true", help="Prefer a ChatGPT Chrome window with exactly one visible tab when several ChatGPT windows are open.")
-    parser.add_argument("--desktop-require-single-tab-window", action="store_true", help="Only use a ChatGPT Chrome window with exactly one visible tab; fail fast if the selected window has extra tabs.")
-    parser.add_argument("--desktop-new-chat", action="store_true", help="Try to open a new ChatGPT chat before every desktop job.")
-    parser.add_argument("--desktop-clipboard-attach", action="store_true", help="Attach images by pasting the file from Windows clipboard into the active ChatGPT composer.")
+    parser.add_argument("--desktop-prefer-single-tab-window", action="store_true", help="Prefer a service Chrome window with exactly one visible tab when several service windows are open.")
+    parser.add_argument("--desktop-require-single-tab-window", action="store_true", help="Only use a service Chrome window with exactly one visible tab; fail fast if the selected window has extra tabs.")
+    parser.add_argument("--desktop-new-chat", action="store_true", help="Try to open a new service chat before every desktop job.")
+    parser.add_argument("--desktop-clipboard-attach", action="store_true", help="Attach images by pasting the file from Windows clipboard into the active service composer.")
     parser.add_argument("--desktop-capture-result", action="store_true", help="Capture a generated image from the desktop UI after submitting.")
     parser.add_argument("--desktop-save-context-menu", action="store_true", help="Try to save the generated image through the browser image context menu.")
-    parser.add_argument("--desktop-reactivate-delay", type=float, default=0.0, help="Seconds to wait before each desktop job so you can activate the ChatGPT composer.")
-    parser.add_argument("--desktop-send-cursor-delay", type=float, default=0.0, help="Seconds to wait after pasting so you can move the mouse over the active ChatGPT send arrow.")
-    parser.add_argument("--desktop-click-composer", action="store_true", help="Click an estimated ChatGPT composer position before pasting. Off by default for active-window mode.")
-    parser.add_argument("--desktop-post-attach-delay", type=float, default=3.0, help="Seconds to wait after pasting the source image into ChatGPT.")
+    parser.add_argument("--desktop-reactivate-delay", type=float, default=0.0, help="Seconds to wait before each desktop job so you can activate the service composer.")
+    parser.add_argument("--desktop-send-cursor-delay", type=float, default=0.0, help="Seconds to wait after pasting so you can move the mouse over the active send arrow.")
+    parser.add_argument("--desktop-click-composer", action="store_true", help="Click an estimated service composer position before pasting. Off by default for active-window mode.")
+    parser.add_argument("--desktop-post-attach-delay", type=float, default=3.0, help="Seconds to wait after pasting the source image into the service composer.")
     parser.add_argument("--desktop-min-result-wait", type=float, default=90.0, help="Minimum seconds to wait after submitting before auto-saving a result image.")
     parser.add_argument("--desktop-result-stable-wait", type=float, default=8.0, help="Seconds a result image must stay stable before auto-saving.")
     parser.add_argument("--pause-between-jobs", action="store_true", help="After each submitted job, wait for Enter before continuing.")
@@ -137,9 +143,9 @@ def parse_args() -> argparse.Namespace:
         "--manual-verification-timeout",
         type=float,
         default=600.0,
-        help="Seconds to wait while you manually complete ChatGPT sign-in or human verification.",
+        help="Seconds to wait while you manually complete service sign-in or human verification.",
     )
-    parser.add_argument("--no-submit", action="store_true", help="Fill each ChatGPT request without submitting it.")
+    parser.add_argument("--no-submit", action="store_true", help="Fill each service request without submitting it.")
     parser.add_argument("--skip-existing", action="store_true", help="Skip portrait files that already exist.")
     parser.add_argument(
         "--continue-on-error",
@@ -151,13 +157,13 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         dest="save_response_text",
         default=None,
-        help="Save visible ChatGPT response text next to portrait outputs.",
+        help="Save visible service response text next to portrait outputs.",
     )
     parser.add_argument(
         "--skip-response-text",
         action="store_false",
         dest="save_response_text",
-        help="Do not save ChatGPT response text even if enabled in config.",
+        help="Do not save service response text even if enabled in config.",
     )
     return parser.parse_args()
 
@@ -338,6 +344,64 @@ def _resolve_under_project(path: Optional[Path], settings: Settings) -> Optional
     return path if path.is_absolute() else settings.project_root / path
 
 
+def _is_gemini_backend(backend: str) -> bool:
+    return backend in {"gemini-desktop", "gemini"}
+
+
+def _is_grok_backend(backend: str) -> bool:
+    return backend in {"grok", "grok-web"}
+
+
+def _service_output_dir_for_chatgpt_dir(output_dir: Path, settings: Settings, service_prefix: str) -> Path:
+    name = output_dir.name
+    name_cf = name.casefold()
+    wanted_prefix = f"{service_prefix}_"
+    if name_cf.startswith(wanted_prefix):
+        return output_dir
+    if name_cf.startswith("chatgpt_"):
+        return output_dir.with_name(f"{wanted_prefix}{name[len('chatgpt_'):]}")
+
+    try:
+        relative = output_dir.relative_to(settings.output_dir)
+    except ValueError:
+        return output_dir
+
+    if not relative.parts:
+        return output_dir
+
+    first = relative.parts[0]
+    first_cf = first.casefold()
+    if first_cf.startswith(wanted_prefix):
+        return output_dir
+    if first_cf.startswith("chatgpt_"):
+        first = f"{wanted_prefix}{first[len('chatgpt_'):]}"
+    else:
+        first = f"{wanted_prefix}{first}"
+    return settings.output_dir.joinpath(first, *relative.parts[1:])
+
+
+def _gemini_output_dir_for_chatgpt_dir(output_dir: Path, settings: Settings) -> Path:
+    return _service_output_dir_for_chatgpt_dir(output_dir, settings, "gemini")
+
+
+def _grok_output_dir_for_chatgpt_dir(output_dir: Path, settings: Settings) -> Path:
+    return _service_output_dir_for_chatgpt_dir(output_dir, settings, "grok")
+
+
+def _output_dir_for_backend(output_dir: Path, backend: str, settings: Settings) -> Path:
+    if _is_gemini_backend(backend):
+        return _gemini_output_dir_for_chatgpt_dir(output_dir, settings)
+    if _is_grok_backend(backend):
+        return _grok_output_dir_for_chatgpt_dir(output_dir, settings)
+    return output_dir
+
+
+def _profile_dir_for_backend(profile_dir: Path, backend: str) -> Path:
+    if _is_grok_backend(backend) and profile_dir == Path(".browser-profile/chatgpt-web"):
+        return Path(".browser-profile/grok-web")
+    return profile_dir
+
+
 def run_batch(
     args: argparse.Namespace,
     settings: Settings | None = None,
@@ -348,12 +412,18 @@ def run_batch(
 
     config_path = args.config_file or (settings.project_root / DEFAULT_CONFIG_NAME)
     portrait_config = load_portrait_config(config_path)
+    backend = getattr(args, "backend", "web")
     input_dir = args.input_dir or settings.input_dir
-    output_dir = _resolve_under_project(args.output_dir, settings)
+    cli_output_dir = _resolve_under_project(args.output_dir, settings)
+    output_dir = cli_output_dir
     if output_dir is None:
         output_dir = _resolve_under_project(portrait_config.output_dir, settings)
+        if output_dir is not None:
+            output_dir = _output_dir_for_backend(output_dir, backend, settings)
     if output_dir is None:
         output_dir = settings.output_dir / DEFAULT_OUTPUT_SUBDIR
+        output_dir = _output_dir_for_backend(output_dir, backend, settings)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     save_response_text = portrait_config.save_response_text
     cli_save_response_text = getattr(args, "save_response_text", None)
@@ -362,16 +432,21 @@ def run_batch(
     response_text_dir = None
     if save_response_text:
         response_text_dir = _resolve_under_project(portrait_config.response_text_dir, settings) or output_dir
+        if response_text_dir != output_dir and cli_output_dir is None:
+            response_text_dir = _output_dir_for_backend(response_text_dir, backend, settings)
+        response_text_dir.mkdir(parents=True, exist_ok=True)
 
     images = list_input_images(input_dir)
     if not images:
         raise FileNotFoundError(f"No source images found in: {input_dir}")
     jobs = build_portrait_jobs(images, portrait_config, output_dir, response_text_dir)
-    if getattr(args, "backend", "web") == "desktop":
+    if backend in {"desktop", "gemini-desktop", "gemini"}:
         return _run_desktop_jobs(args, jobs, portrait_config)
-    if getattr(args, "backend", "web") == "local":
+    if _is_grok_backend(backend):
+        return _run_grok_jobs(args, jobs)
+    if backend == "local":
         return _run_local_jobs(args, jobs)
-    if getattr(args, "backend", "web") == "api":
+    if backend == "api":
         return _run_api_jobs(args, jobs)
 
     session_runner: ChatGPTWebSessionRunner | None = None
@@ -423,6 +498,24 @@ def _run_desktop_jobs(
 ) -> list[Path]:
     from api.chatgpt_desktop_v2 import ChatGPTDesktopAgent, DesktopAgentConfig
 
+    backend = getattr(args, "backend", "desktop")
+    if backend in {"gemini-desktop", "gemini"}:
+        from api.gemini_desktop import (
+            DEFAULT_GEMINI_BROWSER_TAB_TITLE_RE,
+            GEMINI_APP_URL,
+            GeminiDesktopAgent,
+        )
+
+        agent_cls = GeminiDesktopAgent
+        service_name = "Gemini"
+        default_browser_tab_title_re = DEFAULT_GEMINI_BROWSER_TAB_TITLE_RE
+        default_target_url: Optional[str] = GEMINI_APP_URL
+    else:
+        agent_cls = ChatGPTDesktopAgent
+        service_name = "ChatGPT"
+        default_browser_tab_title_re = DEFAULT_CHATGPT_TAB_TITLE_RE
+        default_target_url = None
+
     outputs: list[Path] = []
     for job in jobs:
         if args.skip_existing and job.output_path.exists():
@@ -434,17 +527,32 @@ def _run_desktop_jobs(
         manual_send_position: tuple[int, int] | None = None
         if reactivate_delay > 0:
             print(
-                "Activate the already-open ChatGPT window and click in the message box "
+                f"Activate the already-open {service_name} window and click in the message box "
                 f"away from the send arrow. Continuing in {reactivate_delay:g} seconds...",
                 flush=True,
             )
             time.sleep(reactivate_delay)
             manual_composer_position = _cursor_position()
-            print(f"Captured ChatGPT message-box point: {manual_composer_position}", flush=True)
+            print(f"Captured {service_name} message-box point: {manual_composer_position}", flush=True)
         print(
-            f"Using existing ChatGPT window: {job.image_path.name} / {job.style.name}",
+            f"Using existing {service_name} window: {job.image_path.name} / {job.style.name}",
             flush=True,
         )
+
+        browser_tab_title_re = getattr(args, "desktop_browser_tab_title_re", default_browser_tab_title_re)
+        if backend in {"gemini-desktop", "gemini"} and browser_tab_title_re == DEFAULT_CHATGPT_TAB_TITLE_RE:
+            browser_tab_title_re = default_browser_tab_title_re
+        if getattr(args, "desktop_active_window", False):
+            browser_tab_title_re = None
+
+        target_url = None
+        if default_target_url:
+            configured_target_url = getattr(args, "target_url", None)
+            target_url = (
+                configured_target_url
+                if configured_target_url and configured_target_url != CHATGPT_TARGET_URL
+                else default_target_url
+            )
 
         config = DesktopAgentConfig(
             image_path=job.image_path,
@@ -453,10 +561,8 @@ def _run_desktop_jobs(
             response_text_path=job.response_text_path,
             executable_path=Path(args.chrome_exe) if getattr(args, "chrome_exe", None) else None,
             window_title_re=getattr(args, "desktop_window_title_re", ".*Google Chrome.*"),
-            browser_tab_title_re=None
-            if getattr(args, "desktop_active_window", False)
-            else getattr(args, "desktop_browser_tab_title_re", ".*ChatGPT.*"),
-            target_url=None,
+            browser_tab_title_re=browser_tab_title_re,
+            target_url=target_url,
             startup_timeout_sec=getattr(args, "launch_timeout", 60.0),
             dialog_timeout_sec=getattr(args, "desktop_dialog_timeout", 20.0),
             result_timeout_sec=getattr(args, "result_timeout", 300.0),
@@ -480,13 +586,12 @@ def _run_desktop_jobs(
             submit=not args.no_submit,
         )
         try:
-            ChatGPTDesktopAgent(config).run()
+            agent_cls(config).run()
         except Exception as exc:
-            if _is_desktop_window_selection_error(exc):
-                print(
-                    f"Desktop window selection failed: {exc}",
-                    flush=True,
-                )
+            unsafe_continue = _is_desktop_unsafe_continue_error(exc)
+            if _is_desktop_window_selection_error(exc) or unsafe_continue:
+                label = "Desktop safety stop" if unsafe_continue else "Desktop window selection failed"
+                print(f"{label}: {exc}", flush=True)
                 raise
             if not getattr(args, "continue_on_error", False):
                 raise
@@ -497,11 +602,68 @@ def _run_desktop_jobs(
             continue
         outputs.append(job.output_path)
         if args.no_submit:
-            print(f"Existing ChatGPT window prepared: {job.image_path.name} / {job.style.name}")
+            print(f"Existing {service_name} window prepared: {job.image_path.name} / {job.style.name}")
         else:
-            print(f"Existing ChatGPT window saved: {job.output_path}")
+            print(f"Existing {service_name} window saved: {job.output_path}")
         if getattr(args, "pause_between_jobs", False):
             input("Save the generated result manually, then press Enter here to continue...")
+    return outputs
+
+
+def _run_grok_jobs(args: argparse.Namespace, jobs: list[PortraitJob]) -> list[Path]:
+    from api.grok_web import GrokWebConfig, GrokWebSessionRunner
+
+    profile_dir = _profile_dir_for_backend(getattr(args, "profile_dir", Path(".browser-profile/grok-web")), "grok")
+    target_url = getattr(args, "target_url", CHATGPT_TARGET_URL)
+    if target_url == CHATGPT_TARGET_URL:
+        target_url = "https://grok.com/imagine"
+
+    session_runner = GrokWebSessionRunner()
+    outputs: list[Path] = []
+    try:
+        for job in jobs:
+            if args.skip_existing and job.output_path.exists():
+                print(f"Skipped existing Grok image: {job.output_path}")
+                outputs.append(job.output_path)
+                continue
+
+            print(f"Using Grok window/profile: {job.image_path.name} / {job.style.name}", flush=True)
+            grok_config = GrokWebConfig(
+                prompt_text=job.prompt_text,
+                image_path=job.image_path,
+                output_path=job.output_path,
+                profile_dir=profile_dir,
+                target_url=target_url,
+                executable_path=getattr(args, "chrome_exe", None),
+                debug_port=getattr(args, "chrome_debug_port", None),
+                launch_timeout_ms=int(getattr(args, "launch_timeout", 60.0) * 1000),
+                upload_timeout_ms=int(getattr(args, "upload_timeout", 180.0) * 1000),
+                result_timeout_ms=int(getattr(args, "result_timeout", 300.0) * 1000),
+                submit=not args.no_submit,
+                generation_mode="image",
+                aspect_ratio=getattr(args, "grok_aspect_ratio", None),
+                orientation=getattr(args, "grok_orientation", None),
+                save_debug_artifacts=getattr(args, "save_grok_debug_artifacts", False),
+            )
+            try:
+                result = session_runner.run(grok_config)
+            except Exception as exc:
+                if not getattr(args, "continue_on_error", False):
+                    raise
+                print(
+                    f"Grok job failed: {job.image_path.name} / {job.style.name}: {exc}",
+                    flush=True,
+                )
+                continue
+            outputs.append(result or job.output_path)
+            if args.no_submit:
+                print(f"Grok image request prepared: {job.image_path.name} / {job.style.name}")
+            else:
+                print(f"Grok image saved: {job.output_path}")
+            if getattr(args, "pause_between_jobs", False):
+                input("Review the Grok result, then press Enter here to continue...")
+    finally:
+        session_runner.close()
     return outputs
 
 
@@ -509,11 +671,24 @@ def _is_desktop_window_selection_error(exc: Exception) -> bool:
     message = str(exc).casefold()
     markers = (
         "could not find a usable chatgpt browser window",
+        "could not find a usable gemini browser window",
         "could not find a chatgpt generation window",
+        "could not find a gemini generation window",
         "does not match the generation-window rule",
         "is not the dedicated generation window",
         "is not the chatgpt browser window",
+        "is not the gemini browser window",
         "no matching chrome window",
+    )
+    return any(marker in message for marker in markers)
+
+
+def _is_desktop_unsafe_continue_error(exc: Exception) -> bool:
+    message = str(exc).casefold()
+    markers = (
+        "gemini did not accept the request",
+        "same composer is not filled repeatedly",
+        "stopping before the next job",
     )
     return any(marker in message for marker in markers)
 

@@ -1,0 +1,32 @@
+Generate a new watercolor artwork based on the attached source image.
+
+Style: realistic fine-art watercolor painting on clean white watercolor paper.
+
+Preserve the identity, facial features, proportions, approximate age, expression, clothing, and the main objects from the original image.
+
+IMPORTANT:
+Do NOT recreate the original dark or black background from the source photo.
+The final artwork must appear painted on pure white watercolor paper.
+
+Keep and paint:
+- the main subject
+- important nearby objects
+- essential surrounding elements that belong naturally to the scene
+
+However, all environment elements must be transformed into soft watercolor forms on white paper, without any solid dark backdrop.
+
+The composition should look like a traditional watercolor illustration where:
+- objects and surroundings softly dissolve into white paper
+- edges are partially transparent and organic
+- watercolor pigment diffusion is visible
+- negative white space remains around the composition
+
+No black background.
+No studio backdrop.
+No realistic photographic background reconstruction.
+No full-frame dark fill.
+
+The final result should resemble a real hand-painted watercolor artwork on white textured paper with soft artistic transitions.
+
+Create one finished image only.
+No collage, no text, no captions, no frames, no watermarks, no extra people.

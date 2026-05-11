@@ -15,6 +15,7 @@ cleanup_archive/
 error/
 output/
 input/
+input_*/
 final_project/
 project_publication/
 human_details_filtered/

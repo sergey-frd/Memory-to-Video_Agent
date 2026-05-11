@@ -4,6 +4,8 @@
 
 Правило для ChatGPT desktop-flow: рабочее окно генерации должно быть отдельным Chrome-окном ChatGPT с одной видимой вкладкой. `run_chatgpt_portrait_batch_existing.bat` теперь добавляет `--desktop-require-single-tab-window`, поэтому при нескольких ChatGPT-окнах скрипт выбирает или требует именно dedicated generation window.
 
+Правило для Grok web-flow: portrait batch использует тот же профиль `.browser-profile\grok-web`, что и Grok video pipeline, но запускает `api/grok_web.py` в image-режиме. Перед первым запуском или после разлогина выполните `login_grok_profile.bat`, проверьте `https://grok.com/imagine`, затем закройте login-окно Chrome.
+
 Правило безопасности ввода: перед кликами, вставкой, Enter и сохранением desktop-агент проверяет, что foreground-окно — выбранный ChatGPT или настоящий диалог `Save As`/`Open`. Если сверху Premiere Pro, Total Commander или другое приложение, batch должен остановиться, а не отправлять туда клавиши.
 
 ## Текущие уникальные команды
@@ -29,6 +31,9 @@
 | B017 | `run_project_sequence_batch_vika_26_1A.bat` | Готовый Vika sequence batch wrapper | `.\run_project_sequence_batch_vika_26_1A.bat` |
 | B018 | `run_project_publication_stage.bat` | Подготовить публикационный snapshot без push | `.\run_project_publication_stage.bat --source-root . --dry-run` |
 | B019 | `run_project_publication_push.bat` | Подготовить и отправить публикационный snapshot в внешний repo | `.\run_project_publication_push.bat --source-root .` |
+| B020 | `login_gemini_profile.bat` | Ручной вход в Gemini profile для отдельного single-tab окна генерации | `.\login_gemini_profile.bat` |
+| B021 | `run_gemini_portrait_batch_existing.bat` | Gemini desktop-flow с теми же portrait JSON-конфигами, quiet by default; output-каталоги зеркалятся из `output\chatgpt_*` в `output\gemini_*`, сохранение идет через full-size download button | `.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer` |
+| B022 | `run_grok_portrait_batch_existing.bat` | Grok web-flow с теми же portrait JSON-конфигами и профилем `.browser-profile\grok-web`; output-каталоги зеркалятся из `output\chatgpt_*` в `output\grok_*` | `.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error` |
 
 ## Рабочая команда для текущей задачи
 
@@ -36,8 +41,21 @@
 .\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_watercolor_scene_expansion_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
 ```
 
+Gemini equivalent with the same config format:
+
+```bat
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Grok equivalent with the same config format:
+
+```bat
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error
+```
+
 Ожидаемый результат:
 - входные изображения берутся из `input`;
 - готовые файлы пишутся в `output\chatgpt_watercolor_scene_expansion`;
+- для Gemini и Grok без явного `--output-dir` эти же config-папки зеркалятся в `output\gemini_*` и `output\grok_*`;
 - имена результатов: `<image_stem>_watercolor.png` и `<image_stem>_scene_expansion.png`;
 - при рестарте `--skip-existing` пропускает уже сохраненные изображения.

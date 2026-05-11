@@ -1,428 +1,442 @@
-﻿# Структура проекта и контроль изменений
+# Project Structure Web Map
 
-Этот документ нужен в двух ролях:
+<main>
 
-1. Человеку-разработчику: быстро понять устройство проекта и не пропустить связанный код при изменении.
-2. Системе сопровождения: иметь явную карту подсистем, инвариантов и обязательных проверок.
+<section id="hero">
 
-## 1. Архитектурная идея проекта
+# Memory-to-Video Agent
 
-Проект устроен как набор связанных пайплайнов вокруг одного базового объекта: `stage_id`.
+**Живая карта проекта, пайплайнов, точек риска и обязательных проверок.**
 
-- Источник: входное изображение из `input/` или явно переданный файл.
-- Анализ: локальный анализ изображения плюс scene-analysis через OpenAI.
-- Синтез: описание сцены, video prompt, background prompt, final-frame prompt, music prompt.
-- Исполнение: Grok Web и/или OpenAI Images API.
-- Доставка: копирование результатов в `final_videos_dir` и `regeneration_assets_dir`.
-- Пост-обработка: sequence optimization, reports, export в XML/PRPROJ.
+Этот файл переписан как web-страница внутри Markdown: его удобно читать сверху вниз, открывать как документацию в браузере/GitHub и использовать как стартовую панель для изменений.
 
-Практически весь проект держится на четырех контрактах:
+| Быстрый ответ | Где смотреть |
+| --- | --- |
+| Как устроен проект | [Architecture](#architecture) |
+| Какие есть подсистемы | [Subsystem Cards](#subsystem-cards) |
+| Как идут данные | [Data Flows](#data-flows) |
+| Как запускать `.bat` | [Launch Map](#launch-map) |
+| Что нельзя ломать | [Invariants](#invariants) |
+| Что проверять при изменениях | [Change Control](#change-control) |
+| Где тесты | [Test Matrix](#test-matrix) |
+| Как публиковать внешний bundle | [Publication Sync](#publication-sync) |
+
+</section>
+
+---
+
+<section id="architecture">
+
+## Architecture
+
+Проект состоит из связанных pipeline-маршрутов вокруг одного базового объекта: **`stage_id`**.
+
+<table>
+<tr>
+<th>Слой</th>
+<th>Назначение</th>
+<th>Главные файлы</th>
+</tr>
+<tr>
+<td>Input</td>
+<td>Входные изображения из <code>input/</code> или явно переданный файл.</td>
+<td><code>input/</code>, <code>main.py</code>, <code>main_full_pipeline.py</code></td>
+</tr>
+<tr>
+<td>Analysis</td>
+<td>Локальный анализ изображения и scene-analysis через OpenAI.</td>
+<td><code>utils/image_analysis.py</code>, <code>api/openai_scene.py</code>, <code>models/scene_analysis.py</code></td>
+</tr>
+<tr>
+<td>Prompting</td>
+<td>Описание сцены, motion, video prompt, background prompt, final-frame prompt, music prompt.</td>
+<td><code>utils/prompt_builder.py</code>, <code>api/openai_prompt_synthesizer.py</code>, <code>utils/grok_prompt_json.py</code></td>
+</tr>
+<tr>
+<td>Execution</td>
+<td>Генерация через Grok Web, ChatGPT, Gemini, OpenAI Images API или локальный stylizer.</td>
+<td><code>api/grok_web.py</code>, <code>api/chatgpt_desktop_v2.py</code>, <code>api/gemini_desktop.py</code>, <code>api/openai_image.py</code></td>
+</tr>
+<tr>
+<td>Delivery</td>
+<td>Доставка видео и non-video артефактов в финальные каталоги.</td>
+<td><code>utils/project_delivery.py</code>, <code>final_videos_dir</code>, <code>regeneration_assets_dir</code></td>
+</tr>
+<tr>
+<td>Post</td>
+<td>Sequence optimization, Premiere XML/PRPROJ export, reports.</td>
+<td><code>main_sequence_optimizer.py</code>, <code>main_project_sequence_batch.py</code>, <code>utils/premiere_*.py</code></td>
+</tr>
+</table>
+
+### Four Core Contracts
 
 1. `GenerationConfig` в `config.py` является единой точкой правды для generation-флагов.
 2. Все артефакты одного этапа имеют общий префикс `stage_id`.
-3. `output/` служит рабочей временной зоной, а итоговая доставка делается через `utils/project_delivery.py`.
+3. `output/` является временной рабочей зоной; итоговая доставка идет через `utils/project_delivery.py`.
 4. Sequence-утилиты используют stage-based артефакты из `regeneration_assets_dir`.
 
-## 2. Карта подсистем
+</section>
 
-| Подсистема | Основные файлы | Ответственность | Основные выходы |
+---
+
+<section id="subsystem-cards">
+
+## Subsystem Cards
+
+| Подсистема | Основные файлы | Ответственность | Выходы |
 | --- | --- | --- | --- |
-| Конфигурация и пути | `config.py`, `config.json`, `config_BASE.json`, `config_*.json` | Описание флагов, валидация, canonical paths | `GenerationConfig`, `Settings` |
-| Анализ изображения и сцены | `utils/image_analysis.py`, `api/openai_scene.py`, `models/scene_analysis.py`, `main_scene.py` | Извлечение визуальных признаков и scene payload | `*_scene_analysis.json`, scene summary |
-| Синтез prompts | `utils/prompt_builder.py`, `utils/grok_prompt_json.py`, `api/openai_prompt_synthesizer.py`, `api/openai_motion_selector.py`, `utils/camera_movements.py` | Формирование video/background/final-frame/music prompts, Grok multiscene JSON prompts и motion selection | `*_v_prompt_*.txt`, `*_v_prompt_*.json`, `*_bg_prompt.txt`, `*_assoc_bg_prompt.txt`, `*_final_frame_prompt_*.txt`, `*_m_prompt.txt` |
-| Компоновщик многосценных video prompts | `main_video_prompt_composer.py`, `video_prompt_config.py`, `api/openai_video_prompt_composer.py`, `utils/video_prompt_composer.py`, `services/Seedance_2.0_Director.md`, `video_prompt_composer_config_example.jsonc`, `video_prompt_config_*.json` | Сборка одного EN/RU prompt, Seedance EN JSON и Seedance RU control JSON по сценам, `@imageN` ссылкам и stage-описаниям из `regeneration_assets_dir`, включая несколько scenario variants и полноформатные конфиги запуска | `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt`, `Gen_Video_Seedance_<VariantId>_<ts>.json`, `Gen_Video_Seedance_RU_<VariantId>_<ts>.json` |
-| Основной generation pipeline | `main.py` | Склеивает image analysis, scene analysis, motion, prompt generation, optional final frames | полный набор stage-артефактов в `output/` |
-| API final-frame pipeline | `main_desktop_pipeline.py` | Многокадровый pipeline с manifest и синхронизацией не-видео артефактов | `*_api_pipeline_manifest.json`, final-frame outputs |
-| Grok single-stage runtime | `api/grok_web.py`, `main_grok_web.py` | Генерация background image и/или video для одной prompt-пары | `*_bg_image_16x9.png`, `*_video_*.mp4` |
-| Grok batch runtime | `main_grok_batch.py` | Пакетный запуск Grok по всем `*_v_prompt_*.txt` | набор видео и bg-изображений по всем stage |
-| Полный sequential pipeline | `main_full_pipeline.py` | Генерация prompts и немедленный Grok-run по каждому входному изображению | доставленные stage outputs, возможное очищение `input/` и `output/` |
-| Delivery и lifecycle | `utils/project_delivery.py`, `utils/artifact_cleanup.py`, `main_cleanup_artifacts.py` | Доставка итогов, очистка, перенос ошибок, архивирование | `final_videos_dir`, `regeneration_assets_dir`, `error/`, cleanup reports |
-| Sequence optimization | `main_sequence_optimizer.py`, `utils/sequence_optimizer.py`, `utils/sequence_optimizer_runtime.py`, `utils/premiere_xml.py`, `utils/premiere_project.py`, `utils/premiere_xml_export.py`, `utils/premiere_project_export.py`, `models/video_sequence.py` | Анализ монтажной последовательности и выдача рекомендованного порядка | optimized JSON/TXT/XML/PRPROJ |
-| Sequence reports и batch orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/fcp_translation_results.py` | Построение отчетов, batch-доставка, human-profile overlays, transition recommendations | reports, batch summaries, transition reports |
-| Desktop/web automation | `main_desktop.py`, `api/chatgpt_desktop.py`, `api/chatgpt_desktop_v2.py`, `api/chatgpt_web.py` | Автоматизация desktop/web-взаимодействия для prompt-driven задач | отправка prompts во внешние UI |
-| ChatGPT portrait-style batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `chatgpt_watercolor_scene_expansion_config.json`, `styles/art_styles_Prompt_list.txt`, `BATCH_RUN_HISTORY.md`, `run_chatgpt_portrait_batch_existing.bat` | Пакетная генерация художественных портретов и image-edit задач из `input/` через уже открытое single-tab окно ChatGPT; поддержка коротких, базовых и специальных наборов стилей, restart через `--skip-existing` | `output/chatgpt_portraits/<image_stem>_<style_slug>.png`, `output/chatgpt_watercolor_scene_expansion/<image_stem>_<style_slug>.png` |
+| Config & Paths | `config.py`, `config.json`, `config_BASE.json`, `config_*.json` | Описание флагов, validation, canonical paths | `GenerationConfig`, `Settings` |
+| Image & Scene Analysis | `utils/image_analysis.py`, `api/openai_scene.py`, `models/scene_analysis.py`, `main_scene.py` | Visual metadata и scene payload | `*_scene_analysis.json`, summaries |
+| Prompt Synthesis | `utils/prompt_builder.py`, `utils/grok_prompt_json.py`, `api/openai_prompt_synthesizer.py`, `api/openai_motion_selector.py`, `utils/camera_movements.py` | Video/background/final-frame/music prompts, Grok multiscene JSON, motion selection | `*_v_prompt_*.txt`, `*_v_prompt_*.json`, `*_bg_prompt.txt`, `*_assoc_bg_prompt.txt`, `*_final_frame_prompt_*.txt`, `*_m_prompt.txt` |
+| Multi-Scene Composer | `main_video_prompt_composer.py`, `video_prompt_config.py`, `api/openai_video_prompt_composer.py`, `utils/video_prompt_composer.py`, `services/Seedance_2.0_Director.md` | Один EN/RU prompt, Seedance EN/RU JSON, scenario variants | `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt`, `Gen_Video_Seedance_<VariantId>_<ts>.json`, `Gen_Video_Seedance_RU_<VariantId>_<ts>.json` |
+| Main Generation | `main.py` | Склеивает analysis, scene, motion, prompt generation, optional final frames | stage-артефакты в `output/` |
+| API Final Frames | `main_desktop_pipeline.py` | Многокадровый pipeline, manifest, non-video sync | `*_api_pipeline_manifest.json`, final-frame outputs |
+| Grok Runtime | `api/grok_web.py`, `main_grok_web.py` | Background image/video generation для одной prompt-пары | `*_bg_image_16x9.png`, `*_video_*.mp4` |
+| Grok Batch | `main_grok_batch.py` | Пакетный Grok-run по готовым `*_v_prompt_*` | videos и bg-images по всем stages |
+| Full Sequential Pipeline | `main_full_pipeline.py` | Prompt generation + Grok-run для каждого изображения из `input/` | delivered stage outputs, cleanup of `input/` and `output/` |
+| Delivery & Lifecycle | `utils/project_delivery.py`, `utils/artifact_cleanup.py`, `main_cleanup_artifacts.py` | Доставка, очистка, перенос ошибок, архивирование | `final_videos_dir`, `regeneration_assets_dir`, `error/`, cleanup reports |
+| Sequence Optimization | `main_sequence_optimizer.py`, `utils/sequence_optimizer.py`, `utils/sequence_optimizer_runtime.py`, `utils/premiere_xml.py`, `utils/premiere_project.py`, `models/video_sequence.py` | Рекомендованный порядок клипов и export | optimized JSON/TXT/XML/PRPROJ |
+| Reports & Batch Orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/fcp_translation_results.py` | Reports, batch delivery, human-profile overlays, transition recommendations | reports, batch summaries, transition reports |
+| Desktop/Web Automation | `main_desktop.py`, `api/chatgpt_desktop.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/chatgpt_web.py`, `api/grok_web.py` | Prompt-driven interaction with external UIs | submitted prompts, saved media |
+| Portrait/Image Batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `run_chatgpt_portrait_batch_existing.bat`, `run_gemini_portrait_batch_existing.bat`, `run_grok_portrait_batch_existing.bat` | Batch generation of artistic portraits and image-edit tasks through ChatGPT, Gemini, Grok, OpenAI API, or local stylizer | `output/chatgpt_*`, `output/gemini_*`, `output/grok_*`, optional response text |
 
-## 3. Главные потоки данных
+</section>
 
-### 3.1 Prompt-generation поток
+---
 
-1. `main.py` принимает `--image` или читает список файлов из `input/`.
-2. `GenerationConfig` загружается из JSON и CLI overrides.
-3. `utils/image_analysis.py` строит `ImageMetadata`.
-4. `api/openai_scene.py` строит `SceneAnalysis`.
-5. `api/openai_prompt_synthesizer.py` и `utils/prompt_builder.py` создают prompts.
-6. `main.py` пишет stage-файлы в `output/`.
-7. `utils/project_delivery.py` синхронизирует non-video артефакты в `regeneration_assets_dir`.
+<section id="data-flows">
 
-### 3.2 Grok-runtime поток
+## Data Flows
 
-1. `main_grok_web.py` берет исходное изображение и `*_v_prompt_*.txt` или `*_v_prompt_*.json`.
-2. При включенном `generate_source_background` сначала строится background image.
-3. Затем Grok генерирует видео.
-4. `utils/project_delivery.py` копирует медиа в `final_videos_dir`.
-5. Batch-оболочка `main_grok_batch.py` повторяет это по всем prompt-файлам.
+### Full Generation Route
 
-### 3.3 Full pipeline поток
+```mermaid
+flowchart LR
+  I["input image"] --> M["main.py"]
+  M --> A["image + scene analysis"]
+  A --> P["prompt synthesis"]
+  P --> O["output/ stage artifacts"]
+  O --> G["main_grok_batch.py / api/grok_web.py"]
+  G --> D["utils/project_delivery.py"]
+  D --> F["final_videos_dir"]
+  D --> R["regeneration_assets_dir/stage_id"]
+```
 
-1. `main_full_pipeline.py` последовательно обрабатывает все изображения.
+### Grok Runtime Route
+
+1. `main_grok_web.py` получает исходное изображение и `*_v_prompt_*.txt` или `*_v_prompt_*.json`.
+2. Если включен `generate_source_background`, сначала создается background image.
+3. Затем Grok генерирует video.
+4. `utils/project_delivery.py` копирует media в `final_videos_dir`.
+5. `main_grok_batch.py` повторяет это по всем prompt-файлам.
+
+### Full Sequential Route
+
+1. `main_full_pipeline.py` читает изображения из `input/`.
 2. Для каждого изображения вызывает `_run_generation()` из `main.py`.
-3. Затем запускает Grok через `main_grok_batch.py`.
-4. После успеха может удалять обработанное изображение из `input/`.
+3. Запускает Grok через `main_grok_batch.py`.
+4. После успешной доставки может удалить обработанный input-файл.
 5. После стадии очищает `output/`.
 
-Это один из самых чувствительных маршрутов проекта: любое изменение lifecycle-поведения здесь влияет на безопасность данных.
+This route is high-risk: any lifecycle change can affect source-file safety.
 
-### 3.4 Sequence-optimization поток
+### Sequence Optimization Route
 
 1. `main_sequence_optimizer.py` читает XML или PRPROJ.
-2. Парсеры извлекают клипы и сопоставляют их со stage-артефактами в `regeneration_assets_dir`.
+2. Parser извлекает clips и связывает их со stage-артефактами в `regeneration_assets_dir`.
 3. `utils/sequence_optimizer.py` вычисляет новый порядок.
-4. Экспортеры создают JSON/TXT-отчет и при необходимости новый XML/PRPROJ.
-5. Reporting-утилиты строят human-readable overlays и structure reports.
-6. Финальный optimized `.prproj` сохраняется рядом с исходным `project_path`, а `reports\temp_projects` хранит только временный рабочий `.prproj` для batch и cleanup.
+4. Exporters создают JSON/TXT и, если нужно, XML/PRPROJ.
+5. Reporting utilities создают structure reports, transition recommendations, human-profile overlays.
+6. Финальный optimized `.prproj` сохраняется рядом с исходным `project_path`; `reports/temp_projects` хранит только временную batch-копию.
 
-### 3.5 Multi-scene prompt-composer поток
+### Multi-Scene Prompt Composer Route
 
-1. `main_video_prompt_composer.py` читает либо JSON-запрос, либо полный `--config-file` в формате JSON/JSONC с общей темой, длительностью, аспектом, лимитом длины, списком reference-файлов, сценами по порядку и, при необходимости, несколькими `scenario_variants`.
-2. `utils/video_prompt_composer.py` находит последние stage-папки в `regeneration_assets_dir`, извлекает `description` и обе версии scene-analysis.
-3. `video_prompt_config.py` валидирует конфиг, применяет дефолты (`max_prompt_chars=2000`, `aspect_ratio=16:9`, `Variant_1` по умолчанию), а затем `api/openai_video_prompt_composer.py` строит один EN prompt и один RU prompt с явными `Shot N:` для всех сцен.
-4. При включенном `--seedance-json` тот же контекст пропускается через требования `services/Seedance_2.0_Director.md`.
-5. Итоги сохраняются как `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt` и, при необходимости, набор variant-aware файлов `Gen_Video_Seedance_<VariantId>_<ts>.json` вместе с `Gen_Video_Seedance_RU_<VariantId>_<ts>.json` для ручного контроля.
-6. Для всех задач этого потока, которые создают задания на генерацию видео, двуязычный вывод обязателен: EN-артефакт и соответствующий RU control/review артефакт должны появляться в одном запуске.
+1. `main_video_prompt_composer.py` читает JSON request или полный `--config-file` JSON/JSONC.
+2. `utils/video_prompt_composer.py` берет stage descriptions и scene-analysis из `regeneration_assets_dir`.
+3. `video_prompt_config.py` валидирует параметры и применяет defaults.
+4. `api/openai_video_prompt_composer.py` строит один EN prompt и один RU prompt с `Shot N:`.
+5. При `--seedance-json` создаются Seedance EN/RU control JSON.
+6. Для video-generation задач EN и RU artifacts должны появляться в одном запуске.
 
-### 3.6 ChatGPT portrait-style batch поток
+### Portrait/Image Batch Route
 
-1. `main_chatgpt_portrait_batch.py` читает изображения из `input/` и конфиг стилей.
-2. Рабочий короткий конфиг — `chatgpt_portrait_config.json`; полный базовый банк художественных стилей и image-edit сервисов — `chatgpt_portrait_base_config.json`, собранный из `styles/art_styles_Prompt_list.txt` и дополненный style/service prompts вроде `watercolor`, `modern_color`, `colorize`, `face_enlargement`, `scene_expansion`.
-3. Для каждого изображения и каждого `portrait_styles[]` строится prompt и имя результата `<image_stem>_<style_slug>.png`.
-4. Desktop-режим использует `api/chatgpt_desktop_v2.py` и уже открытое/проверенное окно ChatGPT в Chrome. Автоматизация не обходит human-check/CAPTCHA; если ChatGPT требует проверку, ее проходит пользователь.
-5. Для защиты от путаницы между несколькими ChatGPT-окнами `run_chatgpt_portrait_batch_existing.bat` включает `--desktop-require-single-tab-window`: рабочим считается Chrome-окно ChatGPT с одной видимой вкладкой.
-6. `run_chatgpt_portrait_batch_existing.bat` запускает desktop-flow с вставкой изображения через Windows clipboard, отправкой prompt, ожиданием новой сгенерированной картинки и сохранением через browser context menu / `Save As`.
-7. `--skip-existing` является основным restart-контрактом: готовые PNG не пересоздаются, и batch можно безопасно перезапускать после падения UI-автоматизации.
-8. Детектор результата сравнивает не только прямоугольники UIA-изображений, но и легкий hash содержимого, чтобы новая картинка в том же месте не считалась старой.
-9. Сохранение результата проверяет, что выбранный image-кандидат видим внутри окна ChatGPT, чтобы правый клик не уходил на рабочий стол или в другое окно.
-10. `BATCH_RUN_HISTORY.md` хранит неповторяющиеся примеры запуска всех `.bat`-оболочек и текущие рабочие команды с параметрами.
+```mermaid
+flowchart LR
+  I["input/*.{png,jpg,jpeg,webp,bmp}"] --> B["main_chatgpt_portrait_batch.py"]
+  C["chatgpt_portrait_*.json"] --> B
+  B --> CG["ChatGPT desktop"]
+  B --> GM["Gemini desktop"]
+  B --> GR["Grok web image mode"]
+  B --> API["OpenAI Images API"]
+  B --> L["local stylizer"]
+  CG --> O1["output/chatgpt_*"]
+  GM --> O2["output/gemini_*"]
+  GR --> O3["output/grok_*"]
+  API --> O4["custom/api output"]
+  L --> O5["local output"]
+```
 
-### 3.7 Карта запуска: batch -> программа -> параметры
+Portrait batch rules:
 
-Эта схема нужна для быстрого ответа на три вопроса: какой `.bat` что запускает, где живут основные параметры, и какая Python-программа реально делает работу.
+1. `main_chatgpt_portrait_batch.py` builds one job for each image/style pair.
+2. Result filename is `<image_stem>_<style_slug>.png`.
+3. `--skip-existing` is the restart contract.
+4. Gemini and Grok mirror `output/chatgpt_*` config folders into `output/gemini_*` and `output/grok_*` when `--output-dir` is not explicit.
+5. ChatGPT and Gemini desktop flows depend on dedicated single-tab Chrome windows.
+6. Grok uses `.browser-profile/grok-web` and `https://grok.com/imagine` through Playwright image mode.
+
+</section>
+
+---
+
+<section id="launch-map">
+
+## Launch Map
 
 ```mermaid
 flowchart LR
   B1["run_full_grok_pipeline*.bat"] --> P1["main_full_pipeline.py"]
   B2["run_grok_automation*.bat"] --> P2["main_grok_web.py / main_grok_batch.py"]
-  B3A["run_project_sequence_batch_(project).bat"] --> B3["run_project_sequence_batch.bat"]
-  B3 --> P3["main_project_sequence_batch.py"]
+  B3["run_project_sequence_batch*.bat"] --> P3["main_project_sequence_batch.py"]
   B4["run_project_publication*.bat"] --> P4["main_project_publication_push.py"]
   B5["run_chatgpt_portrait_batch_existing.bat"] --> P6["main_chatgpt_portrait_batch.py"]
+  B6["run_gemini_portrait_batch_existing.bat"] --> P6
+  B7["run_grok_portrait_batch_existing.bat"] --> P6
 
-  A1["CLI flags"] --> P1
-  A2["CLI flags"] --> P2
-  A5["CLI flags\n--config-file\n--skip-existing\n--desktop-*"] --> P6
-  C1["config.json / config.local.json / config_*.json"] --> G1["config.py / GenerationConfig"]
+  C1["config.json / config.local.json / config_*.json"] --> G1["GenerationConfig"]
   G1 --> P1
   G1 --> P2
-  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_watercolor_scene_expansion_config.json\nstyles/art_styles_Prompt_list.txt\nBATCH_RUN_HISTORY.md"] --> P6
 
-  C3["project_sequence_batch_*.json"] --> P3
-  P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
+  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nspecial portrait configs"] --> P6
 
-  A4["CLI flags"] --> P4
-  R1["project_structure_registry.json\n(optional --source-root)"] --> P4
-
-  P1 --> O1["results:\noutput/ stage artifacts\nfinal_videos_dir media\nregeneration_assets_dir non-video assets"]
-  P2 --> O2["results:\n*_video_*.mp4\n*_bg_image_16x9.*\ngrok debug artifacts if enabled"]
-  P5 --> O3["reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)"]
-  P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
-  P6 --> O5["portrait / image-edit results:\noutput/chatgpt_portraits/*_<style_slug>.png\noutput/chatgpt_watercolor_scene_expansion/*_<style_slug>.png\noptional *_response.txt"]
+  P1 --> O1["final_videos_dir\nregeneration_assets_dir"]
+  P2 --> O2["*_video_*.mp4\n*_bg_image_16x9.*"]
+  P3 --> O3["reports\noptimized sequence artifacts"]
+  P4 --> O4["publication bundle"]
+  P6 --> O5["output/chatgpt_*\noutput/gemini_*\noutput/grok_*"]
 ```
 
-Левая часть схемы показывает запуск и источники параметров, правая часть показывает, какие отчеты и результаты появляются на выходе.
+### Common Commands
 
-Приоритет параметров обычно такой:
+```bat
+.\run_full_grok_pipeline.bat --config-file .\config_Yakov.json --upload-timeout 300
+```
 
-1. Жестко зашитые аргументы в `.bat`-оболочке.
-2. Дополнительные аргументы, проброшенные через `%*`.
-3. Значения из JSON-конфига.
-4. Значения по умолчанию в Python-коде.
+```bat
+.\run_grok_automation_all.bat --skip-existing --upload-timeout 300
+```
 
-## 4. Критические инварианты проекта
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+```
 
-### 4.1 Конфигурационные инварианты
+```bat
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
 
-- Все новые generation-флаги должны быть добавлены в `config.py`:
-  - в `CONFIG_BOOL_FIELDS` или другой соответствующий набор;
-  - в `GenerationConfig`;
-  - в `from_dict()`;
-  - в `override()`;
-  - в документацию;
-  - в тесты.
-- Одновременно можно включать только один framing-режим:
+```bat
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error
+```
+
+Parameter precedence:
+
+1. Hardcoded `.bat` arguments.
+2. Extra arguments forwarded through `%*`.
+3. JSON config values.
+4. Python defaults.
+
+</section>
+
+---
+
+<section id="invariants">
+
+## Invariants
+
+<details open>
+<summary><strong>Configuration</strong></summary>
+
+- Every new generation flag must be added to `config.py`.
+- Update the matching field set, `GenerationConfig`, `from_dict()`, `override()`, docs, and tests.
+- Only one framing mode may be enabled at a time:
   - `prefer_face_closeups`
   - `use_ai_optimal_framing`
   - `use_ai_optimal_then_identity_safe_framing`
   - `generate_dual_framing_videos`
-- `ai_optimal_then_identity_safe_ai_optimal_percent` не включает новый режим, а только задает пропорцию hybrid-видео; по умолчанию `70 / 30`.
+  - `generate_identity_safe_closeup_videos`
+  - `generate_triple_framing_videos`
+- `ai_optimal_then_identity_safe_ai_optimal_percent` is a ratio parameter, not a separate mode.
 
-### 4.2 Артефактные инварианты
+</details>
 
-- Stage-артефакты должны иметь единый префикс `stage_id`.
-- Sequence optimizer, batch tools и delivery-функции опираются на соглашения по именованию файлов.
-- Любое изменение формата имени файла требует проверки всех мест, которые:
-  - выводят имя;
-  - читают имя обратно;
-  - извлекают `stage_id`;
-  - синхронизируют артефакты;
-  - строят reports.
+<details open>
+<summary><strong>Artifacts</strong></summary>
 
-### 4.3 Lifecycle-инварианты
+- Stage artifacts must share the same `stage_id` prefix.
+- Naming changes must be checked everywhere filenames are written, read, parsed, synced, or reported.
+- Sequence tools and delivery functions depend on stable naming.
 
-- `main_grok_batch.py` по умолчанию очищает `input/` и `output/` после успешного batch-run, если не задан `--keep-workdirs`.
-- `main_full_pipeline.py` может удалять уже обработанные изображения из `input/`.
-- Любое изменение поведения очистки должно рассматриваться как high-risk change.
+</details>
 
-### 4.4 Prompt-инварианты
+<details open>
+<summary><strong>Lifecycle</strong></summary>
 
-- Если меняется смысл prompt-флага, он должен быть согласован:
-  - в OpenAI synthesizer;
-  - в локальном `PromptBuilder`;
-  - в manifest/config docs;
-  - в tests.
-- Если проект пишет и английские, и русские prompt-файлы, изменение semantics не должно оставаться только в одной языковой ветке без осознанного решения.
+- `main_grok_batch.py` clears `input/` and `output/` after a successful batch unless `--keep-workdirs` is set.
+- `main_full_pipeline.py` can remove processed input images.
+- Any cleanup behavior change is high-risk.
 
-### 4.5 Delivery-инварианты
+</details>
 
-- `.mp4` доставляются в `final_videos_dir`.
-- Non-video stage assets доставляются в `regeneration_assets_dir/<stage_id>/`.
-- Фоновые изображения обрабатываются отдельно и не должны ломать non-video sync contract.
+<details open>
+<summary><strong>Prompts</strong></summary>
 
-## 5. Что проверять при каждом типе изменений
+- Prompt semantics must stay aligned across OpenAI synthesizer, local `PromptBuilder`, manifests, docs, and tests.
+- If both English and Russian prompt artifacts are written, semantic changes must not silently affect only one language branch.
 
-### 5.1 Если меняется generation-флаг
+</details>
 
-Обязательно проверить:
+<details open>
+<summary><strong>Delivery</strong></summary>
 
-- `config.py`
-- `config.json`
-- `config_BASE.json`
-- профильные `config_*.json`, если флаг нужен в реальных сценариях
-- `main.py`
-- `main_desktop_pipeline.py`
-- `main_full_pipeline.py`, если флаг влияет на полный pipeline
-- `api/openai_prompt_synthesizer.py`
-- `utils/prompt_builder.py`
-- `USER_GUIDE.md`
-- `Руководство_пользователя.md`
-- профильные тесты
+- `.mp4` files go to `final_videos_dir`.
+- Non-video stage assets go to `regeneration_assets_dir/<stage_id>/`.
+- Background image handling must not break non-video sync.
 
-Минимальная проверка:
+</details>
 
-- загрузка config;
-- CLI override;
-- manifest serialization;
-- prompt output;
-- targeted tests.
+</section>
 
-### 5.2 Если меняется scene-analysis schema
+---
 
-Обязательно проверить:
+<section id="change-control">
 
-- `models/scene_analysis.py`
-- `api/openai_scene.py`
-- `main_scene.py`
-- `main.py`
-- `api/openai_prompt_synthesizer.py`
-- `utils/prompt_builder.py`
-- все отчеты и sequence-утилиты, которые читают scene payload из `regeneration_assets_dir`
+## Change Control
 
-Минимальная проверка:
+### Required Workflow
 
-- сохранение `*_scene_analysis.json`;
-- чтение старых payloads, если нужна обратная совместимость;
-- tests для parse и prompt integration.
+1. Classify the change: config, prompt, scene schema, naming, Grok runtime, delivery, optimizer, reports, portrait batch.
+2. Open `project_structure_registry.json`.
+3. Select the matching `change_type`.
+4. Review all `must_touch` and `must_review` files.
+5. Update user-facing docs if behavior changes.
+6. Add or update tests for changed contracts.
+7. Run at least one targeted test.
+8. For high-risk changes, run an integration route to a real artifact.
 
-### 5.3 Если меняется naming или `stage_id`
+### Impact Areas
 
-Обязательно проверить:
+| Change Type | Must Review | Minimum Check |
+| --- | --- | --- |
+| Generation flag | `config.py`, `config.json`, `config_BASE.json`, profile configs, `main.py`, `main_desktop_pipeline.py`, `main_full_pipeline.py`, `api/openai_prompt_synthesizer.py`, `utils/prompt_builder.py`, user guides | Config load, CLI override, manifest serialization, prompt output, targeted tests |
+| Scene-analysis schema | `models/scene_analysis.py`, `api/openai_scene.py`, `main_scene.py`, `main.py`, prompt builders, sequence/report readers | Save/read `*_scene_analysis.json`, compatibility if required, parse/prompt tests |
+| Naming / `stage_id` | `main.py`, `main_desktop_pipeline.py`, `main_grok_web.py`, `main_grok_batch.py`, `main_full_pipeline.py`, delivery, Premiere exporters, reports | End-to-end artifact naming and sync check |
+| Grok automation | `api/grok_web.py`, `main_grok_web.py`, `main_grok_batch.py`, `main_full_pipeline.py`, timeout/options | Single-stage run, batch run, background-only run, `--no-submit` |
+| Delivery / cleanup | `utils/project_delivery.py`, `main_grok_batch.py`, `main_full_pipeline.py`, cleanup tools | Final file copy, `regeneration_assets_dir` sync, `error/` behavior, no surprise input deletion |
+| Sequence optimization | sequence models, optimizer, runtime, XML/PRPROJ exporters, reports | JSON/TXT output, XML/PRPROJ export if touched, optimizer/report tests |
+| Portrait/image batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, portrait configs, launchers | Config/job dry-run, output folder mirroring, selected backend sanity check |
 
-- `main.py`
-- `main_desktop_pipeline.py`
-- `main_grok_web.py`
-- `main_grok_batch.py`
-- `main_full_pipeline.py`
-- `utils/project_delivery.py`
-- `utils/premiere_project.py`
-- `utils/premiere_xml.py`
-- `utils/fcp_translation_results.py`
-- sequence reports
+</section>
 
-Это один из самых широких impact-area проекта.
+---
 
-### 5.4 Если меняется Grok automation
+<section id="risk-zones">
 
-Обязательно проверить:
+## High-Risk Zones
 
-- `api/grok_web.py`
-- `main_grok_web.py`
-- `main_grok_batch.py`
-- `main_full_pipeline.py`
-- связанные timeout/options в конфиге и CLI
+| Area | Why It Is Risky |
+| --- | --- |
+| `config.py` | Breaks every generation pipeline if a field is parsed or overridden incorrectly. |
+| `main.py` | Central assembly point for stage artifacts. |
+| `main_grok_web.py` and `api/grok_web.py` | Real browser automation and media saving. |
+| `main_full_pipeline.py` | Can alter lifecycle of input files and output cleanup. |
+| `utils/project_delivery.py` | Controls final result preservation. |
+| `api/chatgpt_desktop_v2.py` and `api/gemini_desktop.py` | UI automation depends on focus, DPI, monitors, localization, and service UI changes. |
+| `main_chatgpt_portrait_batch.py` | Defines `input/` to `output/chatgpt_*`, `output/gemini_*`, and `output/grok_*` contracts. |
+| Naming contracts and `stage_id` | Used across delivery, regeneration assets, reports, and Premiere sequence tools. |
+| `models/scene_analysis.py` and `models/video_sequence.py` | Data contracts shared by multiple subsystems. |
 
-Минимальная проверка:
+</section>
 
-- single-stage run;
-- batch run;
-- background-only run;
-- сценарий `--no-submit`.
+---
 
-### 5.5 Если меняется delivery или очистка
+<section id="test-matrix">
 
-Обязательно проверить:
+## Test Matrix
 
-- `utils/project_delivery.py`
-- `main_grok_batch.py`
-- `main_full_pipeline.py`
-- `utils/artifact_cleanup.py`
-- `main_cleanup_artifacts.py`
+| Class | Tests |
+| --- | --- |
+| Prompt/config | `test/test_config_cli_defaults.py`, `test/test_scene_pipeline_integration.py`, `test/test_motion_selection.py`, `test/test_video_framing_modes.py`, `tests/test_selfie_phone_prompt.py` |
+| Grok pipeline | `test/test_grok_web_app.py`, `test/test_grok_batch_app.py`, `test/test_full_pipeline.py`, `test/test_project_delivery.py` |
+| Scene analysis | `test/test_openai_scene.py`, `test/test_scene_app.py`, `test/test_scene_pipeline_integration.py` |
+| Sequence/reporting | `test/test_sequence_optimizer_app.py`, `test/test_project_delivery.py` |
+| Portrait/image batch | `test/test_chatgpt_portrait_batch.py`, syntax check for `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, `main_chatgpt_portrait_batch.py` |
 
-Минимальная проверка:
+Useful targeted commands:
 
-- копирование итоговых файлов;
-- синхронизация `regeneration_assets_dir`;
-- поведение `error/`;
-- отсутствие неожиданного удаления `input/`.
+```powershell
+python -m pytest -p no:cacheprovider test\test_chatgpt_portrait_batch.py
+```
 
-### 5.6 Если меняется sequence optimization
+```powershell
+python -m pytest -p no:cacheprovider test\test_grok_web_app.py test\test_grok_batch_app.py
+```
 
-Обязательно проверить:
+```powershell
+python -m pytest -p no:cacheprovider test\test_full_pipeline.py test\test_project_delivery.py
+```
 
-- `models/video_sequence.py`
-- `utils/sequence_optimizer.py`
-- `utils/sequence_optimizer_runtime.py`
-- `utils/premiere_xml.py`
-- `utils/premiere_project.py`
-- `utils/premiere_xml_export.py`
-- `utils/premiere_project_export.py`
-- `utils/sequence_structure_report.py`
-- `utils/transition_recommendations.py`
-- `main_sequence_optimizer.py`
+</section>
 
-Минимальная проверка:
+---
 
-- JSON/TXT output;
-- XML/PRPROJ export, если менялся export path;
-- tests по optimizer и reports.
+<section id="registry">
 
-## 6. Обязательный протокол change-control
+## Machine-Readable Registry
 
-Эта последовательность должна выполняться и человеком, и автоматической системой.
+The companion registry is:
 
-1. Классифицировать изменение: config, prompt, scene schema, naming, Grok runtime, delivery, optimizer, reports.
-2. Открыть `project_structure_registry.json` и выбрать соответствующий `change_type`.
-3. Проверить все файлы из `must_touch` и `must_review`, даже если прямое изменение кажется локальным.
-4. Обновить документы, если меняется поведение, доступное пользователю или оператору.
-5. Обновить tests или добавить новый тест на измененный контракт.
-6. Выполнить минимум один targeted test на измененную область.
-7. Для high-risk изменений прогнать интеграционный маршрут до артефакта.
-
-## 7. High-risk зоны
-
-Особенно осторожно надо менять:
-
-- `config.py`: ломает все generation-пайплайны сразу;
-- `main.py`: центральная точка сборки prompt-артефактов;
-- `main_grok_web.py` и `api/grok_web.py`: влияют на реальное выполнение;
-- `main_full_pipeline.py`: может менять lifecycle входных файлов;
-- `utils/project_delivery.py`: влияет на сохранность и доставку результатов;
-- `api/chatgpt_desktop_v2.py`: UI-автоматизация ChatGPT чувствительна к фокусу окна, DPI/нескольким мониторам, локализации Chrome и поведению Save As;
-- `main_chatgpt_portrait_batch.py`: batch-контракт `input/` -> `output/chatgpt_portraits` и restart через `--skip-existing`;
-- naming contracts и `stage_id`;
-- `models/scene_analysis.py` и `models/video_sequence.py`: это data contracts для нескольких подсистем.
-
-## 8. Минимальный набор тестов по классам изменений
-
-### 8.1 Prompt/config изменения
-
-- `test\test_config_cli_defaults.py`
-- `test\test_scene_pipeline_integration.py`
-- `test\test_motion_selection.py`
-- `test\test_video_framing_modes.py`
-- `tests\test_selfie_phone_prompt.py`
-
-### 8.2 Grok pipeline изменения
-
-- `test\test_grok_web_app.py`
-- `test\test_grok_batch_app.py`
-- `test\test_full_pipeline.py`
-- `test\test_project_delivery.py`
-
-### 8.3 Scene-analysis изменения
-
-- `test\test_openai_scene.py`
-- `test\test_scene_app.py`
-- `test\test_scene_pipeline_integration.py`
-
-### 8.4 Sequence/reporting изменения
-
-- `test\test_sequence_optimizer_app.py`
-- `test\test_project_delivery.py`
-
-### 8.5 ChatGPT portrait batch изменения
-
-- `test\test_chatgpt_portrait_batch.py`
-- синтаксическая проверка `api/chatgpt_desktop_v2.py` и `main_chatgpt_portrait_batch.py`
-- короткий dry-run/config-run с `--no-submit`, если меняется только сборка jobs/config
-- ручной интеграционный прогон одного изображения и одного стиля, если меняется desktop-save, submit, focus или result-detection логика
-
-## 9. Машинно-читаемый реестр
-
-Для системы сопровождения рядом лежит файл `project_structure_registry.json`.
-
-Его назначение:
-
-- хранить подсистемы в структурированном виде;
-- задавать `change_types`;
-- перечислять обязательные точки проверки;
-- подсказывать минимальные тесты по каждому классу изменений.
-
-Если при следующем изменении возникает вопрос "что еще может быть затронуто?", первым источником должна быть связка:
-
-- `PROJECT_STRUCTURE.md`
 - `project_structure_registry.json`
 
-Для быстрого impact-анализа используйте:
+Use it when the next change raises the question: **what else may be affected?**
 
 ```powershell
 python .\main_change_impact.py --change-type generation_flag --changed-file config.py --changed-file utils\prompt_builder.py
 ```
 
-Если тип изменения заранее неизвестен, можно дать только список файлов:
+If the change type is unknown:
 
 ```powershell
 python .\main_change_impact.py --changed-file main_grok_web.py
 ```
 
-Для интеграции с автоматикой есть JSON-режим:
+JSON mode:
 
 ```powershell
 python .\main_change_impact.py --change-type grok_runtime --changed-file main_grok_web.py --json
 ```
 
-## 10. External Publication Sync
+</section>
 
-Для отдельного репозитория с живой документацией проекта используйте:
+---
+
+<section id="publication-sync">
+
+## Publication Sync
+
+Use this flow to refresh the external project-information repository bundle.
 
 ```powershell
 python .\main_project_publication.py --target-dir .\project_publication\Memory-to-Video_Agent
 ```
 
-Если у вас есть локальный клон внешнего репозитория, можно направить обновление прямо туда:
+If you have a local clone of the external repository:
 
 ```powershell
 python .\main_project_publication.py --target-dir <path-to-local-Memory-to-Video_Agent-clone>
 ```
 
-Инструмент обновляет управляемый набор файлов:
+Managed bundle:
 
 - `README.md`
 - `.gitignore`
@@ -437,29 +451,29 @@ python .\main_project_publication.py --target-dir <path-to-local-Memory-to-Video
 - `data/project_structure_registry.json`
 - `data/publication_manifest.json`
 
-Для безопасного stage/commit/push в публичный локальный клон используйте:
+Guarded stage/commit/push:
 
 ```powershell
 python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Video_Agent-clone> --stage
 python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Video_Agent-clone> --commit-message "Update project publication" --push
 ```
 
-Короткая команда для вашего текущего локального клона:
+Short wrappers:
 
 ```powershell
 .\run_project_publication_stage.bat
 .\run_project_publication_push.bat
 ```
 
-`run_project_publication_stage.bat` делает только безопасный `--stage` без commit/push.
-`run_project_publication_push.bat` выполняет полный guarded publish-flow.
+Publication safety:
 
-Этот flow:
+- verifies that target is a git repository;
+- verifies `origin` against `Memory-to-Video_Agent`;
+- updates only the managed publication bundle;
+- removes only stale managed files from the previous manifest;
+- stages only managed files;
+- blocks push of new staged publication changes without explicit `--commit-message`.
 
-- проверяет, что target является git-репозиторием;
-- проверяет remote `origin` против `Memory-to-Video_Agent`;
-- обновляет только managed publication bundle;
-- удаляет только stale managed files из предыдущего manifest;
-- stage-ит только managed files, а не весь рабочий проект;
-- не позволяет пушить новые staged publication changes без явного `--commit-message`.
+</section>
 
+</main>

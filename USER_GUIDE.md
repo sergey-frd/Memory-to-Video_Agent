@@ -36,6 +36,7 @@ This project is used to prepare prompt files, generate background images and vid
 - `.browser-profile\grok-web` - Chrome automation profile used for Grok.
 - `styles` - reusable style lists for portrait/style workflows.
 - `output\chatgpt_portraits` - generated portrait PNG files from the ChatGPT portrait batch workflow.
+- `output\gemini_*` and `output\grok_*` - service-specific mirrors of ChatGPT portrait/image-edit output folders.
 
 Example Windows paths in `config.json`:
 
@@ -118,15 +119,24 @@ run_full_grok_pipeline.bat --skip-video --generate-source-background --upload-ti
 run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300
 ```
 
-## ChatGPT Artistic Portrait Batch
+## ChatGPT, Gemini, And Grok Artistic Portrait Batch
 
 This workflow generates finished artistic portraits from every supported image in `input`.
 It uses the already-open ChatGPT web UI in Chrome, not the OpenAI API.
+The same job builder and JSON config format can also drive a dedicated Gemini
+generation window through `--backend gemini-desktop`, or Grok image generation
+through `--backend grok`.
 
 Main files:
 - `main_chatgpt_portrait_batch.py` - builds portrait jobs from images and styles.
 - `api/chatgpt_desktop_v2.py` - desktop automation for the existing ChatGPT window.
+- `api/gemini_desktop.py` - desktop automation adapter for an existing Gemini window.
+- `api/grok_web.py` - Grok web automation reused from the video pipeline, with image mode enabled.
 - `run_chatgpt_portrait_batch_existing.bat` - recommended launcher for an already-open ChatGPT session.
+- `login_gemini_profile.bat` - opens a dedicated Gemini Chrome profile at `https://gemini.google.com/app`.
+- `run_gemini_portrait_batch_existing.bat` - Gemini launcher that reuses the same portrait JSON configs.
+- `login_grok_profile.bat` - signs in the dedicated Grok Chrome profile at `https://grok.com/imagine`.
+- `run_grok_portrait_batch_existing.bat` - Grok launcher that reuses the same portrait JSON configs.
 - `chatgpt_portrait_config.json` - short working style set, currently watercolor and pastel.
 - `chatgpt_portrait_base_config.json` - full base style bank for artistic portraits and image-edit service styles.
 - `chatgpt_watercolor_scene_expansion_config.json` - special two-style config for `watercolor` and `scene_expansion`.
@@ -137,6 +147,8 @@ The base config contains the full portrait/style bank, including Rembrandt, Rena
 
 Output:
 - generated PNG files are written to `output\chatgpt_portraits`;
+- Gemini writes the same jobs into mirrored `output\gemini_*` folders;
+- Grok writes the same jobs into mirrored `output\grok_*` folders;
 - file names use `<image_stem>_<style_slug>.png`, for example `IMG-001_rembrandt.png`;
 - `--skip-existing` lets the batch restart safely and skip already saved portraits.
 
@@ -158,6 +170,25 @@ Short working set command:
 .\run_chatgpt_portrait_batch_existing.bat --skip-existing
 ```
 
+Gemini desktop-flow with the same config files:
+
+```bat
+.\login_gemini_profile.bat
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Gemini uses the same JSON config files as ChatGPT, but automatically mirrors ChatGPT output folders to Gemini folders when `--output-dir` is not explicitly passed. For example, `output\chatgpt_portraits` becomes `output\gemini_portraits`, and `output\chatgpt_watercolor_scene_expansion` becomes `output\gemini_watercolor_scene_expansion`. Pass your own `--output-dir` after the bat command only when a task needs a custom folder.
+Gemini saving first tries the generated image button `Download full size` / `Скачать в полном размере`, waits for the browser download to complete, and moves the downloaded image into the configured output path. If that button is unavailable, the older browser context-menu save path is still used as a fallback. The Gemini bat is intentionally quiet by default; add `--desktop-verbose` only when diagnosing UI problems.
+
+Grok web-flow with the same config files:
+
+```bat
+.\login_grok_profile.bat
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error
+```
+
+Grok uses `.browser-profile\grok-web`, `https://grok.com/imagine`, and Playwright image-mode automation. When `--output-dir` is not explicitly passed, ChatGPT output folders from the config are mirrored to Grok folders, for example `output\chatgpt_portraits` becomes `output\grok_portraits` and `output\chatgpt_watercolor_on_paper` becomes `output\grok_watercolor_on_paper`. Grok saves through browser download/source capture, so it does not use the Windows `Save As` dialog.
+
 Manual focus fallback:
 - keep an already verified ChatGPT window open in Chrome;
 - run the bat file without `--desktop-reactivate-delay 0`;
@@ -172,6 +203,9 @@ Important:
 - desktop input is guarded: before clicks, paste, Enter, and save shortcuts, the script verifies that the foreground window is the selected ChatGPT window or a real `Save As`/`Open` dialog; if another app is foreground, the batch stops instead of sending input there;
 - after saving, ChatGPT may leave the last generated image open on screen. This is acceptable if the batch continues;
 - if the batch stops, rerun the same command with `--skip-existing`.
+- Gemini uses the same foreground-window protection and the same single visible tab rule; keep it in a separate Chrome window opened to `https://gemini.google.com/app`.
+- Gemini sign-in, Google checks, and service-side limits are not bypassed; complete them manually in the dedicated Gemini window before starting the batch.
+- Grok sign-in and service-side checks are not bypassed; use `login_grok_profile.bat` when the Grok profile needs manual login, then close the login window before the managed portrait batch.
 
 ## New Generation Flags
 
@@ -393,12 +427,15 @@ flowchart LR
   B3A["run_project_sequence_batch_(project).bat"] --> B3["run_project_sequence_batch.bat"]
   B3 --> P3["main_project_sequence_batch.py"]
   B4["run_project_publication*.bat"] --> P4["main_project_publication_push.py"]
+  B5["run_chatgpt_portrait_batch_existing.bat / run_gemini_portrait_batch_existing.bat / run_grok_portrait_batch_existing.bat"] --> P6["main_chatgpt_portrait_batch.py"]
 
   A1["CLI flags"] --> P1
   A2["CLI flags"] --> P2
+  A5["CLI flags\n--config-file\n--skip-existing\n--desktop-*\n--grok-*"] --> P6
   C1["config.json / config.local.json / config_*.json"] --> G1["config.py / GenerationConfig"]
   G1 --> P1
   G1 --> P2
+  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_watercolor_scene_expansion_config.json"] --> P6
 
   C3["project_sequence_batch_*.json"] --> P3
   P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
@@ -410,6 +447,7 @@ flowchart LR
   P2 --> O2["results:\n*_video_*.mp4\n*_bg_image_16x9.*\ngrok debug artifacts if enabled"]
   P5 --> O3["reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)"]
   P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
+  P6 --> O5["portrait / image-edit results:\noutput/chatgpt_*/*.png\noutput/gemini_*/*.png\noutput/grok_*/*.png"]
 ```
 
 The left side of the diagram shows launch wrappers and parameter sources, and the right side shows the reports and result artifacts produced by each route.
@@ -822,6 +860,20 @@ ChatGPT short watercolor/pastel portrait batch:
 
 ```bat
 .\run_chatgpt_portrait_batch_existing.bat --skip-existing
+```
+
+Gemini portrait batch using the same JSON config format and a dedicated one-tab Gemini Chrome window:
+
+```bat
+.\login_gemini_profile.bat
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Grok portrait batch using the same JSON config format and the Grok automation profile:
+
+```bat
+.\login_grok_profile.bat
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error
 ```
 
 Premiere sequence optimization batch:
