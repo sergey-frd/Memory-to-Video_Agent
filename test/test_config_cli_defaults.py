@@ -23,6 +23,7 @@ def test_generation_config_defaults_match_requested_values() -> None:
     assert config.generate_source_background is False
     assert config.save_grok_debug_artifacts is False
     assert config.final_videos_dir == "final_project/videos"
+    assert config.final_output_dir == "final_project/output"
     assert config.regeneration_assets_dir == "final_project/regeneration_assets"
     assert config.continue_after_failure is False
     assert config.prefer_face_closeups is False

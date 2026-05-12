@@ -369,7 +369,7 @@
             <tr><td>Analysis</td><td>Локальный анализ изображения и scene-analysis через OpenAI.</td><td><code>utils/image_analysis.py</code>, <code>api/openai_scene.py</code>, <code>models/scene_analysis.py</code></td></tr>
             <tr><td>Prompting</td><td>Описание сцены, motion, video prompt, background prompt, final-frame prompt, music prompt.</td><td><code>utils/prompt_builder.py</code>, <code>api/openai_prompt_synthesizer.py</code>, <code>utils/grok_prompt_json.py</code></td></tr>
             <tr><td>Execution</td><td>Генерация через Grok Web, ChatGPT, Gemini, OpenAI Images API или local stylizer.</td><td><code>api/grok_web.py</code>, <code>api/chatgpt_desktop_v2.py</code>, <code>api/gemini_desktop.py</code>, <code>api/openai_image.py</code></td></tr>
-            <tr><td>Delivery</td><td>Доставка видео и non-video артефактов в финальные каталоги.</td><td><code>utils/project_delivery.py</code>, <code>final_videos_dir</code>, <code>regeneration_assets_dir</code></td></tr>
+            <tr><td>Delivery</td><td>Доставка видео, portrait/image PNG и non-video артефактов в финальные каталоги.</td><td><code>utils/project_delivery.py</code>, <code>final_videos_dir</code>, <code>final_output_dir</code>, <code>regeneration_assets_dir</code></td></tr>
             <tr><td>Post</td><td>Sequence optimization, Premiere XML/PRPROJ export, reports.</td><td><code>main_sequence_optimizer.py</code>, <code>main_project_sequence_batch.py</code>, <code>utils/premiere_*.py</code></td></tr>
           </tbody>
         </table>
@@ -399,7 +399,7 @@
           <article class="card"><h3>Prompt Synthesis</h3><p><code>utils/prompt_builder.py</code>, <code>api/openai_prompt_synthesizer.py</code>, <code>utils/grok_prompt_json.py</code></p><p>Video, background, final-frame, music prompts.</p></article>
           <article class="card"><h3>Grok Runtime</h3><p><code>api/grok_web.py</code>, <code>main_grok_web.py</code>, <code>main_grok_batch.py</code></p><p>Background image и video generation.</p></article>
           <article class="card"><h3>Full Pipeline</h3><p><code>main_full_pipeline.py</code></p><p>Prompt generation + Grok-run по каждому input image.</p></article>
-          <article class="card"><h3>Delivery</h3><p><code>utils/project_delivery.py</code>, <code>utils/artifact_cleanup.py</code></p><p>Финальная доставка, cleanup, error folders.</p></article>
+          <article class="card"><h3>Delivery</h3><p><code>utils/project_delivery.py</code>, <code>utils/artifact_cleanup.py</code></p><p>Финальная доставка в <code>final_videos_dir</code>, <code>final_output_dir</code>, cleanup, error folders.</p></article>
           <article class="card"><h3>Sequence Optimization</h3><p><code>main_sequence_optimizer.py</code>, <code>utils/sequence_optimizer.py</code>, <code>utils/premiere_*.py</code></p><p>Новый порядок клипов, XML/PRPROJ export.</p></article>
           <article class="card"><h3>Reports</h3><p><code>main_sequence_reports.py</code>, <code>main_human_sequence_report.py</code>, <code>utils/transition_recommendations.py</code></p><p>Structure reports, personalized reports, transitions.</p></article>
           <article class="card"><h3>Portrait/Image Batch</h3><p><code>main_chatgpt_portrait_batch.py</code>, <code>api/chatgpt_desktop_v2.py</code>, <code>api/gemini_desktop.py</code>, <code>api/grok_web.py</code></p><p>ChatGPT, Gemini, Grok, OpenAI API, local stylizer.</p></article>
@@ -432,6 +432,7 @@
           <li>Result filename: <code>&lt;image_stem&gt;_&lt;style_slug&gt;.png</code>.</li>
           <li><code>--skip-existing</code> is the restart contract.</li>
           <li>Gemini and Grok mirror <code>output/chatgpt_*</code> into <code>output/gemini_*</code> and <code>output/grok_*</code> unless <code>--output-dir</code> is explicit.</li>
+          <li><code>--delivery-config-file config_*.json</code> keeps restart copies in project <code>output/...</code> and also copies each saved PNG into <code>final_output_dir</code> with the same relative subfolder path, such as <code>output/grok_portraits/...</code> → <code>final_output_dir/grok_portraits/...</code>.</li>
         </ul>
       </section>
 
@@ -446,9 +447,9 @@
             <tr><td><code>run_grok_automation*.bat</code></td><td><code>main_grok_web.py</code> / <code>main_grok_batch.py</code></td><td><code>*_video_*.mp4</code>, <code>*_bg_image_16x9.*</code></td></tr>
             <tr><td><code>run_project_sequence_batch*.bat</code></td><td><code>main_project_sequence_batch.py</code></td><td>reports, optimized sequence artifacts</td></tr>
             <tr><td><code>run_project_publication*.bat</code></td><td><code>main_project_publication_push.py</code></td><td>publication bundle</td></tr>
-            <tr><td><code>run_chatgpt_portrait_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/chatgpt_*</code></td></tr>
-            <tr><td><code>run_gemini_portrait_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/gemini_*</code></td></tr>
-            <tr><td><code>run_grok_portrait_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/grok_*</code></td></tr>
+            <tr><td><code>run_chatgpt_portrait_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/chatgpt_*</code>, optional <code>final_output_dir</code> copy</td></tr>
+            <tr><td><code>run_gemini_portrait_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/gemini_*</code>, optional <code>final_output_dir</code> copy</td></tr>
+            <tr><td><code>run_grok_portrait_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/grok_*</code>, optional <code>final_output_dir</code> copy</td></tr>
           </tbody>
         </table>
 
@@ -456,6 +457,7 @@
         <pre><code>.\run_full_grok_pipeline.bat --config-file .\config_Yakov.json --upload-timeout 300</code></pre>
         <pre><code>.\run_grok_automation_all.bat --skip-existing --upload-timeout 300</code></pre>
         <pre><code>.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
+        <pre><code>.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
         <pre><code>.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
         <pre><code>.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error</code></pre>
 
@@ -470,7 +472,7 @@
         <details open><summary>Artifacts</summary><div><ul><li>Stage artifacts must share the same <code>stage_id</code> prefix.</li><li>Naming changes must be checked everywhere filenames are written, read, parsed, synced, or reported.</li></ul></div></details>
         <details open><summary>Lifecycle</summary><div><ul><li><code>main_grok_batch.py</code> clears <code>input/</code> and <code>output/</code> after successful batch unless <code>--keep-workdirs</code> is set.</li><li><code>main_full_pipeline.py</code> can remove processed input images.</li><li>Cleanup behavior changes are high-risk.</li></ul></div></details>
         <details open><summary>Prompts</summary><div><ul><li>Prompt semantics must stay aligned across OpenAI synthesizer, local <code>PromptBuilder</code>, manifests, docs, and tests.</li><li>If EN and RU prompt artifacts are written, semantic changes must not affect only one language branch silently.</li></ul></div></details>
-        <details open><summary>Delivery</summary><div><ul><li><code>.mp4</code> files go to <code>final_videos_dir</code>.</li><li>Non-video stage assets go to <code>regeneration_assets_dir/&lt;stage_id&gt;/</code>.</li><li>Background image handling must not break non-video sync.</li></ul></div></details>
+        <details open><summary>Delivery</summary><div><ul><li><code>.mp4</code> files go to <code>final_videos_dir</code>.</li><li>Portrait/image-edit PNG copies go to <code>final_output_dir</code> when <code>--delivery-config-file</code> is present, preserving the project <code>output/...</code> subfolder structure.</li><li>Non-video stage assets go to <code>regeneration_assets_dir/&lt;stage_id&gt;/</code>.</li><li>Background image handling must not break non-video sync.</li></ul></div></details>
       </section>
 
       <section id="change-control">

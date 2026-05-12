@@ -158,6 +158,13 @@ NEW_CHAT_BUTTON_PATTERNS = (
     "Новый чат",
     "Создать чат",
 )
+BROWSER_LOCATION_TEXT_PREFIXES = (
+    "http://",
+    "https://",
+    "chrome://",
+    "edge://",
+    "about:",
+)
 
 
 class DesktopAutomationError(RuntimeError):
@@ -173,6 +180,7 @@ VK_C = 0x43
 VK_CONTROL = 0x11
 VK_DOWN = 0x28
 VK_ESCAPE = 0x1B
+VK_L = 0x4C
 VK_MENU = 0x12
 VK_O = 0x4F
 VK_RETURN = 0x0D
@@ -431,10 +439,21 @@ class ChatGPTDesktopAgent:
                 title = window.window_text()
                 self._log(f"active window is not ChatGPT: {title!r}; searching ChatGPT window")
                 if self.config.manual_composer_position is not None:
-                    found = self._find_visible_chatgpt_window()
-                    found_titles = [] if found is None else [self._window_title(found)]
+                    candidates = self._visible_chatgpt_window_candidates()
+                    found_titles = [self._window_title(item) for item in candidates]
                     if found_titles:
                         self._log(f"visible ChatGPT window candidates: {found_titles}")
+                    if len(candidates) == 1:
+                        found = candidates[0]
+                        self._log(
+                            "reactivating the sole visible ChatGPT generation window "
+                            "after the countdown foreground moved elsewhere"
+                        )
+                        self._ensure_foreground_window(
+                            found,
+                            "reactivate sole visible ChatGPT generation window after countdown",
+                        )
+                        return found
                     raise DesktopAutomationError(
                         "The active window after the countdown is not the ChatGPT browser window. "
                         f"Active window title: {title!r}. "
@@ -547,16 +566,20 @@ class ChatGPTDesktopAgent:
         except Exception:
             return False
 
-    def _find_visible_chatgpt_window(self) -> Optional[BaseWrapper]:
+    def _visible_chatgpt_window_candidates(self) -> list[BaseWrapper]:
         if Desktop is None:
-            return None
-        candidates = []
+            return []
+        candidates: list[BaseWrapper] = []
         for window in Desktop(backend="uia").windows(visible_only=True):
             try:
                 if self._looks_like_chatgpt_window(window):
                     candidates.append(window)
             except Exception:
                 continue
+        return candidates
+
+    def _find_visible_chatgpt_window(self) -> Optional[BaseWrapper]:
+        candidates = self._visible_chatgpt_window_candidates()
         if not candidates:
             return None
         candidates.sort(key=lambda item: (self._chatgpt_window_score(item), item.rectangle().width() * item.rectangle().height()))
@@ -701,40 +724,59 @@ class ChatGPTDesktopAgent:
     def _open_new_chat(self, window: BaseWrapper) -> None:
         if self.config.target_url:
             self._open_new_browser_tab(self.config.target_url, window)
-            time.sleep(self.config.post_new_chat_delay_sec)
-            return
+            if self._wait_for_clean_new_chat_surface(
+                window,
+                timeout_sec=max(self.config.post_new_chat_delay_sec, 4.0),
+            ):
+                return
+            raise DesktopAutomationError("Could not confirm a clean ChatGPT chat after opening a new browser tab.")
 
-        self._log("navigating current tab to ChatGPT home")
-        self._navigate_to_url("https://chatgpt.com/", window)
-        time.sleep(max(self.config.post_new_chat_delay_sec, 4.0))
-        if self._find_prompt_input(window) is not None:
+        if self._wait_for_clean_new_chat_surface(window, timeout_sec=1.0):
+            self._log("selected ChatGPT window already shows a clean empty chat; continuing without New chat click.")
             return
 
         button = self._find_button(window, NEW_CHAT_BUTTON_PATTERNS)
         if button is not None:
             self._ensure_foreground_window(window, "click New chat button")
             button.click_input()
-            time.sleep(self.config.post_new_chat_delay_sec)
-            if self._find_prompt_input(window) is not None:
+            if self._wait_for_clean_new_chat_surface(
+                window,
+                timeout_sec=max(self.config.post_new_chat_delay_sec, 3.0),
+            ):
                 return
+            self._log("New chat control was clicked, but the page did not become a clean empty chat.")
+        else:
+            self._log("visible New chat control was not found in the selected ChatGPT window.")
 
-        baseline_text = self._collect_visible_text(window=window)
-        self._ensure_foreground_window(window, "open new ChatGPT chat shortcut")
-        self._assert_foreground_window(window, "open new ChatGPT chat shortcut")
-        send_keys("^+o")
-        deadline = time.time() + self.config.new_chat_timeout_sec
-        while time.time() < deadline:
-            current_text = self._collect_visible_text(window=window)
-            if current_text != baseline_text:
-                time.sleep(self.config.post_new_chat_delay_sec)
-                return
-            time.sleep(0.5)
-        self._log("new-chat shortcut did not change the page; navigating to ChatGPT home again")
+        self._log("trying verified browser-address navigation back to ChatGPT home")
         self._navigate_to_url("https://chatgpt.com/", window)
-        time.sleep(max(self.config.post_new_chat_delay_sec, 4.0))
-        if self._find_prompt_input(window) is not None:
+        if self._wait_for_clean_new_chat_surface(
+            window,
+            timeout_sec=max(self.config.post_new_chat_delay_sec, 4.0),
+        ):
             return
-        raise DesktopAutomationError("Could not open a new chat in the ChatGPT desktop window.")
+
+        raise DesktopAutomationError(
+            "Could not open a clean new ChatGPT chat using the visible New chat control "
+            "or verified browser-address navigation."
+        )
+
+    def _wait_for_clean_new_chat_surface(self, window: BaseWrapper, *, timeout_sec: float) -> bool:
+        deadline = time.time() + max(0.5, timeout_sec)
+        last_result_count: Optional[int] = None
+        while time.time() < deadline:
+            prompt_ready = self._find_prompt_input(window) is not None
+            result_count = len(self._find_result_images(window))
+            if prompt_ready and result_count == 0:
+                return True
+            if result_count and result_count != last_result_count:
+                self._log(
+                    "new-chat surface still shows prior result image candidates: "
+                    f"{result_count}"
+                )
+            last_result_count = result_count
+            time.sleep(0.5)
+        return False
 
     def _open_new_browser_tab(self, url: str, window: Optional[BaseWrapper] = None) -> None:
         target_window = window or self._window
@@ -747,11 +789,11 @@ class ChatGPTDesktopAgent:
 
     def _navigate_to_url(self, url: str, window: Optional[BaseWrapper] = None) -> None:
         target_window = window or self._window
-        if target_window is not None:
-            self._ensure_foreground_window(target_window, "focus browser address bar")
-            self._assert_foreground_window(target_window, "focus browser address bar")
-        send_keys("^l")
-        time.sleep(0.2)
+        if not self._focus_browser_address_bar_verified(target_window):
+            raise DesktopAutomationError(
+                "Browser address-bar focus could not be verified after Ctrl+L. "
+                "Stopping before Enter so the key cannot activate page content."
+            )
         pyperclip.copy(url)
         if target_window is not None:
             self._assert_foreground_window(target_window, "paste browser URL")
@@ -760,6 +802,71 @@ class ChatGPTDesktopAgent:
         if target_window is not None:
             self._assert_foreground_window(target_window, "submit browser URL")
         send_keys("{ENTER}")
+
+    def _focus_browser_address_bar_verified(self, window: Optional[BaseWrapper]) -> bool:
+        if window is not None:
+            self._ensure_foreground_window(window, "focus browser address bar")
+            self._assert_foreground_window(window, "focus browser address bar")
+
+        for attempt_name, action in (
+            ("raw Ctrl+L", lambda: self._press_ctrl_key_raw(VK_L)),
+            ("pywinauto Ctrl+L", lambda: send_keys("^l")),
+        ):
+            self._log(f"trying browser address-bar focus via {attempt_name}")
+            action()
+            time.sleep(0.35)
+            if window is not None:
+                self._assert_foreground_window(window, f"verify browser address bar selection after {attempt_name}")
+            if self._browser_address_selection_is_verified():
+                return True
+
+        if window is not None:
+            for x_ratio, y_offset in (
+                (0.46, 50),
+                (0.54, 50),
+                (0.36, 50),
+                (0.46, 64),
+                (0.54, 64),
+            ):
+                try:
+                    rect = window.rectangle()
+                    x = rect.left + int(rect.width() * x_ratio)
+                    y = rect.top + y_offset
+                    self._log(f"trying browser address-bar focus via toolbar click: x={x}, y={y}")
+                    self._click_screen_point(
+                        x,
+                        y,
+                        expected_window=window,
+                        purpose="click browser address bar",
+                    )
+                    self._press_ctrl_key_raw(VK_A)
+                    time.sleep(0.1)
+                    if self._browser_address_selection_is_verified():
+                        return True
+                except Exception as exc:
+                    self._log(f"browser address-bar toolbar click focus failed: {exc}")
+        return False
+
+    def _browser_address_selection_is_verified(self) -> bool:
+        sentinel = "__codex_address_probe__"
+        try:
+            pyperclip.copy(sentinel)
+            self._press_ctrl_key_raw(VK_C)
+            time.sleep(0.2)
+            copied = (pyperclip.paste() or "").strip()
+        except Exception as exc:
+            self._log(f"browser address-bar verification failed: {exc}")
+            return False
+        if not copied or copied == sentinel:
+            self._log("browser address-bar verification copied no URL text")
+            return False
+        copied_cf = copied.casefold()
+        verified = copied_cf.startswith(BROWSER_LOCATION_TEXT_PREFIXES)
+        if verified:
+            self._log(f"browser address-bar verification copied URL text: {copied[:120]!r}")
+        else:
+            self._log(f"browser address-bar verification copied unexpected text: {copied[:120]!r}")
+        return verified
 
     def _attach_image(self, window: BaseWrapper, image_path: Path) -> None:
         if self.config.attach_via_clipboard:
@@ -1313,6 +1420,11 @@ class ChatGPTDesktopAgent:
         early_ignore_sec = min(15.0, max(5.0, self.config.min_result_wait_sec / 6.0))
         early_ignore_until = start + early_ignore_sec
         baseline_set = set(baseline_signatures)
+        baseline_digests = {
+            digest
+            for digest in (self._result_signature_digest(signature) for signature in baseline_signatures)
+            if digest
+        }
         baseline_count = len(baseline_signatures)
         first_seen: dict[ImageSignature, float] = {}
         stable_signature: Optional[ImageSignature] = None
@@ -1325,7 +1437,11 @@ class ChatGPTDesktopAgent:
             new_candidates: list[tuple[ImageSignature, BaseWrapper, float]] = []
             for candidate in candidates:
                 signature = self._result_signature(candidate)
-                if signature is None or signature in baseline_set:
+                if signature is None or self._signature_matches_baseline(
+                    signature,
+                    baseline_set=baseline_set,
+                    baseline_digests=baseline_digests,
+                ):
                     continue
                 seen_at = first_seen.setdefault(signature, now)
                 new_candidates.append((signature, candidate, seen_at))
@@ -1634,6 +1750,12 @@ class ChatGPTDesktopAgent:
             if self._adopt_recent_saved_image(output_path, existing_files, save_started_at):
                 self._log(f"blind save adopted browser filename via {name}: {output_path}")
                 return True
+            if not foreground_still_safe(f"post-{name} save-dialog check"):
+                self._log(
+                    "blind save stopped after submit because the Save dialog is no longer foreground; "
+                    "not sending another shortcut into ChatGPT"
+                )
+                return self._wait_for_file_path(output_path, timeout_sec=2.0)
             time.sleep(0.5)
         return False
 
@@ -1744,9 +1866,21 @@ class ChatGPTDesktopAgent:
                 if self._wait_for_wrapper_to_close(dialog, timeout_sec=1.5):
                     self._log(f"save dialog closed after {name}")
                     return
+                if not self._dialog_still_visible(dialog):
+                    self._log(
+                        "save dialog is no longer visible after submit; "
+                        "stopping retries so no later shortcut can hit ChatGPT"
+                    )
+                    return
             except Exception as exc:
                 self._log(f"save dialog submit attempt failed via {name}: {exc}")
         raise DesktopAutomationError("Save-file dialog stayed open after all Save attempts.")
+
+    def _dialog_still_visible(self, dialog: BaseWrapper) -> bool:
+        try:
+            return bool(dialog.is_visible())
+        except Exception:
+            return False
 
     def _find_file_dialog_edit(self, dialog: BaseWrapper) -> Optional[BaseWrapper]:
         candidates = []
@@ -2013,6 +2147,21 @@ class ChatGPTDesktopAgent:
             if signature is not None:
                 signatures.append(signature)
         return signatures
+
+    def _result_signature_digest(self, signature: ImageSignature) -> int:
+        return int(signature[-1]) if signature else 0
+
+    def _signature_matches_baseline(
+        self,
+        signature: ImageSignature,
+        *,
+        baseline_set: set[ImageSignature],
+        baseline_digests: set[int],
+    ) -> bool:
+        if signature in baseline_set:
+            return True
+        digest = self._result_signature_digest(signature)
+        return bool(digest and digest in baseline_digests)
 
     def _result_signature(self, wrapper: Optional[BaseWrapper]) -> Optional[ImageSignature]:
         if wrapper is None:

@@ -8,6 +8,7 @@
   "generate_source_background": true,
   "save_grok_debug_artifacts": false,
   "final_videos_dir": "E:\\Git\\P_h_o_t_o\\Dv_Yakov_1\\Dv_Yakov\\2026\\Gen_Vd_AI",
+  "final_output_dir": "E:\\Git\\P_h_o_t_o\\Dv_Yakov_1\\Dv_Yakov\\2026\\output",
   "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Yakov_1\\Dv_Yakov\\2026\\regeneration_assets",
   "continue_after_failure": true,
   "write_description": true,

@@ -14,7 +14,8 @@ from PIL import Image, ImageChops, ImageEnhance, ImageFilter, ImageOps
 
 from api.openai_image import edit_image_with_openai
 from api.chatgpt_web import ChatGPTWebConfig, ChatGPTWebSessionRunner
-from config import Settings
+from config import GenerationConfig, Settings, load_generation_config
+from utils.project_delivery import sync_final_output_file
 from utils.image_analysis import analyze_image
 
 SUPPORTED_INPUT_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
@@ -87,6 +88,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=None,
         help=f"Portrait config JSON. Defaults to {DEFAULT_CONFIG_NAME}.",
+    )
+    parser.add_argument(
+        "--delivery-config-file",
+        type=Path,
+        default=None,
+        help="Optional user delivery config JSON with final_output_dir for copied portrait/image outputs.",
     )
     parser.add_argument(
         "--profile-dir",
@@ -402,6 +409,25 @@ def _profile_dir_for_backend(profile_dir: Path, backend: str) -> Path:
     return profile_dir
 
 
+def _load_delivery_config(args: argparse.Namespace, settings: Settings) -> GenerationConfig | None:
+    config_path = getattr(args, "delivery_config_file", None)
+    if config_path is None:
+        return None
+    if not config_path.is_absolute() and not config_path.exists():
+        config_path = settings.project_root / config_path
+    return load_generation_config(config_path)
+
+
+def _sync_final_portrait_output(
+    settings: Settings,
+    delivery_config: GenerationConfig | None,
+    output_path: Path,
+) -> None:
+    if delivery_config is None:
+        return
+    sync_final_output_file(settings, delivery_config, output_path)
+
+
 def run_batch(
     args: argparse.Namespace,
     settings: Settings | None = None,
@@ -412,6 +438,7 @@ def run_batch(
 
     config_path = args.config_file or (settings.project_root / DEFAULT_CONFIG_NAME)
     portrait_config = load_portrait_config(config_path)
+    delivery_config = _load_delivery_config(args, settings)
     backend = getattr(args, "backend", "web")
     input_dir = args.input_dir or settings.input_dir
     cli_output_dir = _resolve_under_project(args.output_dir, settings)
@@ -441,13 +468,13 @@ def run_batch(
         raise FileNotFoundError(f"No source images found in: {input_dir}")
     jobs = build_portrait_jobs(images, portrait_config, output_dir, response_text_dir)
     if backend in {"desktop", "gemini-desktop", "gemini"}:
-        return _run_desktop_jobs(args, jobs, portrait_config)
+        return _run_desktop_jobs(args, jobs, portrait_config, settings, delivery_config)
     if _is_grok_backend(backend):
-        return _run_grok_jobs(args, jobs)
+        return _run_grok_jobs(args, jobs, settings, delivery_config)
     if backend == "local":
-        return _run_local_jobs(args, jobs)
+        return _run_local_jobs(args, jobs, settings, delivery_config)
     if backend == "api":
-        return _run_api_jobs(args, jobs)
+        return _run_api_jobs(args, jobs, settings, delivery_config)
 
     session_runner: ChatGPTWebSessionRunner | None = None
     if runner is None:
@@ -460,6 +487,7 @@ def run_batch(
     try:
         for job in jobs:
             if args.skip_existing and job.output_path.exists():
+                _sync_final_portrait_output(settings, delivery_config, job.output_path)
                 print(f"Skipped existing portrait: {job.output_path}")
                 outputs.append(job.output_path)
                 continue
@@ -481,6 +509,8 @@ def run_batch(
             )
             result = resolved_runner(web_config)
             outputs.append(result or job.output_path)
+            if not args.no_submit:
+                _sync_final_portrait_output(settings, delivery_config, result or job.output_path)
             if args.no_submit:
                 print(f"ChatGPT portrait request prepared: {job.image_path.name} / {job.style.name}")
             else:
@@ -495,6 +525,8 @@ def _run_desktop_jobs(
     args: argparse.Namespace,
     jobs: list[PortraitJob],
     portrait_config: PortraitBatchConfig,
+    settings: Settings,
+    delivery_config: GenerationConfig | None,
 ) -> list[Path]:
     from api.chatgpt_desktop_v2 import ChatGPTDesktopAgent, DesktopAgentConfig
 
@@ -519,6 +551,7 @@ def _run_desktop_jobs(
     outputs: list[Path] = []
     for job in jobs:
         if args.skip_existing and job.output_path.exists():
+            _sync_final_portrait_output(settings, delivery_config, job.output_path)
             print(f"Skipped existing portrait: {job.output_path}")
             outputs.append(job.output_path)
             continue
@@ -554,6 +587,9 @@ def _run_desktop_jobs(
                 else default_target_url
             )
 
+        open_new_chat_before_run = getattr(args, "desktop_new_chat", False) or portrait_config.new_chat_per_job
+        click_composer_before_paste = getattr(args, "desktop_click_composer", False) or open_new_chat_before_run
+
         config = DesktopAgentConfig(
             image_path=job.image_path,
             prompt_text=job.prompt_text,
@@ -570,16 +606,15 @@ def _run_desktop_jobs(
             post_attach_delay_sec=getattr(args, "desktop_post_attach_delay", 3.0),
             min_result_wait_sec=getattr(args, "desktop_min_result_wait", 90.0),
             result_stable_sec=getattr(args, "desktop_result_stable_wait", 8.0),
-            open_new_chat_before_run=getattr(args, "desktop_new_chat", False)
-            or portrait_config.new_chat_per_job,
+            open_new_chat_before_run=open_new_chat_before_run,
             use_active_window=getattr(args, "desktop_active_window", False),
             prefer_single_tab_window=getattr(args, "desktop_prefer_single_tab_window", False),
             require_single_tab_window=getattr(args, "desktop_require_single_tab_window", False),
             attach_via_clipboard=getattr(args, "desktop_clipboard_attach", False),
             skip_capture_result=not getattr(args, "desktop_capture_result", False),
             save_result_via_context_menu=getattr(args, "desktop_save_context_menu", False),
-            click_composer_before_paste=getattr(args, "desktop_click_composer", False),
-            manual_composer_position=manual_composer_position,
+            click_composer_before_paste=click_composer_before_paste,
+            manual_composer_position=None if click_composer_before_paste else manual_composer_position,
             manual_send_position=manual_send_position,
             manual_send_capture_delay_sec=getattr(args, "desktop_send_cursor_delay", 0.0),
             verbose=getattr(args, "desktop_verbose", False),
@@ -601,6 +636,8 @@ def _run_desktop_jobs(
             )
             continue
         outputs.append(job.output_path)
+        if not args.no_submit:
+            _sync_final_portrait_output(settings, delivery_config, job.output_path)
         if args.no_submit:
             print(f"Existing {service_name} window prepared: {job.image_path.name} / {job.style.name}")
         else:
@@ -610,7 +647,12 @@ def _run_desktop_jobs(
     return outputs
 
 
-def _run_grok_jobs(args: argparse.Namespace, jobs: list[PortraitJob]) -> list[Path]:
+def _run_grok_jobs(
+    args: argparse.Namespace,
+    jobs: list[PortraitJob],
+    settings: Settings,
+    delivery_config: GenerationConfig | None,
+) -> list[Path]:
     from api.grok_web import GrokWebConfig, GrokWebSessionRunner
 
     profile_dir = _profile_dir_for_backend(getattr(args, "profile_dir", Path(".browser-profile/grok-web")), "grok")
@@ -623,6 +665,7 @@ def _run_grok_jobs(args: argparse.Namespace, jobs: list[PortraitJob]) -> list[Pa
     try:
         for job in jobs:
             if args.skip_existing and job.output_path.exists():
+                _sync_final_portrait_output(settings, delivery_config, job.output_path)
                 print(f"Skipped existing Grok image: {job.output_path}")
                 outputs.append(job.output_path)
                 continue
@@ -656,6 +699,8 @@ def _run_grok_jobs(args: argparse.Namespace, jobs: list[PortraitJob]) -> list[Pa
                 )
                 continue
             outputs.append(result or job.output_path)
+            if not args.no_submit:
+                _sync_final_portrait_output(settings, delivery_config, result or job.output_path)
             if args.no_submit:
                 print(f"Grok image request prepared: {job.image_path.name} / {job.style.name}")
             else:
@@ -686,17 +731,27 @@ def _is_desktop_window_selection_error(exc: Exception) -> bool:
 def _is_desktop_unsafe_continue_error(exc: Exception) -> bool:
     message = str(exc).casefold()
     markers = (
+        "browser address-bar focus could not be verified",
+        "could not confirm a clean chatgpt chat",
+        "could not open a clean new chatgpt chat",
         "gemini did not accept the request",
         "same composer is not filled repeatedly",
+        "stopping before enter so the key cannot activate page content",
         "stopping before the next job",
     )
     return any(marker in message for marker in markers)
 
 
-def _run_local_jobs(args: argparse.Namespace, jobs: list[PortraitJob]) -> list[Path]:
+def _run_local_jobs(
+    args: argparse.Namespace,
+    jobs: list[PortraitJob],
+    settings: Settings,
+    delivery_config: GenerationConfig | None,
+) -> list[Path]:
     outputs: list[Path] = []
     for job in jobs:
         if args.skip_existing and job.output_path.exists():
+            _sync_final_portrait_output(settings, delivery_config, job.output_path)
             print(f"Skipped existing portrait: {job.output_path}")
             outputs.append(job.output_path)
             continue
@@ -706,6 +761,7 @@ def _run_local_jobs(args: argparse.Namespace, jobs: list[PortraitJob]) -> list[P
             continue
         result = _stylize_locally(job.image_path, job.output_path, job.style.name)
         outputs.append(result)
+        _sync_final_portrait_output(settings, delivery_config, result)
         print(f"Local portrait saved: {result}")
     return outputs
 
@@ -754,10 +810,16 @@ def _soft_edge_overlay(image: Image.Image, opacity: float) -> Image.Image:
     return Image.merge("RGB", (edges, edges, edges))
 
 
-def _run_api_jobs(args: argparse.Namespace, jobs: list[PortraitJob]) -> list[Path]:
+def _run_api_jobs(
+    args: argparse.Namespace,
+    jobs: list[PortraitJob],
+    settings: Settings,
+    delivery_config: GenerationConfig | None,
+) -> list[Path]:
     outputs: list[Path] = []
     for job in jobs:
         if args.skip_existing and job.output_path.exists():
+            _sync_final_portrait_output(settings, delivery_config, job.output_path)
             print(f"Skipped existing portrait: {job.output_path}")
             outputs.append(job.output_path)
             continue
@@ -778,6 +840,7 @@ def _run_api_jobs(args: argparse.Namespace, jobs: list[PortraitJob]) -> list[Pat
             model_name=getattr(args, "api_model", None),
         )
         outputs.append(result)
+        _sync_final_portrait_output(settings, delivery_config, result)
         print(f"OpenAI portrait saved: {result}")
     return outputs
 

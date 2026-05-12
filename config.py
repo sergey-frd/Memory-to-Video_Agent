@@ -55,6 +55,7 @@ CONFIG_INT_FIELDS = {
 CONFIG_STR_FIELDS = {
     "motion_model",
     "final_videos_dir",
+    "final_output_dir",
     "regeneration_assets_dir",
 }
 CONFIG_ENUM_FIELDS = {
@@ -161,6 +162,7 @@ class GenerationConfig:
     generate_source_background: bool = False
     save_grok_debug_artifacts: bool = False
     final_videos_dir: str = "final_project/videos"
+    final_output_dir: str = "final_project/output"
     regeneration_assets_dir: str = "final_project/regeneration_assets"
     continue_after_failure: bool = False
     write_description: bool = True
@@ -225,6 +227,7 @@ class GenerationConfig:
             generate_source_background=data.get("generate_source_background", default.generate_source_background),
             save_grok_debug_artifacts=data.get("save_grok_debug_artifacts", default.save_grok_debug_artifacts),
             final_videos_dir=str(data.get("final_videos_dir", default.final_videos_dir)),
+            final_output_dir=str(data.get("final_output_dir", default.final_output_dir)),
             regeneration_assets_dir=str(data.get("regeneration_assets_dir", default.regeneration_assets_dir)),
             continue_after_failure=data.get("continue_after_failure", default.continue_after_failure),
             write_description=data.get("write_description", default.write_description),
@@ -275,6 +278,7 @@ class GenerationConfig:
             "generate_source_background": self.generate_source_background,
             "save_grok_debug_artifacts": self.save_grok_debug_artifacts,
             "final_videos_dir": self.final_videos_dir,
+            "final_output_dir": self.final_output_dir,
             "regeneration_assets_dir": self.regeneration_assets_dir,
             "continue_after_failure": self.continue_after_failure,
             "write_description": self.write_description,

@@ -123,6 +123,7 @@ def test_run_batch_builds_chatgpt_configs_and_calls_runner() -> None:
         input_dir=None,
         output_dir=None,
         config_file=config_path,
+        delivery_config_file=None,
         profile_dir=root / ".browser-profile" / "chatgpt-web",
         target_url="https://chatgpt.com/",
         chrome_exe=None,
@@ -172,6 +173,7 @@ def test_run_batch_skips_existing_portrait() -> None:
         input_dir=None,
         output_dir=None,
         config_file=config_path,
+        delivery_config_file=None,
         profile_dir=root / ".browser-profile" / "chatgpt-web",
         target_url="https://chatgpt.com/",
         chrome_exe=None,
@@ -206,6 +208,7 @@ def test_run_batch_api_backend_prepares_without_browser() -> None:
         input_dir=None,
         output_dir=None,
         config_file=config_path,
+        delivery_config_file=None,
         profile_dir=root / ".browser-profile" / "chatgpt-web",
         target_url="https://chatgpt.com/",
         chrome_exe=None,
@@ -278,6 +281,7 @@ def test_run_batch_local_backend_writes_distinct_style_files() -> None:
         input_dir=None,
         output_dir=None,
         config_file=config_path,
+        delivery_config_file=None,
         profile_dir=root / ".browser-profile" / "chatgpt-web",
         target_url="https://chatgpt.com/",
         chrome_exe=None,
@@ -298,3 +302,63 @@ def test_run_batch_local_backend_writes_distinct_style_files() -> None:
     ]
     assert all(path.exists() for path in outputs)
     assert outputs[0].read_bytes() != outputs[1].read_bytes()
+
+
+def test_run_batch_copies_saved_portrait_into_user_final_output_dir() -> None:
+    root = Path("test_runtime") / f"portrait_delivery_{uuid4().hex}"
+    settings = _settings_for(root)
+    image_path = settings.input_dir / "first.png"
+    image_path.write_bytes(b"a")
+    portrait_config_path = root / "portrait.json"
+    portrait_config_path.write_text(
+        '{\n'
+        '  "portrait_styles": [{"name": "watercolor portrait", "slug": "watercolor"}],\n'
+        '  "output_dir": "output/chatgpt_portraits"\n'
+        '}',
+        encoding="utf-8",
+    )
+    delivery_config_path = root / "delivery.json"
+    delivery_config_path.write_text(
+        '{\n'
+        '  "final_output_dir": "delivered/output"\n'
+        '}',
+        encoding="utf-8",
+    )
+
+    def fake_runner(config):
+        config.output_path.parent.mkdir(parents=True, exist_ok=True)
+        config.output_path.write_bytes(b"portrait")
+        return config.output_path
+
+    args = Namespace(
+        input_dir=None,
+        output_dir=None,
+        config_file=portrait_config_path,
+        delivery_config_file=delivery_config_path,
+        profile_dir=root / ".browser-profile" / "chatgpt-web",
+        target_url="https://chatgpt.com/",
+        chrome_exe=None,
+        result_timeout=123.0,
+        launch_timeout=45.0,
+        no_submit=False,
+        skip_existing=False,
+        save_response_text=None,
+    )
+
+    outputs = run_batch(args, settings=settings, runner=fake_runner)
+
+    assert outputs == [root / "output" / "chatgpt_portraits" / "first_watercolor.png"]
+    delivered = root / "delivered" / "output" / "chatgpt_portraits" / "first_watercolor.png"
+    assert delivered.exists()
+    assert delivered.read_bytes() == b"portrait"
+
+
+def test_chatgpt_clean_chat_failure_is_desktop_safety_stop() -> None:
+    from main_chatgpt_portrait_batch import _is_desktop_unsafe_continue_error
+
+    exc = RuntimeError(
+        "Could not open a clean new ChatGPT chat using the visible New chat control "
+        "or verified browser-address navigation."
+    )
+
+    assert _is_desktop_unsafe_continue_error(exc) is True

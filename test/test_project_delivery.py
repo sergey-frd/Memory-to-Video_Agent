@@ -2,7 +2,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from config import GenerationConfig, Settings
-from utils.project_delivery import resolve_delivery_dir, sync_stage_non_video_assets, sync_video_file
+from utils.project_delivery import resolve_delivery_dir, sync_final_output_file, sync_stage_non_video_assets, sync_video_file
 
 
 def _settings_for(root: Path) -> Settings:
@@ -58,3 +58,23 @@ def test_sync_video_file_copies_mp4_into_final_video_dir() -> None:
 
     assert synced == resolve_delivery_dir(settings, config.final_videos_dir) / video_path.name
     assert synced.exists()
+
+
+def test_sync_final_output_file_copies_image_into_final_output_dir() -> None:
+    root = Path("test_runtime") / f"delivery_{uuid4().hex}"
+    settings = _settings_for(root)
+    config = GenerationConfig(
+        final_output_dir="final/output",
+        final_videos_dir="final/videos",
+        regeneration_assets_dir="final/assets",
+    )
+
+    image_path = settings.output_dir / "grok_portraits" / "portrait_watercolor.png"
+    image_path.parent.mkdir(parents=True, exist_ok=True)
+    image_path.write_bytes(b"portrait")
+
+    synced = sync_final_output_file(settings, config, image_path)
+
+    assert synced == resolve_delivery_dir(settings, config.final_output_dir) / "grok_portraits" / image_path.name
+    assert synced.exists()
+    assert synced.read_bytes() == b"portrait"

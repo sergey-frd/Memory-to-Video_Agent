@@ -404,13 +404,25 @@ class GeminiDesktopAgent(ChatGPTDesktopAgent):
 
     def _gemini_submission_started(self, window: BaseWrapper, baseline_signatures: set[tuple[int, ...]]) -> bool:
         deadline = time.time() + 18.0
+        baseline_digests = {
+            digest
+            for digest in (self._result_signature_digest(signature) for signature in baseline_signatures)
+            if digest
+        }
         while time.time() < deadline:
             if self._has_generation_running_indicator(window):
                 return True
             if self._has_gemini_running_text(window):
                 return True
             current_signatures = set(self._result_signatures(self._find_result_images(window)))
-            if any(signature not in baseline_signatures for signature in current_signatures):
+            if any(
+                not self._signature_matches_baseline(
+                    signature,
+                    baseline_set=baseline_signatures,
+                    baseline_digests=baseline_digests,
+                )
+                for signature in current_signatures
+            ):
                 return True
             time.sleep(0.5)
         return False

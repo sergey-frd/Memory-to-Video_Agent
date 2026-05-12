@@ -27,6 +27,7 @@ This project is used to prepare prompt files, generate background images and vid
 - `input` - source images for the current run.
 - `output` - temporary prompt files, manifest files, and intermediate results for the current stage.
 - `final_videos_dir` - final destination for generated `mp4` files and background images.
+- `final_output_dir` - persistent destination for generated portrait/image-edit PNG files copied out of the project runtime `output` while preserving the same subfolder layout.
 - `regeneration_assets_dir` - destination for prompt files, manifests, and other non-video artifacts needed for manual editing and regeneration.
 - `reports` - final destination for sequence optimization reports, batch summaries, and temporary batch work files.
 - `reports\temp_projects` - temporary `.prproj` files produced inside one sequence optimization batch and removable by cleanup.
@@ -43,6 +44,7 @@ Example Windows paths in `config.json`:
 ```json
 {
   "final_videos_dir": "E:\\Git\\P_h_o_t_o\\Dv_Rita_1\\Dv_Rita\\2026\\Gen_Vd_AI",
+  "final_output_dir": "E:\\Git\\P_h_o_t_o\\Dv_Rita_1\\Dv_Rita\\2026\\output",
   "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Rita_1\\Dv_Rita\\2026\\regeneration_assets",
   "reports_dir": "E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\reports"
 }
@@ -149,6 +151,8 @@ Output:
 - generated PNG files are written to `output\chatgpt_portraits`;
 - Gemini writes the same jobs into mirrored `output\gemini_*` folders;
 - Grok writes the same jobs into mirrored `output\grok_*` folders;
+- when `--delivery-config-file .\config_Yakov.json` or another user config is supplied, every newly saved PNG is also copied to that config's `final_output_dir` with the same relative structure as the project `output\...` tree, while the project copy stays in place for `--skip-existing`;
+- for example, project output `output\grok_portraits\portrait.png` is copied to `E:\Git\P_h_o_t_o\Dv_Yakov_1\Dv_Yakov\2026\output\grok_portraits\portrait.png`;
 - file names use `<image_stem>_<style_slug>.png`, for example `IMG-001_rembrandt.png`;
 - `--skip-existing` lets the batch restart safely and skip already saved portraits.
 
@@ -188,6 +192,16 @@ Grok web-flow with the same config files:
 ```
 
 Grok uses `.browser-profile\grok-web`, `https://grok.com/imagine`, and Playwright image-mode automation. When `--output-dir` is not explicitly passed, ChatGPT output folders from the config are mirrored to Grok folders, for example `output\chatgpt_portraits` becomes `output\grok_portraits` and `output\chatgpt_watercolor_on_paper` becomes `output\grok_watercolor_on_paper`. Grok saves through browser download/source capture, so it does not use the Windows `Save As` dialog.
+
+Persistent portrait delivery to a user project:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --continue-on-error
+```
+
+The portrait style config still controls styles and the project-side output folder. The delivery config is separate and controls the persistent mirror root through `final_output_dir`; the service/style subfolders from project `output` are preserved below it.
 
 Manual focus fallback:
 - keep an already verified ChatGPT window open in Chrome;
@@ -386,6 +400,7 @@ All current `GenerationConfig` fields:
 - `generate_source_background` — default `false`; create background prompts and run the background-image stage in Grok.
 - `save_grok_debug_artifacts` — default `false`; keep Grok diagnostic candidate/debug artifacts in `output`.
 - `final_videos_dir` — default `final_project/videos`; final delivery folder for generated `mp4` files and background images.
+- `final_output_dir` — default `final_project/output`; final delivery root for portrait/image-edit PNG copies produced by ChatGPT, Gemini, Grok, API, or local portrait batch flows when `--delivery-config-file` is provided. Project `output/...` subfolders are mirrored below this root.
 - `regeneration_assets_dir` — default `final_project/regeneration_assets`; delivery folder for prompts, manifests, and non-video stage artifacts.
 - `continue_after_failure` — default `false`; continue with the next image after moving a failed stage into `error`.
 - `write_description` — default `true`; write the stage description / analysis text file.

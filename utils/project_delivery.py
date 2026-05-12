@@ -41,6 +41,22 @@ def sync_video_file(settings: Settings, generation_config: GenerationConfig, vid
     return sync_final_media_file(settings, generation_config, video_path)
 
 
+def sync_final_output_file(settings: Settings, generation_config: GenerationConfig, artifact_path: Path) -> Path:
+    if not artifact_path.exists():
+        return artifact_path
+    target_dir = resolve_delivery_dir(settings, generation_config.final_output_dir)
+    try:
+        relative_output_path = artifact_path.resolve(strict=False).relative_to(
+            settings.output_dir.resolve(strict=False)
+        )
+    except ValueError:
+        relative_output_path = Path(artifact_path.name)
+    target_path = target_dir / relative_output_path
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    copy2(artifact_path, target_path)
+    return target_path
+
+
 def sync_stage_non_video_assets(
     settings: Settings,
     generation_config: GenerationConfig,

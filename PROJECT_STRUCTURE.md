@@ -60,7 +60,7 @@
 <tr>
 <td>Delivery</td>
 <td>Доставка видео и non-video артефактов в финальные каталоги.</td>
-<td><code>utils/project_delivery.py</code>, <code>final_videos_dir</code>, <code>regeneration_assets_dir</code></td>
+<td><code>utils/project_delivery.py</code>, <code>final_videos_dir</code>, <code>final_output_dir</code>, <code>regeneration_assets_dir</code></td>
 </tr>
 <tr>
 <td>Post</td>
@@ -95,11 +95,11 @@
 | Grok Runtime | `api/grok_web.py`, `main_grok_web.py` | Background image/video generation для одной prompt-пары | `*_bg_image_16x9.png`, `*_video_*.mp4` |
 | Grok Batch | `main_grok_batch.py` | Пакетный Grok-run по готовым `*_v_prompt_*` | videos и bg-images по всем stages |
 | Full Sequential Pipeline | `main_full_pipeline.py` | Prompt generation + Grok-run для каждого изображения из `input/` | delivered stage outputs, cleanup of `input/` and `output/` |
-| Delivery & Lifecycle | `utils/project_delivery.py`, `utils/artifact_cleanup.py`, `main_cleanup_artifacts.py` | Доставка, очистка, перенос ошибок, архивирование | `final_videos_dir`, `regeneration_assets_dir`, `error/`, cleanup reports |
+| Delivery & Lifecycle | `utils/project_delivery.py`, `utils/artifact_cleanup.py`, `main_cleanup_artifacts.py` | Доставка, очистка, перенос ошибок, архивирование | `final_videos_dir`, `final_output_dir`, `regeneration_assets_dir`, `error/`, cleanup reports |
 | Sequence Optimization | `main_sequence_optimizer.py`, `utils/sequence_optimizer.py`, `utils/sequence_optimizer_runtime.py`, `utils/premiere_xml.py`, `utils/premiere_project.py`, `models/video_sequence.py` | Рекомендованный порядок клипов и export | optimized JSON/TXT/XML/PRPROJ |
 | Reports & Batch Orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/fcp_translation_results.py` | Reports, batch delivery, human-profile overlays, transition recommendations | reports, batch summaries, transition reports |
 | Desktop/Web Automation | `main_desktop.py`, `api/chatgpt_desktop.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/chatgpt_web.py`, `api/grok_web.py` | Prompt-driven interaction with external UIs | submitted prompts, saved media |
-| Portrait/Image Batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `run_chatgpt_portrait_batch_existing.bat`, `run_gemini_portrait_batch_existing.bat`, `run_grok_portrait_batch_existing.bat` | Batch generation of artistic portraits and image-edit tasks through ChatGPT, Gemini, Grok, OpenAI API, or local stylizer | `output/chatgpt_*`, `output/gemini_*`, `output/grok_*`, optional response text |
+| Portrait/Image Batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `run_chatgpt_portrait_batch_existing.bat`, `run_gemini_portrait_batch_existing.bat`, `run_grok_portrait_batch_existing.bat` | Batch generation of artistic portraits and image-edit tasks through ChatGPT, Gemini, Grok, OpenAI API, or local stylizer | `output/chatgpt_*`, `output/gemini_*`, `output/grok_*`, optional `final_output_dir` copy, optional response text |
 
 </section>
 
@@ -185,6 +185,7 @@ Portrait batch rules:
 4. Gemini and Grok mirror `output/chatgpt_*` config folders into `output/gemini_*` and `output/grok_*` when `--output-dir` is not explicit.
 5. ChatGPT and Gemini desktop flows depend on dedicated single-tab Chrome windows.
 6. Grok uses `.browser-profile/grok-web` and `https://grok.com/imagine` through Playwright image mode.
+7. `--delivery-config-file config_*.json` preserves the project-side restart copy in `output/...` and also copies every newly saved PNG into `final_output_dir` while mirroring the same relative subfolder path, such as `output/grok_portraits/...` -> `final_output_dir/grok_portraits/...`.
 
 </section>
 
@@ -229,6 +230,10 @@ flowchart LR
 
 ```bat
 .\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
 ```
 
 ```bat
@@ -300,6 +305,7 @@ Parameter precedence:
 <summary><strong>Delivery</strong></summary>
 
 - `.mp4` files go to `final_videos_dir`.
+- Portrait/image-edit PNG copies go to `final_output_dir` when `--delivery-config-file` is present, preserving the project `output/...` subfolder structure.
 - Non-video stage assets go to `regeneration_assets_dir/<stage_id>/`.
 - Background image handling must not break non-video sync.
 
