@@ -996,7 +996,9 @@ Seedance notes:
 
 ## Documentation Sync Rule
 
-Whenever workflow, file locations, naming, cleanup rules, or report outputs change, update both guide files together:
+Whenever workflow, file locations, naming, cleanup rules, or report outputs change, update all guide files together:
 
 - `USER_GUIDE.md`
+- `USER_GUIDE.html`
 - `Руководство_пользователя.md`
+- `Руководство_пользователя.html`

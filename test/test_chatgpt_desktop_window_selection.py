@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 try:
@@ -114,6 +116,41 @@ def test_signature_digest_blocks_reusing_same_image_after_layout_shift() -> None
         baseline_set={original_signature},
         baseline_digests={123456},
     )
+
+
+def test_wait_for_attached_source_image_accepts_new_preview_candidate(monkeypatch) -> None:
+    agent = ChatGPTDesktopAgent(_config())
+    window = _FakeWindow("ChatGPT - Google Chrome")
+    preview = object()
+
+    monkeypatch.setattr(agent, "_collect_attachment_surface_text", lambda _window: "")
+    monkeypatch.setattr(agent, "_find_attachment_image_candidates", lambda _window: [preview])
+    monkeypatch.setattr(agent, "_result_signature", lambda _wrapper: (10, 20, 30, 40, 54321))
+
+    agent._wait_for_attached_source_image(
+        window,
+        Path("family_photo.jpg"),
+        baseline_signatures=[],
+        baseline_surface_text="",
+    )
+
+
+def test_wait_for_attached_source_image_stops_before_prompt_when_no_preview_appears(monkeypatch) -> None:
+    agent = ChatGPTDesktopAgent(_config())
+    window = _FakeWindow("ChatGPT - Google Chrome")
+    timestamps = iter([0.0, 21.0])
+
+    monkeypatch.setattr(agent, "_collect_attachment_surface_text", lambda _window: "")
+    monkeypatch.setattr(agent, "_find_attachment_image_candidates", lambda _window: [])
+    monkeypatch.setattr("api.chatgpt_desktop_v2.time.time", lambda: next(timestamps))
+
+    with pytest.raises(DesktopAutomationError, match="never exposed a confirmed attachment preview"):
+        agent._wait_for_attached_source_image(
+            window,
+            Path("family_photo.jpg"),
+            baseline_signatures=[],
+            baseline_surface_text="",
+        )
 
 
 def test_dialog_visibility_helper_returns_false_when_wrapper_is_gone() -> None:

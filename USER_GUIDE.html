@@ -1,0 +1,979 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Memory-to-Video Agent | User Guide</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --ink: #1e2430;
+      --muted: #657084;
+      --line: #d9dee8;
+      --accent: #176b87;
+      --accent-2: #b14f2a;
+      --soft: #eef6f8;
+      --code: #101827;
+      --code-ink: #e8edf7;
+      --radius: 8px;
+      --shadow: 0 16px 40px rgba(21, 31, 46, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.58;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .shell {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 28px 20px;
+      overflow: auto;
+      background: #17202e;
+      color: #eef3fb;
+      border-right: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    aside h2 { margin: 0 0 6px; font-size: 20px; letter-spacing: 0; }
+    aside p { margin: 0 0 22px; color: #aeb9c8; font-size: 13px; }
+    nav { display: grid; gap: 6px; }
+    nav a {
+      display: block;
+      padding: 8px 10px;
+      color: #d9e4f2;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    nav a:hover { background: rgba(255, 255, 255, 0.09); text-decoration: none; }
+    nav a.level-3 { padding-left: 24px; color: #b9c7d8; font-size: 12px; }
+    main { padding: 40px min(6vw, 72px) 72px; }
+    .hero {
+      max-width: 1120px;
+      margin: 0 auto 28px;
+      padding-bottom: 26px;
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent-2);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+    .hero p { max-width: 780px; margin: 18px 0 0; color: var(--muted); font-size: 17px; }
+    .content {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 34px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .content h1 { font-size: 38px; margin: 0 0 20px; }
+    .content h2 {
+      margin: 38px 0 14px;
+      padding-top: 8px;
+      font-size: 26px;
+      line-height: 1.22;
+      letter-spacing: 0;
+    }
+    .content h3 { margin: 28px 0 10px; font-size: 19px; line-height: 1.28; }
+    .content p { margin: 0 0 14px; }
+    .content ul, .content ol { margin: 0 0 18px 24px; padding: 0; }
+    .content li { margin: 7px 0; padding-left: 4px; }
+    .content li.indent-1 { margin-left: 18px; }
+    .content li.indent-2 { margin-left: 36px; }
+    .content li.indent-3 { margin-left: 54px; }
+    .content li.indent-4 { margin-left: 72px; }
+    code {
+      padding: 2px 5px;
+      color: #0d3b4c;
+      background: var(--soft);
+      border: 1px solid #d5e8ee;
+      border-radius: 5px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.92em;
+    }
+    pre {
+      margin: 12px 0 22px;
+      padding: 16px;
+      overflow: auto;
+      color: var(--code-ink);
+      background: var(--code);
+      border-radius: var(--radius);
+      line-height: 1.48;
+    }
+    pre code {
+      padding: 0;
+      color: inherit;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      font-size: 13px;
+    }
+    .code-label {
+      display: inline-block;
+      margin: 10px 0 -4px;
+      padding: 3px 8px;
+      color: #7b4b2f;
+      background: #fff1e8;
+      border: 1px solid #f0d5c5;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .source-note {
+      margin-top: 34px;
+      padding-top: 18px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+    }
+    @media (max-width: 980px) {
+      .shell { display: block; }
+      aside { position: relative; height: auto; }
+      nav { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+      nav a.level-3 { padding-left: 10px; }
+      main { padding: 28px 18px 48px; }
+      .content { padding: 22px; }
+    }
+    @media print {
+      .shell { display: block; }
+      aside { display: none; }
+      main { padding: 0; }
+      .content { border: 0; box-shadow: none; padding: 0; }
+      a { color: inherit; }
+    }
+  </style>
+</head>
+<body>
+<!-- Generated from USER_GUIDE.md. Edit USER_GUIDE.md first, then regenerate this file. -->
+  <div class="shell">
+    <aside>
+      <h2>User Guide</h2>
+      <p>HTML companion to USER_GUIDE.md</p>
+      <nav aria-label="User guide table of contents">
+        <a class="level-2" href="#one-minute-quick-start">One-Minute Quick Start</a>
+        <a class="level-2" href="#purpose">Purpose</a>
+        <a class="level-2" href="#main-directories">Main Directories</a>
+        <a class="level-2" href="#bat-files">BAT Files</a>
+        <a class="level-3" href="#login_grok_profilebat">login_grok_profile.bat</a>
+        <a class="level-3" href="#run_grok_automationbat">run_grok_automation.bat</a>
+        <a class="level-3" href="#run_grok_automation_allbat">run_grok_automation_all.bat</a>
+        <a class="level-3" href="#run_full_grok_pipelinebat">run_full_grok_pipeline.bat</a>
+        <a class="level-2" href="#chatgpt-gemini-and-grok-artistic-portrait-batch">ChatGPT, Gemini, And Grok Artistic Portrait Batch</a>
+        <a class="level-2" href="#new-generation-flags">New Generation Flags</a>
+        <a class="level-3" href="#generate_video">generate_video</a>
+        <a class="level-3" href="#generate_grok_multiscene_json_prompt">generate_grok_multiscene_json_prompt</a>
+        <a class="level-3" href="#generate_source_background">generate_source_background</a>
+        <a class="level-3" href="#save_grok_debug_artifacts">save_grok_debug_artifacts</a>
+        <a class="level-3" href="#continue_after_failure">continue_after_failure</a>
+        <a class="level-2" href="#full-generation-config-reference">Full Generation Config Reference</a>
+        <a class="level-2" href="#architecture-and-change-control">Architecture And Change Control</a>
+        <a class="level-2" href="#batch-program-parameter-map">Batch / Program / Parameter Map</a>
+        <a class="level-2" href="#deploying-on-another-machine">Deploying On Another Machine</a>
+        <a class="level-2" href="#three-command-working-cheat-sheet">Three-Command Working Cheat Sheet</a>
+        <a class="level-2" href="#what-gets-copied-after-a-successful-stage">What Gets Copied After a Successful Stage</a>
+        <a class="level-2" href="#what-happens-on-failure">What Happens on Failure</a>
+        <a class="level-2" href="#premiere-sequence-workflow">Premiere Sequence Workflow</a>
+        <a class="level-2" href="#sequence-optimization-batch">Sequence Optimization Batch</a>
+        <a class="level-2" href="#rebuild-reports-after-manual-sequence-changes">Rebuild Reports After Manual Sequence Changes</a>
+        <a class="level-2" href="#music-first-from-project-and-sequence-only">Music-First From Project And Sequence Only</a>
+        <a class="level-2" href="#add-human-detail-to-the-report">Add Human Detail To The Report</a>
+        <a class="level-2" href="#cleanup-of-old-and-temporary-files">Cleanup Of Old And Temporary Files</a>
+        <a class="level-2" href="#final-naming-standard">Final Naming Standard</a>
+        <a class="level-2" href="#typical-commands">Typical Commands</a>
+        <a class="level-2" href="#short-operator-recommendations">Short Operator Recommendations</a>
+        <a class="level-2" href="#multi-scene-video-prompt-composer">Multi-Scene Video Prompt Composer</a>
+        <a class="level-2" href="#documentation-sync-rule">Documentation Sync Rule</a>
+      </nav>
+    </aside>
+    <main>
+      <section class="hero">
+        <p class="eyebrow">Memory-to-Video Agent</p>
+        <h1>User Guide</h1>
+        <p>This web version is synchronized with <code>USER_GUIDE.md</code> and keeps the same operating instructions, commands, flags, cleanup rules, and documentation sync rule.</p>
+      </section>
+      <article class="content">
+        <p>﻿# User Guide</p>
+        <h2 id="one-minute-quick-start">One-Minute Quick Start</h2>
+        <ol>
+        <li>Put source images into <code>input</code>.</li>
+        <li>If you need to sign in to Grok or refresh the session, run <code>login_grok_profile.bat</code>, sign in, open <code>https://grok.com/imagine</code> once to verify access, and then fully close that Chrome window.</li>
+        <li>Run the main pipeline:</li>
+        </ol>
+        <div class="code-label">bat</div><pre><code class="language-bat">run_full_grok_pipeline.bat --upload-timeout 300</code></pre>
+        <ol>
+        <li>After a successful run:</li>
+        </ol>
+        <ul>
+        <li class="indent-1">final <code>mp4</code> files and background images will be copied to <code>final_videos_dir</code>;</li>
+        <li class="indent-1">prompt files, manifests, and other non-video artifacts will be copied to <code>regeneration_assets_dir</code>.</li>
+        </ul>
+        <ol>
+        <li>If a stage fails, the problematic files will be moved to <code>error\input</code> and <code>error\output</code>.</li>
+        <li>After the video generation phase, build Premiere sequences manually from the generated videos.</li>
+        <li>Run sequence optimization and open the final optimized <code>.prproj</code> from the same folder as the source <code>project_path</code>; <code>reports\temp_projects</code> keeps only the temporary batch working copy.</li>
+        <li>If you manually adjust the optimized sequence, rebuild reports from the current sequence order with <code>main_sequence_reports.py</code>.</li>
+        </ol>
+        <h2 id="purpose">Purpose</h2>
+        <p>This project is used to prepare prompt files, generate background images and videos through Grok, optimize Premiere sequence order, and build reports for the final editing phase. The main workflow is: input image -&gt; generate media -&gt; build manual Premiere sequences -&gt; optimize sequence order -&gt; manually refine -&gt; rebuild final recommendations from the approved order.</p>
+        <h2 id="main-directories">Main Directories</h2>
+        <ul>
+        <li><code>input</code> - source images for the current run.</li>
+        <li><code>output</code> - temporary prompt files, manifest files, and intermediate results for the current stage.</li>
+        <li><code>final_videos_dir</code> - final destination for generated <code>mp4</code> files and background images.</li>
+        <li><code>final_output_dir</code> - persistent destination for generated portrait/image-edit PNG files copied out of the project runtime <code>output</code> while preserving the same subfolder layout.</li>
+        <li><code>regeneration_assets_dir</code> - destination for prompt files, manifests, and other non-video artifacts needed for manual editing and regeneration.</li>
+        <li><code>reports</code> - final destination for sequence optimization reports, batch summaries, and temporary batch work files.</li>
+        <li><code>reports\temp_projects</code> - temporary <code>.prproj</code> files produced inside one sequence optimization batch and removable by cleanup.</li>
+        <li>the source Premiere project folder from <code>project_path</code> - persistent location for the final optimized <code>.prproj</code>.</li>
+        <li><code>error\input</code> - source images for stages that failed.</li>
+        <li><code>error\output</code> - prompt files, manifests, and error reports for failed stages.</li>
+        <li><code>.browser-profile\grok-web</code> - Chrome automation profile used for Grok.</li>
+        <li><code>styles</code> - reusable style lists for portrait/style workflows.</li>
+        <li><code>output\chatgpt_portraits</code> - generated portrait PNG files from the ChatGPT portrait batch workflow.</li>
+        <li><code>output\gemini_*</code> and <code>output\grok_*</code> - service-specific mirrors of ChatGPT portrait/image-edit output folders.</li>
+        </ul>
+        <p>Example Windows paths in <code>config.json</code>:</p>
+        <div class="code-label">json</div><pre><code class="language-json">{
+  &quot;final_videos_dir&quot;: &quot;E:\\Git\\P_h_o_t_o\\Dv_Rita_1\\Dv_Rita\\2026\\Gen_Vd_AI&quot;,
+  &quot;final_output_dir&quot;: &quot;E:\\Git\\P_h_o_t_o\\Dv_Rita_1\\Dv_Rita\\2026\\output&quot;,
+  &quot;regeneration_assets_dir&quot;: &quot;E:\\Git\\P_h_o_t_o\\Dv_Rita_1\\Dv_Rita\\2026\\regeneration_assets&quot;,
+  &quot;reports_dir&quot;: &quot;E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\reports&quot;
+}</code></pre>
+        <h2 id="bat-files">BAT Files</h2>
+        <h3 id="login_grok_profilebat"><code>login_grok_profile.bat</code></h3>
+        <p>Purpose:</p>
+        <ul>
+        <li>open Chrome with the project automation profile;</li>
+        <li>sign in to Grok manually;</li>
+        <li>verify that <code>https://grok.com/imagine</code> opens successfully.</li>
+        </ul>
+        <p>When to use it:</p>
+        <ul>
+        <li>on the first run;</li>
+        <li>if Grok signed out;</li>
+        <li>if Grok starts showing <code>Sign in</code> or <code>Sign up</code>.</li>
+        </ul>
+        <p>Important:</p>
+        <ul>
+        <li>this bat file is only for manual login;</li>
+        <li>after checking access, close that Chrome window completely;</li>
+        <li>the main pipeline starts Grok on its own when it runs.</li>
+        </ul>
+        <h3 id="run_grok_automationbat"><code>run_grok_automation.bat</code></h3>
+        <p>Purpose:</p>
+        <ul>
+        <li>run Grok for one image / one prompt file.</li>
+        </ul>
+        <p>Example:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_20260314_101010_v_prompt_1.txt --upload-timeout 300</code></pre>
+        <p>Useful when you want to:</p>
+        <ul>
+        <li>re-run one prompt;</li>
+        <li>regenerate only one background or one video;</li>
+        <li>test a single Grok stage without running the full pipeline.</li>
+        </ul>
+        <h3 id="run_grok_automation_allbat"><code>run_grok_automation_all.bat</code></h3>
+        <p>Purpose:</p>
+        <ul>
+        <li>process all <code>*_v_prompt_*.txt</code> files already present in <code>output</code>.</li>
+        </ul>
+        <p>Examples:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">run_grok_automation_all.bat --upload-timeout 300
+run_grok_automation_all.bat --skip-existing --upload-timeout 300
+run_grok_automation_all.bat --skip-video --generate-source-background --upload-timeout 300</code></pre>
+        <p>This bat file is useful when prompt files already exist and you only need the Grok part.</p>
+        <h3 id="run_full_grok_pipelinebat"><code>run_full_grok_pipeline.bat</code></h3>
+        <p>This is the main launcher for normal operation.</p>
+        <p>It does the following:</p>
+        <ol>
+        <li>takes one input image from <code>input</code>;</li>
+        <li>builds all stage files in <code>output</code>;</li>
+        <li>starts Grok for that image;</li>
+        <li>saves the background image and/or video;</li>
+        <li>copies results to <code>final_videos_dir</code> and <code>regeneration_assets_dir</code>;</li>
+        <li>closes Grok;</li>
+        <li>continues with the next image.</li>
+        </ol>
+        <p>Examples:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">run_full_grok_pipeline.bat --upload-timeout 300
+run_full_grok_pipeline.bat --skip-video --generate-source-background --upload-timeout 300
+run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300</code></pre>
+        <h2 id="chatgpt-gemini-and-grok-artistic-portrait-batch">ChatGPT, Gemini, And Grok Artistic Portrait Batch</h2>
+        <p>This workflow generates finished artistic portraits from every supported image in <code>input</code>. It uses the already-open ChatGPT web UI in Chrome, not the OpenAI API. The same job builder and JSON config format can also drive a dedicated Gemini generation window through <code>--backend gemini-desktop</code>, or Grok image generation through <code>--backend grok</code>.</p>
+        <p>Main files:</p>
+        <ul>
+        <li><code>main_chatgpt_portrait_batch.py</code> - builds portrait jobs from images and styles.</li>
+        <li><code>api/chatgpt_desktop_v2.py</code> - desktop automation for the existing ChatGPT window.</li>
+        <li><code>api/gemini_desktop.py</code> - desktop automation adapter for an existing Gemini window.</li>
+        <li><code>api/grok_web.py</code> - Grok web automation reused from the video pipeline, with image mode enabled.</li>
+        <li><code>run_chatgpt_portrait_batch_existing.bat</code> - recommended launcher for an already-open ChatGPT session.</li>
+        <li><code>login_gemini_profile.bat</code> - opens a dedicated Gemini Chrome profile at <code>https://gemini.google.com/app</code>.</li>
+        <li><code>run_gemini_portrait_batch_existing.bat</code> - Gemini launcher that reuses the same portrait JSON configs.</li>
+        <li><code>login_grok_profile.bat</code> - signs in the dedicated Grok Chrome profile at <code>https://grok.com/imagine</code>.</li>
+        <li><code>run_grok_portrait_batch_existing.bat</code> - Grok launcher that reuses the same portrait JSON configs.</li>
+        <li><code>chatgpt_portrait_config.json</code> - short working style set, currently watercolor and pastel.</li>
+        <li><code>chatgpt_portrait_base_config.json</code> - full base style bank for artistic portraits and image-edit service styles.</li>
+        <li><code>chatgpt_watercolor_scene_expansion_config.json</code> - special two-style config for <code>watercolor</code> and <code>scene_expansion</code>.</li>
+        <li><code>BATCH_RUN_HISTORY.md</code> - non-repeating examples for all batch launchers and their parameters.</li>
+        <li><code>styles\art_styles_Prompt_list.txt</code> - source human-readable style prompt list.</li>
+        </ul>
+        <p>The base config contains the full portrait/style bank, including Rembrandt, Renaissance, Impressionist, Watercolor, Van Gogh post-impressionism, Klimt art nouveau, Art Deco, Karsh black-and-white studio portrait, Pop Art, Cubist, Chagall poetic modernism, plus service styles such as MODERN_COLOR, COLORIZE, FACE_ENLARGEMENT, and SCENE_EXPANSION.</p>
+        <p>Output:</p>
+        <ul>
+        <li>generated PNG files are written to <code>output\chatgpt_portraits</code>;</li>
+        <li>Gemini writes the same jobs into mirrored <code>output\gemini_*</code> folders;</li>
+        <li>Grok writes the same jobs into mirrored <code>output\grok_*</code> folders;</li>
+        <li>when <code>--delivery-config-file .\config_Yakov.json</code> or another user config is supplied, every newly saved PNG is also copied to that config's <code>final_output_dir</code> with the same relative structure as the project <code>output\...</code> tree, while the project copy stays in place for <code>--skip-existing</code>;</li>
+        <li>for example, project output <code>output\grok_portraits\portrait.png</code> is copied to <code>E:\Git\P_h_o_t_o\Dv_Yakov_1\Dv_Yakov\2026\output\grok_portraits\portrait.png</code>;</li>
+        <li>file names use <code>&lt;image_stem&gt;_&lt;style_slug&gt;.png</code>, for example <code>IMG-001_rembrandt.png</code>;</li>
+        <li><code>--skip-existing</code> lets the batch restart safely and skip already saved portraits.</li>
+        </ul>
+        <p>Recommended automatic command:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
+        <p>Watercolor + scene expansion command:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_watercolor_scene_expansion_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
+        <p>Short working set command:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">.\run_chatgpt_portrait_batch_existing.bat --skip-existing</code></pre>
+        <p>Gemini desktop-flow with the same config files:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">.\login_gemini_profile.bat
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
+        <p>Gemini uses the same JSON config files as ChatGPT, but automatically mirrors ChatGPT output folders to Gemini folders when <code>--output-dir</code> is not explicitly passed. For example, <code>output\chatgpt_portraits</code> becomes <code>output\gemini_portraits</code>, and <code>output\chatgpt_watercolor_scene_expansion</code> becomes <code>output\gemini_watercolor_scene_expansion</code>. Pass your own <code>--output-dir</code> after the bat command only when a task needs a custom folder. Gemini saving first tries the generated image button <code>Download full size</code> / <code>Скачать в полном размере</code>, waits for the browser download to complete, and moves the downloaded image into the configured output path. If that button is unavailable, the older browser context-menu save path is still used as a fallback. The Gemini bat is intentionally quiet by default; add <code>--desktop-verbose</code> only when diagnosing UI problems.</p>
+        <p>Grok web-flow with the same config files:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">.\login_grok_profile.bat
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error</code></pre>
+        <p>Grok uses <code>.browser-profile\grok-web</code>, <code>https://grok.com/imagine</code>, and Playwright image-mode automation. When <code>--output-dir</code> is not explicitly passed, ChatGPT output folders from the config are mirrored to Grok folders, for example <code>output\chatgpt_portraits</code> becomes <code>output\grok_portraits</code> and <code>output\chatgpt_watercolor_on_paper</code> becomes <code>output\grok_watercolor_on_paper</code>. Grok saves through browser download/source capture, so it does not use the Windows <code>Save As</code> dialog.</p>
+        <p>Persistent portrait delivery to a user project:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --continue-on-error</code></pre>
+        <p>The portrait style config still controls styles and the project-side output folder. The delivery config is separate and controls the persistent mirror root through <code>final_output_dir</code>; the service/style subfolders from project <code>output</code> are preserved below it.</p>
+        <p>Manual focus fallback:</p>
+        <ul>
+        <li>keep an already verified ChatGPT window open in Chrome;</li>
+        <li>run the bat file without <code>--desktop-reactivate-delay 0</code>;</li>
+        <li>during each countdown, click inside the ChatGPT message box;</li>
+        <li>the script then attaches the source image, pastes the prompt, submits it, waits for a generated result, and saves the image.</li>
+        </ul>
+        <p>Important:</p>
+        <ul>
+        <li>the automation does not bypass ChatGPT human checks or CAPTCHA prompts; pass them manually in the browser first;</li>
+        <li>do not run two portrait batches at the same time;</li>
+        <li>keep the generation ChatGPT in a dedicated Chrome window with exactly one visible tab; <code>run_chatgpt_portrait_batch_existing.bat</code> now requires this with <code>--desktop-require-single-tab-window</code>;</li>
+        <li>if Chrome has several ChatGPT windows, the single-tab generation window is the only safe target for the desktop batch;</li>
+        <li>desktop input is guarded: before clicks, paste, Enter, and save shortcuts, the script verifies that the foreground window is the selected ChatGPT window or a real <code>Save As</code>/<code>Open</code> dialog; if another app is foreground, the batch stops instead of sending input there;</li>
+        <li>after saving, ChatGPT may leave the last generated image open on screen. This is acceptable if the batch continues;</li>
+        <li>if the batch stops, rerun the same command with <code>--skip-existing</code>.</li>
+        <li>Gemini uses the same foreground-window protection and the same single visible tab rule; keep it in a separate Chrome window opened to <code>https://gemini.google.com/app</code>.</li>
+        <li>Gemini sign-in, Google checks, and service-side limits are not bypassed; complete them manually in the dedicated Gemini window before starting the batch.</li>
+        <li>Grok sign-in and service-side checks are not bypassed; use <code>login_grok_profile.bat</code> when the Grok profile needs manual login, then close the login window before the managed portrait batch.</li>
+        </ul>
+        <h2 id="new-generation-flags">New Generation Flags</h2>
+        <h3 id="generate_video"><code>generate_video</code></h3>
+        <p>Controls video generation. Default: <code>true</code>.</p>
+        <p>In <code>config.json</code>:</p>
+        <div class="code-label">json</div><pre><code class="language-json">{
+  &quot;generate_video&quot;: true
+}</code></pre>
+        <p>CLI parameters:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">--generate-video
+--skip-video</code></pre>
+        <p>Behavior:</p>
+        <ul>
+        <li>if <code>generate_video = true</code>, the pipeline generates videos in Grok;</li>
+        <li>if <code>generate_video = false</code> and <code>generate_source_background = true</code>, the pipeline generates only background images;</li>
+        <li>if <code>generate_video = false</code> and <code>generate_source_background = false</code>, the stage fails because there is nothing to generate.</li>
+        </ul>
+        <p>When visible people are present, <code>*_v_prompt_*.(txt|json)</code> and <code>*_v_prm_ru_*.(txt|json)</code> now prefer identity-safe camera language: more distant or medium-wide framing, side / top / low / drone-like angles, and less aggressive facial enlargement. The goal is to reduce face drift in generated videos.</p>
+        <p>This identity-safe behavior is now the default, but it is configurable through six framing-mode flags plus one ratio key:</p>
+        <div class="code-label">json</div><pre><code class="language-json">{
+  &quot;prefer_face_closeups&quot;: false,
+  &quot;use_ai_optimal_framing&quot;: false,
+  &quot;use_ai_optimal_then_identity_safe_framing&quot;: false,
+  &quot;ai_optimal_then_identity_safe_ai_optimal_percent&quot;: 70,
+  &quot;generate_dual_framing_videos&quot;: false,
+  &quot;generate_identity_safe_closeup_videos&quot;: false,
+  &quot;generate_triple_framing_videos&quot;: false
+}</code></pre>
+        <p>Framing mode rules:</p>
+        <ul>
+        <li>if all six flags are <code>false</code>, the pipeline keeps the default identity-safe framing and tries to avoid aggressive face enlargement;</li>
+        <li>if <code>prefer_face_closeups = true</code>, close facial framing may be preferred and the video prompt may move into a tighter portrait scale;</li>
+        <li>if <code>use_ai_optimal_framing = true</code>, the AI chooses the most effective cinematic framing for the source image without letting the face become significantly enlarged or distorted;</li>
+        <li>if <code>use_ai_optimal_then_identity_safe_framing = true</code>, one video is generated from one source image, but inside that single video the first <code>ai_optimal_then_identity_safe_ai_optimal_percent</code> percent uses AI-optimal framing and the remaining percent transitions into identity-safe framing from a safer distance;</li>
+        <li>if <code>ai_optimal_then_identity_safe_ai_optimal_percent</code> is omitted, the default ratio is <code>70 / 30</code>; for example, <code>50</code> means <code>50%</code> AI-optimal and <code>50%</code> identity-safe.</li>
+        <li>if <code>generate_dual_framing_videos = true</code>, the pipeline builds two branches from the same source frame: one identity-safe branch and one AI-optimal branch.</li>
+        <li>if <code>generate_identity_safe_closeup_videos = true</code>, the pipeline builds two branches from the same source frame: one identity-safe branch and one face-closeup branch.</li>
+        <li>if <code>generate_triple_framing_videos = true</code>, the pipeline builds three branches from the same source frame: identity-safe, face-closeup, and AI-optimal.</li>
+        </ul>
+        <p>Dual-mode output count:</p>
+        <ul>
+        <li>with <code>video_count = 1</code>, dual mode produces <code>2</code> videos;</li>
+        <li>with <code>video_count = N</code>, dual mode produces <code>2 x N</code> videos.</li>
+        </ul>
+        <p>Only one of these six framing flags can be enabled at a time. The percentage key is not a separate mode flag; it only refines the hybrid mode.</p>
+        <h3 id="generate_grok_multiscene_json_prompt"><code>generate_grok_multiscene_json_prompt</code></h3>
+        <p>Controls a special Grok prompt mode where the usual <code>*_v_prompt_*.txt</code> file is replaced by a JSON prompt artifact.</p>
+        <p>In <code>config.json</code>:</p>
+        <div class="code-label">json</div><pre><code class="language-json">{
+  &quot;generate_grok_multiscene_json_prompt&quot;: true,
+  &quot;grok_multiscene_prompt_size&quot;: 2000
+}</code></pre>
+        <p>Behavior:</p>
+        <ul>
+        <li>the pipeline writes <code>*_v_prompt_*.json</code> in English and <code>*_v_prm_ru_*.json</code> in Russian instead of TXT prompt files;</li>
+        <li>each JSON file is a one-item array with a <code>prompt</code> field, similar in spirit to <code>Gen_Video_Seedance</code>;</li>
+        <li>Grok reads the English <code>prompt</code> text from that JSON automatically, so batch execution still works through the normal Grok runners;</li>
+        <li>the prompt is treated as a compact three-shot video plan built from one input image, where <code>@image1</code> is the input image itself.</li>
+        </ul>
+        <p>Current fixed layout:</p>
+        <ul>
+        <li><code>Shot 1</code>, <code>0-2s</code>: strongest current AI-optimal cinematic interpretation;</li>
+        <li><code>Shot 2</code>, <code>2-4s</code>: alternative AI-optimal interpretation with a clearly different camera solution;</li>
+        <li><code>Shot 3</code>, <code>4-6s</code>: safer distance / angle view with wider spatial reveal.</li>
+        </ul>
+        <p>Current limits:</p>
+        <ul>
+        <li>total duration is fixed at <code>6s</code>;</li>
+        <li>aspect ratio is fixed at <code>16:9</code>;</li>
+        <li>the English prompt is validated against the configured <code>grok_multiscene_prompt_size</code> in characters, and the word budget is derived automatically as approximately <code>size / 5</code>.</li>
+        </ul>
+        <p>Prompt-size parameter:</p>
+        <ul>
+        <li><code>grok_multiscene_prompt_size</code> — default <code>1000</code>, which gives about <code>200</code> words;</li>
+        <li><code>2000</code> gives about <code>400</code> words and allows a more detailed JSON video prompt for Grok;</li>
+        <li>the builder still keeps the prompt concise, but may preserve more scene detail when the size is increased.</li>
+        </ul>
+        <p>When to use <code>--skip-video</code>:</p>
+        <ul>
+        <li>when you only need background images;</li>
+        <li>when you want to postpone video generation;</li>
+        <li>when you want to prepare backgrounds first and generate videos later.</li>
+        </ul>
+        <h3 id="generate_source_background"><code>generate_source_background</code></h3>
+        <p>Controls background image generation in Grok.</p>
+        <p>CLI parameters:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">--generate-source-background
+--skip-source-background</code></pre>
+        <p>Current behavior:</p>
+        <ul>
+        <li>background generation uses <code>*_assoc_bg_prompt.txt</code>;</li>
+        <li>that descriptor describes a realistic associative image suitable as a background;</li>
+        <li>Grok builds a new background from that descriptor and uses the source image as visual guidance.</li>
+        </ul>
+        <h3 id="save_grok_debug_artifacts"><code>save_grok_debug_artifacts</code></h3>
+        <p>Controls whether Grok diagnostic files are kept. Default: <code>false</code>.</p>
+        <p>In <code>config.json</code>:</p>
+        <div class="code-label">json</div><pre><code class="language-json">{
+  &quot;save_grok_debug_artifacts&quot;: false
+}</code></pre>
+        <p>CLI parameters:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">--save-grok-debug-artifacts
+--skip-grok-debug-artifacts</code></pre>
+        <p>Behavior:</p>
+        <ul>
+        <li>if <code>false</code>, candidate/debug files do not remain in <code>output</code>, so the working folder stays clean;</li>
+        <li>if <code>true</code>, Grok diagnostic artifacts are saved in <code>output</code>.</li>
+        </ul>
+        <p>Possible files when enabled:</p>
+        <ul>
+        <li><code>*_bg_image_16x9.candidate_*.png</code></li>
+        <li><code>*_bg_image_16x9_candidates.json</code></li>
+        <li><code>*_grok_debug.png</code></li>
+        <li><code>*_grok_debug.html</code></li>
+        <li><code>*_grok_debug.json</code></li>
+        </ul>
+        <p>When to enable it:</p>
+        <ul>
+        <li>if Grok saved the wrong background image;</li>
+        <li>if you need to see which candidate was found on the page;</li>
+        <li>if you need detailed diagnostics of Grok page results.</li>
+        </ul>
+        <p>When to keep it disabled:</p>
+        <ul>
+        <li>during normal operation;</li>
+        <li>when you want <code>output</code> to stay clean.</li>
+        </ul>
+        <h3 id="continue_after_failure"><code>continue_after_failure</code></h3>
+        <p>Controls what happens after a failed stage.</p>
+        <p>Behavior:</p>
+        <ul>
+        <li>if <code>false</code>, the pipeline stops on the first failure;</li>
+        <li>if <code>true</code>, the failed stage is moved to <code>error</code>, and processing continues with the next image.</li>
+        </ul>
+        <p>When to enable it:</p>
+        <ul>
+        <li>when there are many input images;</li>
+        <li>when some of them may be too large or otherwise problematic;</li>
+        <li>when it is more convenient to review only failed stages later.</li>
+        </ul>
+        <h2 id="full-generation-config-reference">Full Generation Config Reference</h2>
+        <p>All current <code>GenerationConfig</code> fields:</p>
+        <ul>
+        <li><code>generate_video</code> — default <code>true</code>; generate video prompts and run the video stage.</li>
+        <li><code>generate_grok_multiscene_json_prompt</code> — default <code>false</code>; write Grok-ready EN/RU JSON prompt artifacts instead of TXT video prompt files, using a fixed three-shot <code>6s</code> layout built from one input image.</li>
+        <li><code>grok_multiscene_prompt_size</code> — default <code>1000</code>; maximum prompt size for Grok multiscene JSON mode in approximate characters. The word budget is derived automatically, for example <code>1000 -&gt; 200 words</code>, <code>2000 -&gt; 400 words</code>.</li>
+        <li><code>video_count</code> — default <code>2</code>; how many videos to build from one source frame for each active framing mode.</li>
+        <li><code>camera_segments</code> — default <code>1</code>; how many motion segments are planned inside one video prompt.</li>
+        <li><code>motion_source</code> — default <code>table</code>; choose camera motions from the local table or from AI (<code>ai</code>).</li>
+        <li><code>motion_model</code> — default <code>gpt-4.1</code>; OpenAI model used for AI motion selection when <code>motion_source = ai</code>.</li>
+        <li><code>generate_source_background</code> — default <code>false</code>; create background prompts and run the background-image stage in Grok.</li>
+        <li><code>save_grok_debug_artifacts</code> — default <code>false</code>; keep Grok diagnostic candidate/debug artifacts in <code>output</code>.</li>
+        <li><code>final_videos_dir</code> — default <code>final_project/videos</code>; final delivery folder for generated <code>mp4</code> files and background images.</li>
+        <li><code>final_output_dir</code> — default <code>final_project/output</code>; final delivery root for portrait/image-edit PNG copies produced by ChatGPT, Gemini, Grok, API, or local portrait batch flows when <code>--delivery-config-file</code> is provided. Project <code>output/...</code> subfolders are mirrored below this root.</li>
+        <li><code>regeneration_assets_dir</code> — default <code>final_project/regeneration_assets</code>; delivery folder for prompts, manifests, and non-video stage artifacts.</li>
+        <li><code>continue_after_failure</code> — default <code>false</code>; continue with the next image after moving a failed stage into <code>error</code>.</li>
+        <li><code>write_description</code> — default <code>true</code>; write the stage description / analysis text file.</li>
+        <li><code>generate_final_frames</code> — default <code>false</code>; generate final-frame images through the image API.</li>
+        <li><code>read_input_list</code> — default <code>true</code>; read all supported source images from <code>input</code>.</li>
+        <li><code>generate_music</code> — default <code>false</code>; generate a music prompt after the last processed image.</li>
+        <li><code>prefer_face_closeups</code> — default <code>false</code>; allow and prefer closer facial framing when that matches the source image.</li>
+        <li><code>use_ai_optimal_framing</code> — default <code>false</code>; let AI choose the strongest cinematic framing, but do not significantly enlarge or distort the face.</li>
+        <li><code>use_ai_optimal_then_identity_safe_framing</code> — default <code>false</code>; generate one video where the first part uses AI-optimal framing and the remaining part transitions into identity-safe distance / angles.</li>
+        <li><code>ai_optimal_then_identity_safe_ai_optimal_percent</code> — default <code>70</code>; only for <code>use_ai_optimal_then_identity_safe_framing = true</code>; how much of the video duration is reserved for the AI-optimal part. Valid range: <code>1..99</code>. The identity-safe remainder is calculated automatically as <code>100 - value</code>.</li>
+        <li><code>generate_dual_framing_videos</code> — default <code>false</code>; generate both identity-safe and AI-optimal framing branches from the same source frame.</li>
+        <li><code>generate_identity_safe_closeup_videos</code> — default <code>false</code>; generate both identity-safe and face-closeup framing branches from the same source frame.</li>
+        <li><code>generate_triple_framing_videos</code> — default <code>false</code>; generate identity-safe, face-closeup, and AI-optimal framing branches from the same source frame.</li>
+        <li><code>hide_phone_in_selfie</code> — default <code>true</code>; if the input looks like a selfie / self-portrait, keep the selfie feel but try not to show the phone, photo camera, video camera, or their reflections when plausible.</li>
+        <li><code>prefer_loving_kindness_tone</code> — default <code>true</code>; where appropriate for the specific input image, gently bias the prompts toward loving-kindness, friendliness, benevolence, warm goodwill, and gentle mercy through light, color, atmosphere, environment, and background.</li>
+        </ul>
+        <p>Important framing rule:</p>
+        <ul>
+        <li>Only one of <code>prefer_face_closeups</code>, <code>use_ai_optimal_framing</code>, <code>use_ai_optimal_then_identity_safe_framing</code>, <code>generate_dual_framing_videos</code>, <code>generate_identity_safe_closeup_videos</code>, or <code>generate_triple_framing_videos</code> can be enabled at a time.</li>
+        </ul>
+        <h2 id="architecture-and-change-control">Architecture And Change Control</h2>
+        <p>For a developer-oriented map of the project structure, data flows, invariants, and change-impact checklist, see <code>PROJECT_STRUCTURE.md</code>. For automation and machine-guided change review, see <code>project_structure_registry.json</code>. Use <code>python .\main_change_impact.py --change-type generation_flag --changed-file config.py</code> to generate a concrete impact checklist. Use <code>python .\main_project_publication.py --target-dir .\project_publication\Memory-to-Video_Agent</code> to refresh the external project-information repository bundle. The public bundle now includes a full safe source mirror under <code>source/</code>, excluding secrets, media artifacts, and runtime-only folders. Use <code>python .\main_project_publication_push.py --repo-dir &lt;path-to-local-Memory-to-Video_Agent-clone&gt; --stage</code> for the guarded public-repo publish flow. Use <code>.\run_project_publication_stage.bat</code> for the shortest preview/stage-only run without push. Use <code>.\run_project_publication_push.bat</code> for the shortest manual publish command with your current local clone path.</p>
+        <h2 id="batch-program-parameter-map">Batch / Program / Parameter Map</h2>
+        <p>Use this compact map when you need to quickly see which <code>.bat</code> launches which Python entry point, and where the main parameters come from.</p>
+        <div class="code-label">mermaid</div><pre class="mermaid"><code>flowchart LR
+  B1[&quot;run_full_grok_pipeline*.bat&quot;] --&gt; P1[&quot;main_full_pipeline.py&quot;]
+  B2[&quot;run_grok_automation*.bat&quot;] --&gt; P2[&quot;main_grok_web.py / main_grok_batch.py&quot;]
+  B3A[&quot;run_project_sequence_batch_(project).bat&quot;] --&gt; B3[&quot;run_project_sequence_batch.bat&quot;]
+  B3 --&gt; P3[&quot;main_project_sequence_batch.py&quot;]
+  B4[&quot;run_project_publication*.bat&quot;] --&gt; P4[&quot;main_project_publication_push.py&quot;]
+  B5[&quot;run_chatgpt_portrait_batch_existing.bat / run_gemini_portrait_batch_existing.bat / run_grok_portrait_batch_existing.bat&quot;] --&gt; P6[&quot;main_chatgpt_portrait_batch.py&quot;]
+
+  A1[&quot;CLI flags&quot;] --&gt; P1
+  A2[&quot;CLI flags&quot;] --&gt; P2
+  A5[&quot;CLI flags\n--config-file\n--skip-existing\n--desktop-*\n--grok-*&quot;] --&gt; P6
+  C1[&quot;config.json / config.local.json / config_*.json&quot;] --&gt; G1[&quot;config.py / GenerationConfig&quot;]
+  G1 --&gt; P1
+  G1 --&gt; P2
+  C5[&quot;chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_watercolor_scene_expansion_config.json&quot;] --&gt; P6
+
+  C3[&quot;project_sequence_batch_*.json&quot;] --&gt; P3
+  P3 --&gt; P5[&quot;main_sequence_optimizer.py\n+ sequence reports\n+ human profile report&quot;]
+
+  A4[&quot;CLI flags&quot;] --&gt; P4
+  R1[&quot;project_structure_registry.json\n(optional --source-root)&quot;] --&gt; P4
+
+  P1 --&gt; O1[&quot;results:\noutput/ stage artifacts\nfinal_videos_dir media\nregeneration_assets_dir non-video assets&quot;]
+  P2 --&gt; O2[&quot;results:\n*_video_*.mp4\n*_bg_image_16x9.*\ngrok debug artifacts if enabled&quot;]
+  P5 --&gt; O3[&quot;reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)&quot;]
+  P4 --&gt; O4[&quot;publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore&quot;]
+  P6 --&gt; O5[&quot;portrait / image-edit results:\noutput/chatgpt_*/*.png\noutput/gemini_*/*.png\noutput/grok_*/*.png&quot;]</code></pre>
+        <p>The left side of the diagram shows launch wrappers and parameter sources, and the right side shows the reports and result artifacts produced by each route.</p>
+        <p>Parameter precedence is usually:</p>
+        <ol>
+        <li>hardcoded arguments in the <code>.bat</code> wrapper;</li>
+        <li>extra arguments forwarded through <code>%*</code>;</li>
+        <li>JSON config values;</li>
+        <li>defaults in Python code.</li>
+        </ol>
+        <h2 id="deploying-on-another-machine">Deploying On Another Machine</h2>
+        <p>For a clean local deployment in another folder or on another machine:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File .\setup_project.ps1</code></pre>
+        <p>This script:</p>
+        <ul>
+        <li>creates <code>.venv</code>;</li>
+        <li>installs <code>requirements.txt</code>;</li>
+        <li>creates local runtime folders such as <code>input</code>, <code>output</code>, <code>final_project\videos</code>, and <code>final_project\regeneration_assets</code>;</li>
+        <li>writes <code>.env.template</code>;</li>
+        <li>creates <code>config.local.json</code> with relative local paths.</li>
+        </ul>
+        <p>Then:</p>
+        <ul>
+        <li>fill real keys into <code>.env</code>;</li>
+        <li>place source images into <code>input\</code>;</li>
+        <li>for a new clone, run <code>login_grok_profile.bat</code> once and sign in to Grok inside that clone-specific Chrome profile;</li>
+        <li>run <code>.\run_full_grok_pipeline_local.bat</code>.</li>
+        </ul>
+        <p>Or use the one-step deploy/check/run helper:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1</code></pre>
+        <p>It runs bootstrap first, then checks:</p>
+        <ul>
+        <li><code>.env</code> and <code>OPENAI_API_KEY</code>;</li>
+        <li>local Chrome availability;</li>
+        <li>whether the clone-specific Grok profile in <code>.browser-profile\grok-web</code> is already authenticated for <code>https://grok.com/imagine</code>;</li>
+        <li>whether <code>input\</code> already contains supported source images.</li>
+        <li>Note: each clone uses its own Grok Chrome profile under <code>.browser-profile\grok-web</code> unless you explicitly pass another <code>--profile-dir</code>.</li>
+        </ul>
+        <p>If the Grok profile is not logged in yet, <code>deploy_and_run.ps1</code> now stops before the pipeline and tells you to run <code>login_grok_profile.bat</code>.</p>
+        <p>Use this for a dry readiness check without starting the pipeline:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1 -CheckOnly</code></pre>
+        <h2 id="three-command-working-cheat-sheet">Three-Command Working Cheat Sheet</h2>
+        <p>Use this short sequence for day-to-day work in the main project directory:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">cd E:\Git\AI_PIC_DEF\def_AI\img-style-ag_1
+powershell -ExecutionPolicy Bypass -File .\deploy_and_run.ps1 -CheckOnly
+python .\main_project_publication_push.py --repo-dir E:\Git\AI_PIC_DEF\Memory-to-Video_Agent --commit-message &quot;Update project publication&quot; --push</code></pre>
+        <p>Meaning:</p>
+        <ul>
+        <li><code>work</code> — switch to the main working directory;</li>
+        <li><code>check</code> — verify the environment, the clone-specific Grok profile, and <code>input\</code>;</li>
+        <li><code>publish</code> — refresh and push the public project mirror.</li>
+        </ul>
+        <h2 id="what-gets-copied-after-a-successful-stage">What Gets Copied After a Successful Stage</h2>
+        <p>Into <code>final_videos_dir</code>:</p>
+        <ul>
+        <li><code>*.mp4</code>;</li>
+        <li>final background images.</li>
+        </ul>
+        <p>Into <code>regeneration_assets_dir\&lt;stage_id&gt;</code>:</p>
+        <ul>
+        <li><code>description</code>;</li>
+        <li><code>scene_analysis</code>;</li>
+        <li><code>v_prompt</code>;</li>
+        <li><code>v_prm_ru</code>;</li>
+        <li><code>bg_prompt</code>;</li>
+        <li><code>bg_prm_ru</code>;</li>
+        <li><code>assoc_bg_prompt</code>;</li>
+        <li><code>assoc_bg_prm_ru</code>;</li>
+        <li><code>manifest</code>;</li>
+        <li>other non-video stage files.</li>
+        </ul>
+        <p>Not copied to <code>regeneration_assets_dir</code>:</p>
+        <ul>
+        <li>the source image;</li>
+        <li>final <code>mp4</code> files;</li>
+        <li>the final background image.</li>
+        </ul>
+        <h2 id="what-happens-on-failure">What Happens on Failure</h2>
+        <p>If a stage fails:</p>
+        <ul>
+        <li>stage files from <code>output</code> are moved to <code>error\output\&lt;stage_id&gt;</code>;</li>
+        <li>the source image is moved to <code>error\input\&lt;stage_id&gt;</code>;</li>
+        <li>a file named <code>&lt;stage_id&gt;_error.txt</code> is saved next to them with the error details.</li>
+        </ul>
+        <p>This makes it easier to inspect and re-run only the problematic images.</p>
+        <p>If Grok closes the current browser tab right after <code>submit</code>, the automation now tries to recover from another live Grok tab or from a just-finished download before marking the stage as failed. For unfinished stages that already have a ready <code>*_v_prompt_*.txt</code>, you can safely re-run only the video step and skip repeated background generation.</p>
+        <h2 id="premiere-sequence-workflow">Premiere Sequence Workflow</h2>
+        <p>After video generation is finished, the normal process is:</p>
+        <ol>
+        <li>Build Premiere sequences manually from the generated <code>mp4</code> files.</li>
+        <li>Run the sequence optimization batch to create new <code>_oNN</code> sequences from approved <code>_eNN</code> sequences.</li>
+        <li>Review the optimized result in Premiere.</li>
+        <li>If needed, manually change clip order again after optimization.</li>
+        <li>Rebuild the reports from the current manual order.</li>
+        <li>Keep the final optimized project beside the source Premiere project and keep the reports in <code>reports</code>.</li>
+        </ol>
+        <p>Important location rule:</p>
+        <ul>
+        <li><code>reports</code> is the final result for sequence optimization reports and batch summaries.</li>
+        <li><code>reports\temp_projects</code> is a temporary batch workspace for <code>.prproj</code> files and is safe to clean up later.</li>
+        <li>the persistent optimized <code>.prproj</code> lives beside <code>project_path</code>.</li>
+        <li><code>output</code> is a temporary workspace area.</li>
+        <li>If everything finishes successfully, <code>output</code> should ideally end up empty.</li>
+        </ul>
+        <h2 id="sequence-optimization-batch">Sequence Optimization Batch</h2>
+        <p>Run the batch optimizer with a JSON config:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_project_sequence_batch.py --config .\project_sequence_batch_igor_26_1A.json</code></pre>
+        <p>Example config fields:</p>
+        <div class="code-label">json</div><pre><code class="language-json">{
+  &quot;project_path&quot;: &quot;E:\\Git\\video_projects\\Igor\\Proj\\Igor26_1A_w01.prproj&quot;,
+  &quot;regeneration_assets_dir&quot;: &quot;E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\regeneration_assets&quot;,
+  &quot;output_project_path&quot;: &quot;E:\\Git\\video_projects\\Igor\\Proj\\Igor26_1A_o01.prproj&quot;,
+  &quot;reports_dir&quot;: &quot;E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\reports&quot;,
+  &quot;generate_personalized_report&quot;: false,
+  &quot;human_detail_txt&quot;: &quot;E:\\Git\\AI_PIC_DEF\\def\\Detail_1\\Igor\\Igor_detail.txt&quot;,
+  &quot;sequence_jobs&quot;: [
+    {
+      &quot;source_sequence_name&quot;: &quot;Igor26_baby_1_e01&quot;,
+      &quot;new_sequence_name&quot;: &quot;Igor26_baby_1_o01&quot;
+    }
+  ]
+}</code></pre>
+        <p>The final optimized <code>.prproj</code> is stored next to the source <code>project_path</code>. During the batch, the program also keeps a temporary working <code>.prproj</code> inside <code>reports\temp_projects</code>, and cleanup may remove that temporary copy later.</p>
+        <p>If an older config still points <code>output_project_path</code> into <code>reports</code>, the file name is preserved, but the persistent optimized project is still written next to <code>project_path</code>.</p>
+        <p>In normal work, keep one project-specific batch config next to the template, for example <code>project_sequence_batch_slava_26_1.json</code>, and re-run the batch from that file instead of editing the template each time.</p>
+        <p>After a successful batch run, <code>reports</code> typically contains:</p>
+        <ul>
+        <li><code>batch_summary.json</code>;</li>
+        <li><code>batch_summary.txt</code>;</li>
+        <li><code>batch_transition_recommendations.txt</code>;</li>
+        <li>per-sequence JSON/TXT reports;</li>
+        <li><code>*_structure.txt</code>;</li>
+        <li><code>*_human_profile_report.txt</code> if personalized reporting was requested;</li>
+        <li><code>*_transition_recommendations.txt</code>;</li>
+        <li><code>temp_projects\*.prproj</code> temporary working projects, including the last batch working copy.</li>
+        </ul>
+        <p>The persistent final optimized <code>.prproj</code> is stored in the same folder as the source Premiere project from <code>project_path</code>.</p>
+        <p>To build personalized reports automatically inside the batch, enable both:</p>
+        <ul>
+        <li><code>"generate_personalized_report": true</code></li>
+        <li><code>"human_detail_txt": "E:\\...\\hero_detail.txt"</code></li>
+        </ul>
+        <p>If <code>generate_personalized_report</code> stays <code>false</code>, the batch works exactly as before and no extra personalized report is created.</p>
+        <h2 id="rebuild-reports-after-manual-sequence-changes">Rebuild Reports After Manual Sequence Changes</h2>
+        <p>If you manually change the optimized sequence after the program finishes, you can rebuild the reports for the current order without running optimization again:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_sequence_reports.py `
+  --prproj &quot;E:\Git\video_projects\Igor\Proj\Igor26_1A_o01.prproj&quot; `
+  --sequence-name &quot;Igor26_baby_1_o01&quot; `
+  --optimization-report-json &quot;E:\Git\P_h_o_t_o\Igor_Brams_1\Igor_Brams\2026\reports\01_Igor26_baby_1_o01.json&quot; `
+  --output-dir &quot;E:\Git\P_h_o_t_o\Igor_Brams_1\Igor_Brams\2026\reports&quot;</code></pre>
+        <p>This command rebuilds:</p>
+        <ul>
+        <li><code>&lt;sequence&gt;_manual_order.json</code>;</li>
+        <li><code>&lt;sequence&gt;_manual_order_music.txt</code>;</li>
+        <li><code>&lt;sequence&gt;_manual_order_structure.txt</code>;</li>
+        <li><code>&lt;sequence&gt;_manual_order_transition_recommendations.txt</code>.</li>
+        </ul>
+        <p>Use this when the user manually improved the sequence after automatic optimization and now wants fresh editing, description, and music recommendations for the approved order.</p>
+        <p>Music now comes first in this flow: <code>main_sequence_reports.py</code> always writes a dedicated music-first report for the current sequence before the structure and transition recommendations. That music-first report now also starts with one single highest-priority track choice for this video before the broader category lists.</p>
+        <p>If you only need the music recommendation for the current sequence, use:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_sequence_reports.py `
+  --prproj &quot;E:\Git\video_projects\Igor\Proj\Igor26_1A_o01.prproj&quot; `
+  --sequence-name &quot;Igor26_baby_1_o01&quot; `
+  --optimization-report-json &quot;E:\Git\P_h_o_t_o\Igor_Brams_1\Igor_Brams\2026\reports\01_Igor26_baby_1_o01.json&quot; `
+  --output-dir &quot;E:\Git\P_h_o_t_o\Igor_Brams_1\Igor_Brams\2026\reports&quot; `
+  --music-only</code></pre>
+        <p>In <code>--music-only</code> mode the command still rebuilds the current-order JSON context, but skips the structure and transition text reports.</p>
+        <h2 id="music-first-from-project-and-sequence-only">Music-First From Project And Sequence Only</h2>
+        <p>If you only have a Premiere project and a sequence, and there is no prior optimization JSON yet, use the direct <code>project + sequence -&gt; music-first</code> mode:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_sequence_music_first.py `
+  --prproj &quot;E:\Git\video_projects\Igor\Proj\Igor26_2w_v01.prproj&quot; `
+  --sequence-name &quot;Igor26_2w_e05&quot; `
+  --max-sampled-clips 12</code></pre>
+        <p>This mode:</p>
+        <ul>
+        <li>parses the current Premiere sequence directly from <code>.prproj</code>;</li>
+        <li>selects representative clips across the current order;</li>
+        <li>extracts still frames from those clips;</li>
+        <li>runs scene analysis on the sampled frames;</li>
+        <li>writes a JSON context plus a music-first recommendation report.</li>
+        <li>that music-first report begins with one highest-priority track choice for the sequence, followed by the broader category lists.</li>
+        </ul>
+        <p>Use this mode for a completely new sequence that has never gone through the older stage-based optimization pipeline.</p>
+        <p>If you also want the second queue of recommendations for the same brand-new sequence, use:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_sequence_music_first.py `
+  --prproj &quot;E:\Git\video_projects\Igor\Proj\Igor26_2w_v01.prproj&quot; `
+  --sequence-name &quot;Igor26_2w_e05&quot; `
+  --full-recommendations</code></pre>
+        <p>In <code>--full-recommendations</code> mode the command keeps the music report as the primary output, and then also:</p>
+        <ul>
+        <li>analyzes the current sequence clips for a recommended order without requiring the old <code>optimization-report-json</code>;</li>
+        <li>writes <code>*_music_first_structure.txt</code> as the recommended sequence/order report;</li>
+        <li>writes <code>*_music_first_transition_recommendations.txt</code> as the transition guidance between the recommended neighboring clips.</li>
+        </ul>
+        <p>If the sequence is very long, you can cap the deeper second-queue analysis with <code>--max-analyzed-clips</code>, but omitting that flag gives the best full-order recommendation because all current clips are analyzed.</p>
+        <p>The structure report now separates adult travel/leisure sequences from family portraits more conservatively. Older adults, large groups, or generic portrait/group cues alone should not force the report into a family theme if the sequence is clearly built around travel, rest, and locations.</p>
+        <p>Repeated pets are also surfaced more explicitly now. If dogs, cats, or other домашние животные appear through multiple clips, <code>*_structure.txt</code> should mention that motif in the main theme or the brief description instead of dropping it.</p>
+        <p>Adult family portrait wording is now gender-neutral by default. The report should not describe a sequence as centered on women or on men unless repeated frame evidence clearly justifies that emphasis.</p>
+        <p>Short English pet words are matched more carefully now. Words like <code>capturing</code> should no longer create a false <code>cat</code> motif, while repeated wedding/bride-groom or fishing/fish-fisherman motifs should now surface in <code>*_structure.txt</code> when they repeat through the sequence.</p>
+        <p>When such motifs are present only in part of the sequence, the report should describe them as a noticeable line or accent inside the larger story instead of turning the whole video into only “wedding” or only “fishing”.</p>
+        <p>Wedding wording is now stricter too: the report should switch to a wedding motif only when explicit bride/groom/wedding cues are present. Generic romantic scenes, couple portraits, or kisses alone should not relabel the whole sequence as a wedding. Travel-dominant family sequences should stay travel-centered.</p>
+        <h2 id="add-human-detail-to-the-report">Add Human Detail To The Report</h2>
+        <p>Keep the regular <code>*_structure.txt</code> as a video-only report.</p>
+        <p>If you also have a human-written hero description, build one more separate report that overlays:</p>
+        <ul>
+        <li>what is visible in the video;</li>
+        <li>what the human description says about the hero;</li>
+        <li>how the music recommendations should be corrected for this person.</li>
+        </ul>
+        <p>Command:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_human_sequence_report.py `
+  --optimization-report-json &quot;E:\Git\P_h_o_t_o\Dv_Maya\2026\reports\01_Maya26_o03.json&quot; `
+  --human-detail-txt &quot;E:\Git\AI_PIC_DEF\def\Detail_1\Maya\Maya_detail_260328_2.txt&quot;</code></pre>
+        <p>This creates:</p>
+        <ul>
+        <li><code>01_Maya26_o03_human_profile_report.txt</code></li>
+        </ul>
+        <p>The same logic can now run automatically inside <code>main_project_sequence_batch.py</code> when the batch config contains:</p>
+        <div class="code-label">json</div><pre><code class="language-json">{
+  &quot;generate_personalized_report&quot;: true,
+  &quot;human_detail_txt&quot;: &quot;E:\\Git\\AI_PIC_DEF\\def\\Detail_1\\Maya\\Maya_detail_260328_2.txt&quot;
+}</code></pre>
+        <p>Important rule:</p>
+        <ul>
+        <li>the main theme, story, and factual structure must stay video-based;</li>
+        <li>the human text should adjust hero portrait, wording tone, and music preferences;</li>
+        <li>professions, biography facts, diet, education, and other non-visible details should not be turned into direct video facts unless they are visible in the sequence.</li>
+        </ul>
+        <h2 id="cleanup-of-old-and-temporary-files">Cleanup Of Old And Temporary Files</h2>
+        <p>Preview cleanup only:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_cleanup_artifacts.py `
+  --reports-dir &quot;E:\Git\P_h_o_t_o\Igor_Brams_1\Igor_Brams\2026\reports&quot; `
+  --older-than-days 7 `
+  --include-output-build-dirs `
+  --include-test-runtime-items</code></pre>
+        <p>Safe cleanup with archive:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_cleanup_artifacts.py `
+  --reports-dir &quot;E:\Git\P_h_o_t_o\Igor_Brams_1\Igor_Brams\2026\reports&quot; `
+  --older-than-days 7 `
+  --include-output-build-dirs `
+  --include-test-runtime-items `
+  --archive-dir &quot;E:\Git\P_h_o_t_o\Igor_Brams_1\Igor_Brams\2026\cleanup_archive\20260326&quot; `
+  --execute</code></pre>
+        <p>Notes:</p>
+        <ul>
+        <li>without <code>--execute</code>, the command is a dry run only;</li>
+        <li>cleanup reports are written into <code>output\cleanup_reports</code>;</li>
+        <li><code>--include-test-runtime-items</code> adds top-level <code>test_runtime</code> artifacts to the cleanup scan;</li>
+        <li>use <code>--archive-dir</code> when you want to keep a recoverable copy before deletion.</li>
+        </ul>
+        <p>Recommended one-line workspace cleanup:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_cleanup_artifacts.py --include-output-build-dirs --include-output-files --include-test-runtime-items --archive-dir &quot;.\cleanup_archive\workspace_$(Get-Date -Format yyyyMMdd_HHmmss)&quot; --execute</code></pre>
+        <p>Recommended one-line preview:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_cleanup_artifacts.py --include-output-build-dirs --include-output-files --include-test-runtime-items --archive-dir &quot;.\cleanup_archive\workspace_$(Get-Date -Format yyyyMMdd_HHmmss)&quot;</code></pre>
+        <h2 id="final-naming-standard">Final Naming Standard</h2>
+        <p>Use this short naming standard for new projects and new batch configs:</p>
+        <ul>
+        <li>project in approved manual work: <code>Igor26_1A_w01.prproj</code></li>
+        <li>project produced by optimization batch: <code>Igor26_1A_o01.prproj</code></li>
+        <li>approved manual sequence: <code>Igor26_baby_1_e01</code></li>
+        <li>optimized sequence proposal: <code>Igor26_baby_1_o01</code></li>
+        </ul>
+        <p>Meaning:</p>
+        <ul>
+        <li><code>w</code> = working project</li>
+        <li><code>e</code> = editable and approved manual sequence</li>
+        <li><code>o</code> = optimized result from the program</li>
+        <li><code>01</code>, <code>02</code>, <code>03</code> = version number</li>
+        </ul>
+        <p>Recommended cycle:</p>
+        <ol>
+        <li>Work manually in <code>Igor26_1A_w01.prproj</code>.</li>
+        <li>Keep the approved source sequence as <code>Igor26_baby_1_e01</code>.</li>
+        <li>Run optimization and create <code>Igor26_1A_o01.prproj</code> with sequence <code>Igor26_baby_1_o01</code>.</li>
+        <li>Review and manually refine that optimized sequence.</li>
+        <li>If it becomes the new approved base, save the next manual project as <code>Igor26_1A_w02.prproj</code>.</li>
+        <li>Rename the accepted sequence to <code>Igor26_baby_1_e02</code>.</li>
+        <li>If another cycle is needed, create <code>Igor26_1A_o02.prproj</code> and <code>Igor26_baby_1_o02</code>.</li>
+        <li>When the sequence is final, rebuild reports from the final current order and keep them in <code>reports</code>.</li>
+        </ol>
+        <h2 id="typical-commands">Typical Commands</h2>
+        <p>Full cycle:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">run_full_grok_pipeline.bat --upload-timeout 300</code></pre>
+        <p>Background images only:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">run_full_grok_pipeline.bat --skip-video --generate-source-background --upload-timeout 300</code></pre>
+        <p>Full cycle with Grok debug artifacts:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300</code></pre>
+        <p>Grok batch only for already prepared prompt files:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">run_grok_automation_all.bat --upload-timeout 300</code></pre>
+        <p>ChatGPT artistic portrait batch from all images in <code>input</code> using the full base style bank:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
+        <p>ChatGPT watercolor portrait + scene expansion batch:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_watercolor_scene_expansion_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
+        <p>ChatGPT short watercolor/pastel portrait batch:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">.\run_chatgpt_portrait_batch_existing.bat --skip-existing</code></pre>
+        <p>Gemini portrait batch using the same JSON config format and a dedicated one-tab Gemini Chrome window:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">.\login_gemini_profile.bat
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
+        <p>Grok portrait batch using the same JSON config format and the Grok automation profile:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">.\login_grok_profile.bat
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error</code></pre>
+        <p>Premiere sequence optimization batch:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_project_sequence_batch.py --config .\project_sequence_batch_igor_26_1A.json</code></pre>
+        <p>Rebuild reports from current manual order:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_sequence_reports.py --prproj &quot;&lt;project.prproj&gt;&quot; --sequence-name &quot;&lt;sequence&gt;&quot; --optimization-report-json &quot;&lt;report.json&gt;&quot; --output-dir &quot;&lt;reports-dir&gt;&quot;</code></pre>
+        <p>Cleanup preview:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_cleanup_artifacts.py --reports-dir &quot;&lt;reports-dir&gt;&quot; --older-than-days 7 --include-output-build-dirs --include-test-runtime-items</code></pre>
+        <p>One-line workspace safe cleanup:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_cleanup_artifacts.py --include-output-build-dirs --include-output-files --include-test-runtime-items --archive-dir &quot;.\cleanup_archive\workspace_$(Get-Date -Format yyyyMMdd_HHmmss)&quot; --execute</code></pre>
+        <p>One prompt manually:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_20260314_101010_v_prompt_1.txt --upload-timeout 300</code></pre>
+        <h2 id="short-operator-recommendations">Short Operator Recommendations</h2>
+        <ul>
+        <li>Use <code>login_grok_profile.bat</code> only when manual Grok login is needed.</li>
+        <li>For normal work, run <code>run_full_grok_pipeline.bat</code>.</li>
+        <li>If you only need backgrounds, use <code>--skip-video</code> together with <code>--generate-source-background</code>.</li>
+        <li>If something goes wrong with Grok result saving, temporarily enable <code>--save-grok-debug-artifacts</code>.</li>
+        <li>If a stage failed, first check <code>error\output\&lt;stage_id&gt;\&lt;stage_id&gt;_error.txt</code>.</li>
+        <li>Open final optimized <code>.prproj</code> files from the same folder as the source <code>project_path</code>; <code>reports\temp_projects</code> only holds the temporary batch working copy.</li>
+        <li>If you changed an optimized sequence manually, rebuild reports with <code>main_sequence_reports.py</code>.</li>
+        <li>Before deleting old artifacts, run cleanup in dry-run mode first and preferably keep an archive copy.</li>
+        <li>For ChatGPT portrait batches, keep only one automation run active and always use <code>--skip-existing</code> when resuming after a UI failure.</li>
+        </ul>
+        <h2 id="multi-scene-video-prompt-composer">Multi-Scene Video Prompt Composer</h2>
+        <p>Use <code>main_video_prompt_composer.py</code> when you already have <code>regeneration_assets</code> for a set of source images and want one combined multi-scene prompt from ordered scene notes and <code>@imageN</code> references.</p>
+        <p>Mandatory bilingual rule for video-generation tasks:</p>
+        <ul>
+        <li>Any task that produces final video-generation prompt artifacts through <code>main_video_prompt_composer.py</code> must emit both English and Russian outputs in the same run.</li>
+        <li>This rule applies to combined TXT prompts and to Seedance JSON generation tasks, including every item produced through <code>scenario_variants</code>.</li>
+        <li>The English artifact is the production prompt, and the Russian artifact is the required control/review companion.</li>
+        <li>A video-generation task is considered incomplete if the matching RU output file is missing.</li>
+        </ul>
+        <p>Input contract:</p>
+        <ul>
+        <li>JSON request with <code>technical_preamble</code>, <code>total_duration_seconds</code>, <code>aspect_ratio</code>, <code>regeneration_assets_dir</code>, <code>references</code>, and ordered <code>scenes</code>.</li>
+        <li>Alternatively, you can use <code>--config-file</code> with one full JSON/JSONC config that contains both the scenario payload and the Seedance/TXT generation settings.</li>
+        <li>Optional <code>max_prompt_chars</code> controls the prompt length limit; default is <code>2000</code>.</li>
+        <li>Optional <code>scenario_variants</code> lets one scenario produce multiple alternative JSON generation tasks from the same scene list.</li>
+        <li>Each reference item maps a source file to a stable <code>@imageN</code> tag.</li>
+        <li>Each scene contains <code>duration_seconds</code> and a short scene description that may reference one or more <code>@imageN</code> tags.</li>
+        </ul>
+        <p>Outputs in <code>regeneration_assets_dir</code>:</p>
+        <ul>
+        <li><code>Gen_Video_&lt;timestamp&gt;.txt</code> - English prompt.</li>
+        <li><code>Gen_Video_RU_&lt;timestamp&gt;.txt</code> - Russian translation.</li>
+        <li><code>Gen_Video_Seedance_&lt;timestamp&gt;.json</code> - Seedance 2.0 JSON prompt when <code>--seedance-json</code> is enabled.</li>
+        <li><code>Gen_Video_Seedance_RU_&lt;timestamp&gt;.json</code> - Russian control JSON for manual review of the same Seedance prompt.</li>
+        <li><code>Gen_Video_Seedance_&lt;VariantId&gt;_&lt;timestamp&gt;.json</code> and <code>Gen_Video_Seedance_RU_&lt;VariantId&gt;_&lt;timestamp&gt;.json</code> - per-variant outputs when <code>scenario_variants</code> contains more than one scenario branch.</li>
+        </ul>
+        <p>Typical command:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">.\.venv\Scripts\python.exe -u .\main_video_prompt_composer.py --request-file .\video_prompt_request_slava_volga_example.json --seedance-json</code></pre>
+        <p>Config-file command:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">.\.venv\Scripts\python.exe -u .\main_video_prompt_composer.py --config-file .\video_prompt_config_maya_africa_home_two_variants.json</code></pre>
+        <p>Seedance JSON only:</p>
+        <div class="code-label">powershell</div><pre><code class="language-powershell">.\.venv\Scripts\python.exe -u .\main_video_prompt_composer.py --request-file .\video_prompt_request_slava_volga_example.json --seedance-json --seedance-json-only</code></pre>
+        <p>Variant rule:</p>
+        <ul>
+        <li><code>Variant_1</code> should be the most likely, most suitable, and most coherent interpretation.</li>
+        <li><code>Variant_2</code> should be a fully distinct alternative interpretation based on the same scenario facts.</li>
+        </ul>
+        <p>Seedance notes:</p>
+        <ul>
+        <li>Requirements are loaded from <code>services\Seedance_2.0_Director.md</code>.</li>
+        <li>The English Seedance JSON output is a strict one-item array: <code>[{"lang":"en","prompt":"..."}]</code>.</li>
+        <li>The paired Russian control JSON output is a strict one-item array: <code>[{"lang":"ru","prompt":"..."}]</code>.</li>
+        <li>The generated prompt is validated for <code>Shot N:</code> labels, <code>Total:</code> footer, aspect ratio, required <code>@imageN</code> tags, and 2000-character limit.</li>
+        <li>The generator must avoid extreme remote aerial/drone/bird's-eye framing that turns characters into tiny figures; wide shots are allowed only when people remain clearly legible and consistent with the reference-image scale.</li>
+        <li>Full reusable config examples live in <code>video_prompt_composer_config_example.jsonc</code> and <code>video_prompt_config_*.json</code>.</li>
+        <li><code>seedance_json_only: true</code> automatically implies <code>seedance_json: true</code>.</li>
+        </ul>
+        <h2 id="documentation-sync-rule">Documentation Sync Rule</h2>
+        <p>Whenever workflow, file locations, naming, cleanup rules, or report outputs change, update all guide files together:</p>
+        <ul>
+        <li><code>USER_GUIDE.md</code></li>
+        <li><code>USER_GUIDE.html</code></li>
+        <li><code>Руководство_пользователя.md</code></li>
+        <li><code>Руководство_пользователя.html</code></li>
+        </ul>
+        <p class="source-note">Source document: <code>USER_GUIDE.md</code>. Keep this HTML file synchronized whenever the regular guide changes.</p>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

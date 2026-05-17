@@ -151,6 +151,18 @@ IMAGE_SAVE_MENU_PATTERNS = (
     "Сохранить изображение",
     "Сохранить картинку",
 )
+ATTACHMENT_CONFIRMATION_PATTERNS = (
+    "remove attachment",
+    "remove image",
+    "remove file",
+    "delete attachment",
+    "delete image",
+    "delete file",
+    "удалить вложение",
+    "удалить изображение",
+    "удалить картинку",
+    "удалить файл",
+)
 NEW_CHAT_BUTTON_PATTERNS = (
     "New chat",
     "New Chat",
@@ -869,10 +881,20 @@ class ChatGPTDesktopAgent:
         return verified
 
     def _attach_image(self, window: BaseWrapper, image_path: Path) -> None:
+        baseline_attachment_signatures = self._result_signatures(
+            self._find_attachment_image_candidates(window)
+        )
+        baseline_attachment_text = self._collect_attachment_surface_text(window)
         if self.config.attach_via_clipboard:
             self._log("attaching image via Windows clipboard")
             self._paste_file_clipboard(window, image_path)
             time.sleep(self.config.post_attach_delay_sec)
+            self._wait_for_attached_source_image(
+                window,
+                image_path,
+                baseline_attachment_signatures,
+                baseline_attachment_text,
+            )
             return
 
         attach_button = self._find_button(window, ATTACH_BUTTON_PATTERNS)
@@ -886,6 +908,94 @@ class ChatGPTDesktopAgent:
         dialog = self._wait_for_dialog_or_attach_menu(window)
         self._fill_open_dialog(dialog, image_path)
         time.sleep(self.config.post_attach_delay_sec)
+        self._wait_for_attached_source_image(
+            window,
+            image_path,
+            baseline_attachment_signatures,
+            baseline_attachment_text,
+        )
+
+    def _wait_for_attached_source_image(
+        self,
+        window: BaseWrapper,
+        image_path: Path,
+        baseline_signatures: list[ImageSignature],
+        baseline_surface_text: str,
+    ) -> None:
+        timeout_sec = max(20.0, self.config.post_attach_delay_sec + 16.0)
+        deadline = time.time() + timeout_sec
+        baseline_set = set(baseline_signatures)
+        baseline_digests = {
+            digest
+            for digest in (self._result_signature_digest(signature) for signature in baseline_signatures)
+            if digest
+        }
+        baseline_text_cf = baseline_surface_text.casefold()
+        last_log_at = 0.0
+
+        while time.time() < deadline:
+            attachment_text = self._collect_attachment_surface_text(window)
+            evidence = self._attachment_text_evidence(
+                image_path=image_path,
+                current_text=attachment_text,
+                baseline_text_cf=baseline_text_cf,
+            )
+            if evidence is not None:
+                self._log(f"confirmed source image attachment by visible UI text: {evidence!r}")
+                return
+
+            candidates = self._find_attachment_image_candidates(window)
+            new_candidates: list[BaseWrapper] = []
+            for candidate in candidates:
+                signature = self._result_signature(candidate)
+                if signature is None or self._signature_matches_baseline(
+                    signature,
+                    baseline_set=baseline_set,
+                    baseline_digests=baseline_digests,
+                ):
+                    continue
+                new_candidates.append(candidate)
+            if new_candidates:
+                self._log(
+                    "confirmed source image attachment by new visible preview candidate: "
+                    f"{self._wrapper_rect_text(new_candidates[-1])}"
+                )
+                return
+
+            now = time.time()
+            if self.config.verbose and now - last_log_at >= 5.0:
+                self._log(
+                    "waiting for ChatGPT to expose the attached source image before prompt paste"
+                )
+                last_log_at = now
+            time.sleep(0.5)
+
+        raise DesktopAutomationError(
+            "The source image paste/open action completed, but ChatGPT never exposed a confirmed "
+            "attachment preview. Stopping before prompt paste so the request cannot run without "
+            f"the source image: {image_path.name}."
+        )
+
+    def _attachment_text_evidence(
+        self,
+        *,
+        image_path: Path,
+        current_text: str,
+        baseline_text_cf: str,
+    ) -> Optional[str]:
+        current_text_cf = current_text.casefold()
+        tokens = [
+            image_path.name.casefold(),
+            image_path.stem.casefold(),
+        ]
+        for token in tokens:
+            if len(token) >= 3 and token in current_text_cf and token not in baseline_text_cf:
+                return token
+        for pattern in ATTACHMENT_CONFIRMATION_PATTERNS:
+            normalized = pattern.casefold()
+            if normalized in current_text_cf and normalized not in baseline_text_cf:
+                return pattern
+        return None
 
     def _paste_file_clipboard(self, window: BaseWrapper, image_path: Path) -> None:
         if self._preserve_manual_composer_focus() and not self.config.click_composer_before_paste:
@@ -2083,6 +2193,23 @@ class ChatGPTDesktopAgent:
                     continue
         return "\n".join(lines)
 
+    def _collect_attachment_surface_text(self, window: BaseWrapper) -> str:
+        lines = [self._collect_visible_text(window)]
+        seen = {line for line in lines if line}
+        for control_type in ("Button", "Image"):
+            for wrapper in window.descendants(control_type=control_type):
+                try:
+                    if not wrapper.is_visible():
+                        continue
+                    text = self._control_search_text(wrapper).strip()
+                    if not text or text in seen:
+                        continue
+                    seen.add(text)
+                    lines.append(text)
+                except Exception:
+                    continue
+        return "\n".join(line for line in lines if line)
+
     def _save_text_snapshot(self, path: Path, text: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
@@ -2100,6 +2227,24 @@ class ChatGPTDesktopAgent:
             try:
                 rect = wrapper.rectangle()
                 if rect.width() < 128 or rect.height() < 128:
+                    continue
+                if not wrapper.is_visible():
+                    continue
+                if not self._rect_center_inside(rect, window_rect):
+                    continue
+                candidates.append(wrapper)
+            except Exception:
+                continue
+        candidates.sort(key=lambda item: (item.rectangle().bottom, item.rectangle().width() * item.rectangle().height()))
+        return candidates
+
+    def _find_attachment_image_candidates(self, window: BaseWrapper) -> list[BaseWrapper]:
+        candidates = []
+        window_rect = window.rectangle()
+        for wrapper in window.descendants(control_type="Image"):
+            try:
+                rect = wrapper.rectangle()
+                if rect.width() < 24 or rect.height() < 24:
                     continue
                 if not wrapper.is_visible():
                     continue
