@@ -97,7 +97,7 @@
 | Full Sequential Pipeline | `main_full_pipeline.py` | Prompt generation + Grok-run для каждого изображения из `input/` | delivered stage outputs, cleanup of `input/` and `output/` |
 | Delivery & Lifecycle | `utils/project_delivery.py`, `utils/artifact_cleanup.py`, `main_cleanup_artifacts.py` | Доставка, очистка, перенос ошибок, архивирование | `final_videos_dir`, `final_output_dir`, `regeneration_assets_dir`, `error/`, cleanup reports |
 | Sequence Optimization | `main_sequence_optimizer.py`, `utils/sequence_optimizer.py`, `utils/sequence_optimizer_runtime.py`, `utils/premiere_xml.py`, `utils/premiere_project.py`, `models/video_sequence.py` | Рекомендованный порядок клипов и export | optimized JSON/TXT/XML/PRPROJ |
-| Reports & Batch Orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/fcp_translation_results.py` | Reports, batch delivery, human-profile overlays, transition recommendations | reports, batch summaries, transition reports |
+| Reports & Batch Orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/premiere_transition_script.py`, `utils/premiere_transform_script.py`, `utils/fcp_translation_results.py` | Reports, batch delivery, human-profile overlays, transition and transform scripts | reports, batch summaries, transition reports, Premiere JSX scripts |
 | Desktop/Web Automation | `main_desktop.py`, `api/chatgpt_desktop.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/chatgpt_web.py`, `api/grok_web.py` | Prompt-driven interaction with external UIs | submitted prompts, saved media |
 | Portrait/Image Batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `run_chatgpt_portrait_batch_existing.bat`, `run_gemini_portrait_batch_existing.bat`, `run_grok_portrait_batch_existing.bat` | Batch generation of artistic portraits and image-edit tasks through ChatGPT, Gemini, Grok, OpenAI API, or local stylizer | `output/chatgpt_*`, `output/gemini_*`, `output/grok_*`, optional `final_output_dir` copy, optional response text |
 
@@ -152,9 +152,10 @@ This route is high-risk: any lifecycle change can affect source-file safety.
 
 Sequence timing extension:
 
-- `utils/sequence_edit_plan.py` adds media kind, recommended clip duration, and next-transition metadata to `SequenceRecommendationEntry`.
-- `main_sequence_optimizer.py` exposes `--include-visual-media`, `--enable-auto-durations`, and `--enable-visual-transitions`.
+- `utils/sequence_edit_plan.py` adds media kind, recommended clip duration, next-transition metadata, and content/neighbor-aware still-image transform metadata to `SequenceRecommendationEntry`.
+- `main_sequence_optimizer.py` exposes `--include-visual-media`, `--enable-auto-durations`, `--enable-visual-transitions`, and `--enable-auto-transforms`.
 - `utils/premiere_project_export.py` can apply the edit plan to `.prproj` exports, including mixed `image -> image`, `image -> video`, `video -> image`, and `video -> video` transition pairs when enabled.
+- `utils/premiere_transition_script.py` and `utils/premiere_transform_script.py` generate Premiere JSX files that can be run from the CEP panel after opening the optimized sequence in Premiere.
 
 ### Multi-Scene Prompt Composer Route
 

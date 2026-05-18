@@ -109,6 +109,11 @@ def parse_args() -> argparse.Namespace:
         help="Enable heuristic timeline duration recommendations and apply them during prproj export.",
     )
     parser.add_argument(
+        "--enable-auto-transforms",
+        action="store_true",
+        help="Enable heuristic Transform effect recommendations for still images.",
+    )
+    parser.add_argument(
         "--include-visual-media",
         action="store_true",
         help="Optimize supported image and video clips instead of mp4 video clips only.",
@@ -145,6 +150,7 @@ def run_sequence_optimizer(
     translation_results_path: Path | None = None,
     enable_subject_series_grouping: bool = False,
     enable_auto_durations: bool = False,
+    enable_auto_transforms: bool = False,
 ) -> tuple[Path, Path]:
     settings = settings or Settings()
     settings.ensure_output()
@@ -162,6 +168,7 @@ def run_sequence_optimizer(
         translation_results_path=translation_results_path,
         enable_subject_series_grouping=enable_subject_series_grouping,
         enable_auto_durations=enable_auto_durations,
+        enable_auto_transforms=enable_auto_transforms,
     )
 
     file_stem = f"{xml_path.stem}_optimized_sequence"
@@ -198,6 +205,7 @@ def run_project_sequence_optimizer(
     enable_auto_transitions: bool = False,
     enable_visual_transitions: bool = False,
     enable_auto_durations: bool = False,
+    enable_auto_transforms: bool = False,
     include_visual_media: bool = False,
     enable_subject_series_grouping: bool = False,
     allow_transition_handle_trimming: bool = False,
@@ -209,7 +217,7 @@ def run_project_sequence_optimizer(
     if not regeneration_assets_dir.exists():
         raise FileNotFoundError(f"regeneration_assets directory not found: {regeneration_assets_dir}")
 
-    if include_visual_media or enable_visual_transitions or enable_auto_durations:
+    if include_visual_media or enable_visual_transitions or enable_auto_durations or enable_auto_transforms:
         selected_sequence_name, clips = parse_premiere_project_sequence_visual_clips(project_path, sequence_name)
     else:
         selected_sequence_name, clips = parse_premiere_project_sequence_clips(project_path, sequence_name)
@@ -222,10 +230,12 @@ def run_project_sequence_optimizer(
         translation_results_path=translation_results_path,
         enable_subject_series_grouping=enable_subject_series_grouping,
         enable_auto_durations=enable_auto_durations,
+        enable_auto_transforms=enable_auto_transforms,
     )
     result = attach_sequence_edit_plan(
         result,
         enable_auto_durations=enable_auto_durations,
+        enable_auto_transforms=enable_auto_transforms,
         transition_template_duration=_resolve_transition_template_duration(
             project_path,
             transition_template_project_path=transition_template_project_path,
@@ -252,6 +262,7 @@ def run_project_sequence_optimizer(
                 enable_auto_transitions=enable_auto_transitions,
                 enable_visual_transitions=enable_visual_transitions,
                 enable_auto_durations=enable_auto_durations,
+                enable_auto_transforms=enable_auto_transforms,
                 allow_transition_handle_trimming=allow_transition_handle_trimming,
                 transition_template_project_path=transition_template_project_path,
             )
@@ -263,6 +274,7 @@ def run_project_sequence_optimizer(
                 enable_auto_transitions=enable_auto_transitions,
                 enable_visual_transitions=enable_visual_transitions,
                 enable_auto_durations=enable_auto_durations,
+                enable_auto_transforms=enable_auto_transforms,
                 allow_transition_handle_trimming=allow_transition_handle_trimming,
                 transition_template_project_path=transition_template_project_path,
             )
@@ -426,6 +438,7 @@ def main() -> None:
             enable_auto_transitions=args.enable_auto_transitions,
             enable_visual_transitions=args.enable_visual_transitions,
             enable_auto_durations=args.enable_auto_durations,
+            enable_auto_transforms=args.enable_auto_transforms,
             include_visual_media=args.include_visual_media,
             enable_subject_series_grouping=args.enable_subject_series_grouping,
             allow_transition_handle_trimming=args.allow_transition_handle_trimming,
@@ -443,6 +456,7 @@ def main() -> None:
             translation_results_path=args.translation_results,
             enable_subject_series_grouping=args.enable_subject_series_grouping,
             enable_auto_durations=args.enable_auto_durations,
+            enable_auto_transforms=args.enable_auto_transforms,
         )
     print(f"Sequence optimization JSON saved to: {json_path}")
     print(f"Sequence optimization text report saved to: {txt_path}")

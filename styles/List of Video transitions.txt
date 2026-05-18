@@ -14,6 +14,9 @@ Detected in template:
 
 The transition names below are the names detected in the template sequence and can be used by the Premiere sequence optimizer when transition template cloning is enabled.
 
+Automation note:
+Morph Cut is present in the Premiere template, but it is disabled for automatic application because Premiere can fail with "Can't apply to a single clip" when the required two-clip handles or analysis conditions are not suitable. The optimizer now chooses from the broader safe spectrum of dissolve/fade, dip, wipe/iris, slide/push/zoom, and light/stylized transitions.
+
 Dissolve / Fade
 
 Additive Dissolve

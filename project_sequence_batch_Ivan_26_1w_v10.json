@@ -1,8 +1,8 @@
 {
-  "project_path": "E:\\Git\\video_projects\\Ivan\\Proj\\Ivan26_w01.prproj",
-  "prin_path": "E:\\Git\\video_projects\\Ivan\\Proj\\Ivan26_w01.prin",
+  "project_path": "E:\\Git\\video_projects\\Ivan\\Proj\\Ivan26_w10.prproj",
+  "prin_path": "E:\\Git\\video_projects\\Ivan\\Proj\\Ivan26_w10.prin",
   "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Ivan\\2026\\regeneration_assets",
-  "output_project_path": "E:\\Git\\video_projects\\Ivan\\Proj\\Ivan26_1o_v04.prproj",
+  "output_project_path": "E:\\Git\\video_projects\\Ivan\\Proj\\Ivan26_1o_v10.prproj",
   "transition_template_project_path": "E:\\Git\\video_projects\\Ivan\\Proj\\Premiere_Transition_Template.prproj",
   "reports_dir": "E:\\Git\\P_h_o_t_o\\Dv_Ivan\\2026\\reports",
   "engine": "heuristic",
@@ -21,8 +21,8 @@
   "human_detail_txt": "E:\\Git\\AI_PIC_DEF\\def\\Detail_1\\Ivan\\Ivan_detail_260517_3.txt",
   "sequence_jobs": [
     {
-      "source_sequence_name": "Ivan26_e03",
-      "new_sequence_name": "Ivan26_o04"
+      "source_sequence_name": "Ivan26_e10",
+      "new_sequence_name": "Ivan26_o10"
     }
   ]
 }

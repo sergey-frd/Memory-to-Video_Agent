@@ -20,6 +20,7 @@ from utils.project_delivery import (
 from utils.sequence_structure_report import derive_structure_report_path
 from utils.transition_recommendations import normalize_transition_mode, write_transition_recommendations_report
 from utils.premiere_transition_script import write_premiere_transition_extendscript
+from utils.premiere_transform_script import write_premiere_transform_extendscript
 
 
 def run_project_sequence_batch_from_config(
@@ -50,6 +51,7 @@ def run_project_sequence_batch_from_config(
     transition_mode = normalize_transition_mode(payload.get("transition_mode"), enable_auto_transitions=enable_auto_transitions)
     enable_visual_transitions = bool(payload.get("enable_visual_transitions", False))
     enable_auto_durations = bool(payload.get("enable_auto_durations", False))
+    enable_auto_transforms = bool(payload.get("enable_auto_transforms", False))
     include_visual_media = bool(payload.get("include_visual_media", False))
     enable_subject_series_grouping = bool(payload.get("enable_subject_series_grouping", False))
     allow_transition_handle_trimming = bool(payload.get("allow_transition_handle_trimming", False))
@@ -62,6 +64,20 @@ def run_project_sequence_batch_from_config(
     )
     premiere_transition_script_track_index = int(payload.get("premiere_transition_script_track_index", 0))
     premiere_transition_script_save_project = bool(payload.get("premiere_transition_script_save_project", True))
+    generate_premiere_transform_script = bool(
+        payload.get("generate_premiere_transform_script", enable_auto_transforms)
+    )
+    premiere_transform_script_track_index = int(payload.get("premiere_transform_script_track_index", 0))
+    premiere_transform_script_save_project = bool(payload.get("premiere_transform_script_save_project", True))
+    premiere_transform_script_default_effect_name = str(
+        payload.get("premiere_transform_script_default_effect_name") or "Transform"
+    )
+    premiere_transform_script_add_video_effects = bool(
+        payload.get("premiere_transform_script_add_video_effects", False)
+    )
+    premiere_transform_script_apply_safe_effect = bool(
+        payload.get("premiere_transform_script_apply_safe_effect", True)
+    )
     transition_template_project_raw = payload.get("transition_template_project_path")
     transition_template_project_path = (
         Path(str(transition_template_project_raw)) if transition_template_project_raw else None
@@ -119,7 +135,8 @@ def run_project_sequence_batch_from_config(
             enable_auto_transitions=transition_mode == "apply",
             enable_visual_transitions=enable_visual_transitions and transition_mode == "apply",
             enable_auto_durations=enable_auto_durations,
-            include_visual_media=include_visual_media or enable_visual_transitions or enable_auto_durations,
+            enable_auto_transforms=enable_auto_transforms,
+            include_visual_media=include_visual_media or enable_visual_transitions or enable_auto_durations or enable_auto_transforms,
             enable_subject_series_grouping=enable_subject_series_grouping,
             allow_transition_handle_trimming=allow_transition_handle_trimming and transition_mode == "apply",
             transition_template_project_path=transition_template_project_path,
@@ -178,6 +195,16 @@ def run_project_sequence_batch_from_config(
         video_track_index=premiere_transition_script_track_index,
         save_project=premiere_transition_script_save_project,
     )
+    premiere_transform_script_paths = _write_batch_premiere_transform_scripts(
+        delivered_jobs,
+        reports_dir=final_reports_dir,
+        enabled=generate_premiere_transform_script,
+        video_track_index=premiere_transform_script_track_index,
+        save_project=premiere_transform_script_save_project,
+        default_effect_name=premiere_transform_script_default_effect_name,
+        add_video_effects=premiere_transform_script_add_video_effects,
+        apply_safe_transform_effect=premiere_transform_script_apply_safe_effect,
+    )
 
     summary = {
         "config_path": str(config_path),
@@ -196,7 +223,8 @@ def run_project_sequence_batch_from_config(
         "enable_auto_transitions": transition_mode == "apply",
         "enable_visual_transitions": enable_visual_transitions and transition_mode == "apply",
         "enable_auto_durations": enable_auto_durations,
-        "include_visual_media": include_visual_media or enable_visual_transitions or enable_auto_durations,
+        "enable_auto_transforms": enable_auto_transforms,
+        "include_visual_media": include_visual_media or enable_visual_transitions or enable_auto_durations or enable_auto_transforms,
         "enable_subject_series_grouping": enable_subject_series_grouping,
         "allow_transition_handle_trimming": allow_transition_handle_trimming and transition_mode == "apply",
         "generate_premiere_transition_script": generate_premiere_transition_script and transition_mode == "apply",
@@ -204,6 +232,12 @@ def run_project_sequence_batch_from_config(
         "premiere_transition_script_duration_seconds": premiere_transition_script_duration_seconds,
         "premiere_transition_script_track_index": premiere_transition_script_track_index,
         "premiere_transition_script_save_project": premiere_transition_script_save_project,
+        "generate_premiere_transform_script": generate_premiere_transform_script,
+        "premiere_transform_script_track_index": premiere_transform_script_track_index,
+        "premiere_transform_script_save_project": premiere_transform_script_save_project,
+        "premiere_transform_script_default_effect_name": premiere_transform_script_default_effect_name,
+        "premiere_transform_script_add_video_effects": premiere_transform_script_add_video_effects,
+        "premiere_transform_script_apply_safe_effect": premiere_transform_script_apply_safe_effect,
         "transition_template_project_path": (
             str(transition_template_project_path) if transition_template_project_path else None
         ),
@@ -213,6 +247,7 @@ def run_project_sequence_batch_from_config(
             str(batch_transition_recommendations_txt) if batch_transition_recommendations_txt else None
         ),
         "premiere_transition_scripts": [str(path) for path in premiere_transition_script_paths],
+        "premiere_transform_scripts": [str(path) for path in premiere_transform_script_paths],
         "sequence_jobs": [_serialize_completed_job(item) for item in delivered_jobs],
     }
 
@@ -417,6 +452,11 @@ def _serialize_completed_job(item: dict[str, object]) -> dict[str, object]:
             if item.get("premiere_transition_script_jsx_path")
             else None
         ),
+        "premiere_transform_script_jsx": (
+            str(item["premiere_transform_script_jsx_path"])
+            if item.get("premiere_transform_script_jsx_path")
+            else None
+        ),
         "project_after_job": str(item["project_after_job_path"]),
     }
 
@@ -440,6 +480,7 @@ def _format_batch_summary(summary: dict[str, object]) -> str:
         f"Auto transitions: {summary.get('enable_auto_transitions')}",
         f"Visual transitions: {summary.get('enable_visual_transitions')}",
         f"Auto durations: {summary.get('enable_auto_durations')}",
+        f"Auto transforms: {summary.get('enable_auto_transforms')}",
         f"Include visual media: {summary.get('include_visual_media')}",
         f"Subject series grouping: {summary.get('enable_subject_series_grouping')}",
         f"Allow transition handle trimming: {summary.get('allow_transition_handle_trimming')}",
@@ -448,6 +489,13 @@ def _format_batch_summary(summary: dict[str, object]) -> str:
         f"Premiere transition script duration seconds: {summary.get('premiere_transition_script_duration_seconds')}",
         f"Premiere transition script track index: {summary.get('premiere_transition_script_track_index')}",
         f"Premiere transition scripts: {', '.join(summary.get('premiere_transition_scripts') or []) or '<disabled>'}",
+        f"Generate Premiere transform script: {summary.get('generate_premiere_transform_script')}",
+        f"Premiere transform script default effect: {summary.get('premiere_transform_script_default_effect_name')}",
+        f"Premiere transform script track index: {summary.get('premiere_transform_script_track_index')}",
+        f"Premiere transform script save project: {summary.get('premiere_transform_script_save_project')}",
+        f"Premiere transform script add video effects: {summary.get('premiere_transform_script_add_video_effects')}",
+        f"Premiere transform script apply safe effect: {summary.get('premiere_transform_script_apply_safe_effect')}",
+        f"Premiere transform scripts: {', '.join(summary.get('premiere_transform_scripts') or []) or '<disabled>'}",
         f"Transition template project: {summary.get('transition_template_project_path') or '<source project only>'}",
         f"Generate personalized report: {summary.get('generate_personalized_report')}",
         f"Human detail TXT: {summary.get('human_detail_txt') or '<disabled>'}",
@@ -468,6 +516,7 @@ def _format_batch_summary(summary: dict[str, object]) -> str:
                 f"   Structure TXT: {item.get('structure_report_txt') or '<not generated>'}",
                 f"   Transition recommendations: {item.get('transition_recommendations_txt') or '<disabled>'}",
                 f"   Premiere transition JSX: {item.get('premiere_transition_script_jsx') or '<disabled>'}",
+                f"   Premiere transform JSX: {item.get('premiere_transform_script_jsx') or '<disabled>'}",
                 f"   Personalized report: {item.get('human_profile_report_txt') or '<disabled>'}",
                 f"   Project after job: {item.get('project_after_job')}",
                 "",
@@ -541,6 +590,41 @@ def _write_batch_premiere_transition_scripts(
             optimization_report_json=Path(str(item["report_json_path"])),
         )
         item["premiere_transition_script_jsx_path"] = script_path
+        output_paths.append(script_path)
+    return output_paths
+
+
+def _write_batch_premiere_transform_scripts(
+    completed_jobs: list[dict[str, object]],
+    *,
+    reports_dir: Path,
+    enabled: bool,
+    video_track_index: int,
+    save_project: bool,
+    default_effect_name: str,
+    add_video_effects: bool,
+    apply_safe_transform_effect: bool,
+) -> list[Path]:
+    if not enabled:
+        return []
+
+    output_paths: list[Path] = []
+    for item in completed_jobs:
+        sequence_name = str(item["new_sequence_name"])
+        project_after_job = Path(str(item["project_after_job_path"]))
+        output_path = reports_dir / f"{_slugify_filename(sequence_name)}_apply_transforms.jsx"
+        script_path, _jobs = write_premiere_transform_extendscript(
+            project_path=project_after_job,
+            sequence_name=sequence_name,
+            output_jsx_path=output_path,
+            video_track_index=video_track_index,
+            save_project=save_project,
+            optimization_report_json=Path(str(item["report_json_path"])),
+            default_effect_name=default_effect_name,
+            add_video_effects=add_video_effects,
+            apply_safe_transform_effect=apply_safe_transform_effect,
+        )
+        item["premiere_transform_script_jsx_path"] = script_path
         output_paths.append(script_path)
     return output_paths
 

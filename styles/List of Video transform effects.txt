@@ -1,0 +1,52 @@
+List of Video transform effects
+
+Checked visually against the current Adobe Premiere Effects panel category:
+Video Effects > Transform
+
+Detected transform effect names:
+
+- 3D Rotate
+- Auto Reframe
+- Camera Shake
+- Grow
+- Horizontal Flip
+- Move
+- Offset
+- Shrink
+- Spacer
+- Spin
+- Transform
+- Vertical Flip
+- Wiggle
+
+Default optimizer template
+
+The Premiere sequence optimizer uses the conservative subset below for automatic still-image motion. By default the generated JSX does not add the named effects directly; it applies safe built-in Motion > Scale keyframes and uses the effect names as template labels. Set `premiere_transform_script_add_video_effects` to `true` only for experiments where the actual Premiere effects should be added.
+
+- Grow: slow push-in for portraits, single-subject stills, and close details.
+- Shrink: slow pull-back for group photos and images where context must remain readable.
+- Move: small movement cue for higher-energy still images.
+- Transform: fallback effect when a named Transform-category effect is unavailable.
+
+Effects available but not auto-selected by default:
+
+- 3D Rotate
+- Auto Reframe
+- Camera Shake
+- Horizontal Flip
+- Offset
+- Spacer
+- Spin
+- Vertical Flip
+- Wiggle
+
+Reason:
+These effects can be useful manually, but they are stronger, more destructive, more style-specific, or need frame-by-frame composition tuning. Offset is kept manual-only because its position/edge behavior needs careful visual adjustment. The automatic path keeps them out of the default plan so the first generated sequence stays calm and family-photo safe.
+
+Generated JSX:
+
+When `enable_auto_transforms` is true, `main_project_sequence_batch.py` writes:
+
+`<sequence_name>_apply_transforms.jsx`
+
+Run it from the same Premiere CEP panel that was created for transition scripts. Open the optimized sequence in Premiere first, then run the generated JSX.

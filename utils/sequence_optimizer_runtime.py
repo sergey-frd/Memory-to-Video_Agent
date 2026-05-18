@@ -291,6 +291,7 @@ def optimize_sequence(
     translation_results_path: Path | None = None,
     enable_subject_series_grouping: bool = False,
     enable_auto_durations: bool = False,
+    enable_auto_transforms: bool = False,
 ) -> SequenceOptimizationResult:
     candidates, warnings = build_sequence_candidates(clips, regeneration_assets_dir)
     if not candidates:
@@ -353,6 +354,7 @@ def optimize_sequence(
     return attach_sequence_edit_plan(
         result,
         enable_auto_durations=enable_auto_durations,
+        enable_auto_transforms=enable_auto_transforms,
     )
 
 
@@ -470,6 +472,15 @@ def format_sequence_report(result: SequenceOptimizationResult) -> str:
                 ),
                 f"   Heuristic score: {entry.score:.3f}",
                 f"   Reason: {entry.reason}",
+                (
+                    "   Transform: "
+                    f"{entry.transform_plan.transform_name} "
+                    f"({entry.transform_plan.effect_name}; "
+                    f"scale {entry.transform_plan.start_scale:g}->{entry.transform_plan.end_scale:g}; "
+                    f"{entry.transform_plan.reason})"
+                    if entry.transform_plan
+                    else "   Transform: <not planned>"
+                ),
                 (
                     "   Transition to next: "
                     f"{entry.transition_to_next.transition_name}, "

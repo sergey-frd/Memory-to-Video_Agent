@@ -134,6 +134,8 @@
         "utils/premiere_project_export.py",
         "utils/sequence_structure_report.py",
         "utils/transition_recommendations.py",
+        "utils/premiere_transition_script.py",
+        "utils/premiere_transform_script.py",
         "utils/current_sequence_reports.py",
         "utils/human_profile_sequence_report.py",
         "utils/fcp_translation_results.py",
@@ -309,6 +311,8 @@
         "utils/premiere_project_export.py",
         "utils/sequence_structure_report.py",
         "utils/transition_recommendations.py",
+        "utils/premiere_transition_script.py",
+        "utils/premiere_transform_script.py",
         "utils/project_sequence_batch.py"
       ],
       "minimum_checks": [

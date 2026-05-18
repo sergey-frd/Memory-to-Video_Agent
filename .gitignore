@@ -25,6 +25,7 @@ tmp_pytest/
 tmp_pytest_run/
 tmp_pytest_auto/
 pytest-temp/
+pytest-cache-files-*/
 *.pyc
 *.pyo
 *.tmp

@@ -38,6 +38,7 @@ from utils.sequence_structure_report import (
     _top_tokens,
     build_sequence_structure_report,
 )
+from utils.sequence_edit_plan import attach_sequence_edit_plan
 from utils.transition_recommendations import _select_recommended_transition_type, build_transition_recommendations_report
 
 
@@ -1834,14 +1835,17 @@ def test_run_project_sequence_optimizer_can_plan_visual_media_durations_and_tran
         output_prproj=output_project,
         include_visual_media=True,
         enable_auto_durations=True,
+        enable_auto_transforms=True,
         enable_auto_transitions=True,
         enable_visual_transitions=True,
     )
 
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     assert payload["feature_flags"]["enable_auto_durations"] is True
+    assert payload["feature_flags"]["enable_auto_transforms"] is True
     assert payload["entries"][0]["edit_plan"]["media_kind"] == "image"
     assert payload["entries"][0]["transition_to_next"]["media_pair"] == "image->image"
+    assert payload["entries"][0]["transform_plan"]["effect_name"] in {"Grow", "Shrink", "Move"}
 
     output_root_xml = ET.fromstring(gzip.decompress(output_project.read_bytes()))
     generated_nodes = [
@@ -1852,6 +1856,77 @@ def test_run_project_sequence_optimizer_can_plan_visual_media_durations_and_tran
     assert generated_nodes
     video_sequence_source = next(output_root_xml.iter("VideoSequenceSource"))
     assert int(video_sequence_source.findtext("./OriginalDuration", "0")) != 360
+
+
+def test_auto_transforms_use_content_and_neighbor_context() -> None:
+    entries = [
+        _make_transform_entry(
+            index=1,
+            name="portrait_a.jpg",
+            people_count=1,
+            shot_scale=2,
+            energy_level=0,
+            summary="Close portrait of a couple in a garden.",
+            background="Garden path.",
+            shot_type="close-up portrait",
+            subject_tokens=["couple"],
+            keywords=["portrait", "garden", "couple"],
+        ),
+        _make_transform_entry(
+            index=2,
+            name="portrait_b.jpg",
+            people_count=1,
+            shot_scale=2,
+            energy_level=0,
+            summary="Another close portrait of the same couple in the same garden.",
+            background="Garden path.",
+            shot_type="close-up portrait",
+            subject_tokens=["couple"],
+            keywords=["portrait", "garden", "couple"],
+        ),
+        _make_transform_entry(
+            index=3,
+            name="group.jpg",
+            people_count=5,
+            shot_scale=1,
+            energy_level=0,
+            summary="Family group photo with several visible faces.",
+            background="Indoor room.",
+            shot_type="medium group shot",
+            subject_tokens=["family"],
+            keywords=["family", "group"],
+        ),
+        _make_transform_entry(
+            index=4,
+            name="wide_beach.jpg",
+            people_count=0,
+            shot_scale=0,
+            energy_level=0,
+            summary="Wide beach landscape with sea and sky.",
+            background="Sea, beach and open horizon.",
+            shot_type="wide establishing shot",
+            subject_tokens=[],
+            keywords=["wide", "beach", "sea"],
+        ),
+    ]
+    result = SequenceOptimizationResult(
+        source_xml="sample.xml",
+        selected_sequence_name="Sequence",
+        engine_requested="heuristic",
+        engine_used="heuristic",
+        warnings=[],
+        entries=entries,
+    )
+
+    attach_sequence_edit_plan(result, enable_auto_transforms=True)
+
+    transform_names = [entry.transform_plan.transform_name for entry in result.entries if entry.transform_plan]
+    assert transform_names[0] == "Grow"
+    assert transform_names[1] != "Grow"
+    assert "previous Grow" in result.entries[1].transform_plan.reason
+    assert transform_names[2] == "Shrink"
+    assert transform_names[3] == "Move"
+    assert "Offset" not in transform_names
 
 
 def test_run_project_sequence_optimizer_enables_transitions_only_on_pure_mp4_track() -> None:
@@ -2530,8 +2605,8 @@ def test_transition_recommendations_report_lists_supported_types() -> None:
     assert "Morph Cut" in report_text
 
 
-def test_select_recommended_transition_type_uses_scene_rules() -> None:
-    morph_cut, morph_reason = _select_recommended_transition_type(
+def test_select_recommended_transition_type_uses_safe_broad_scene_rules() -> None:
+    face_continuity, face_reason = _select_recommended_transition_type(
         _make_transition_candidate(
             series_subject_tokens=["vika"],
             series_appearance_tokens=["white_dress", "blonde"],
@@ -2589,13 +2664,63 @@ def test_select_recommended_transition_type_uses_scene_rules() -> None:
             prompt_text="soft cinematic memory feeling",
         ),
     )
+    stylized_transition, stylized_reason = _select_recommended_transition_type(
+        _make_transition_candidate(
+            keywords=["party", "neon", "modern"],
+            shot_scale=1,
+            people_count=2,
+            energy_level=3,
+            summary="Modern neon party frame with bright movement.",
+            shot_type_text="medium event shot",
+            prompt_text="high-energy neon party with light leak feeling",
+        ),
+        _make_transition_candidate(
+            keywords=["party", "glow", "digital"],
+            shot_scale=1,
+            people_count=2,
+            energy_level=3,
+            summary="Digital glow celebration frame.",
+            shot_type_text="medium event shot",
+            prompt_text="modern glitch glow celebration",
+        ),
+    )
 
-    assert morph_cut.display_name == "Morph Cut"
-    assert "same-person" in morph_reason
+    assert face_continuity.display_name != "Morph Cut"
+    assert face_continuity.display_name in {
+        "Film Dissolve",
+        "Blur Dissolve",
+        "Non-Additive Dissolve",
+        "Additive Dissolve",
+        "Luma Fade",
+    }
+    assert "Morph Cut is intentionally excluded" in face_reason
     assert dip_to_black.display_name == "Dip to Black"
     assert "scene or tone break" in dip_reason
-    assert film_dissolve.display_name == "Film Dissolve"
+    assert film_dissolve.display_name in {
+        "Film Dissolve",
+        "Blur Dissolve",
+        "Non-Additive Dissolve",
+        "Additive Dissolve",
+        "Luma Fade",
+    }
     assert "softer cinematic dissolve" in film_reason
+    assert stylized_transition.display_name in {
+        "Light Leak",
+        "Glow",
+        "Glitch",
+        "Flare",
+        "Flash",
+        "Flicker",
+        "Chroma Leak",
+        "Light Sweep",
+        "Lens Blur",
+        "Burn Alpha",
+        "Burn Chroma",
+        "VHS Damage",
+        "Neon Wipe",
+        "Film Roll",
+    }
+    assert "stronger template transition" in stylized_reason
 
 
 def _build_sample_project() -> tuple[Path, Path, Path]:
@@ -4147,6 +4272,67 @@ def _make_structure_entry(
                 prompt_text="",
             ),
         ),
+    )
+
+
+def _make_transform_entry(
+    *,
+    index: int,
+    name: str,
+    people_count: int,
+    shot_scale: int,
+    energy_level: int,
+    summary: str,
+    background: str,
+    shot_type: str,
+    subject_tokens: list[str],
+    keywords: list[str],
+) -> SequenceRecommendationEntry:
+    stage_id = Path(name).stem
+    candidate = SequenceCandidate(
+        clip=PremiereSequenceClip(
+            sequence_name="Sequence",
+            order_index=index,
+            track_index=0,
+            clipitem_id=f"clip-{index}",
+            name=name,
+            source_path=f"C:/media/{name}",
+            start=(index - 1) * 120,
+            end=index * 120,
+            in_point=0,
+            out_point=120,
+            duration=120,
+            stage_id=stage_id,
+            video_index=1,
+        ),
+        assets=ClipAssetBundle(
+            stage_id=stage_id,
+            bundle_dir=f"C:/assets/{stage_id}",
+            scene_analysis={
+                "summary": summary,
+                "people_count": people_count,
+                "background": background,
+                "shot_type": shot_type,
+                "main_action": summary,
+                "mood": [],
+                "relationships": [],
+            },
+            prompt_text=summary,
+        ),
+        keywords=keywords,
+        people_count=people_count,
+        shot_scale=shot_scale,
+        energy_level=energy_level,
+        series_subject_tokens=subject_tokens,
+        series_appearance_tokens=subject_tokens,
+        series_pose_tokens=[],
+    )
+    return SequenceRecommendationEntry(
+        recommended_index=index,
+        original_index=index,
+        score=1.0,
+        reason="test",
+        candidate=candidate,
     )
 
 

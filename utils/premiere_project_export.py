@@ -30,6 +30,7 @@ _UUID_TEXT_PATTERN = re.compile(
 )
 _DEFAULT_VIDEO_TRANSITION_MEDIA_TYPE = "228cda18-3625-4d2d-951e-348879e4ed93"
 _MIN_VISIBLE_AUTO_TRANSITION_DURATION = PREMIERE_TICKS_PER_SECOND
+_DEFAULT_SEQUENCE_KEYFRAME_OFFSET = 3600 * PREMIERE_TICKS_PER_SECOND
 
 
 def export_optimized_premiere_project(
@@ -40,6 +41,7 @@ def export_optimized_premiere_project(
     enable_auto_transitions: bool = False,
     enable_visual_transitions: bool = False,
     enable_auto_durations: bool = False,
+    enable_auto_transforms: bool = False,
     allow_transition_handle_trimming: bool = False,
     transition_template_project_path: Path | None = None,
 ) -> Path:
@@ -67,6 +69,7 @@ def export_optimized_premiere_project(
         enable_auto_transitions=enable_auto_transitions,
         enable_visual_transitions=enable_visual_transitions,
         enable_auto_durations=enable_auto_durations,
+        enable_auto_transforms=enable_auto_transforms,
         allow_transition_handle_trimming=allow_transition_handle_trimming,
         transition_template_project_path=transition_template_project_path,
     )
@@ -91,6 +94,7 @@ def export_optimized_premiere_project_sequence_copy(
     enable_auto_transitions: bool = False,
     enable_visual_transitions: bool = False,
     enable_auto_durations: bool = False,
+    enable_auto_transforms: bool = False,
     allow_transition_handle_trimming: bool = False,
     transition_template_project_path: Path | None = None,
 ) -> Path:
@@ -147,6 +151,7 @@ def export_optimized_premiere_project_sequence_copy(
         enable_auto_transitions=enable_auto_transitions,
         enable_visual_transitions=enable_visual_transitions,
         enable_auto_durations=enable_auto_durations,
+        enable_auto_transforms=enable_auto_transforms,
         allow_transition_handle_trimming=allow_transition_handle_trimming,
         transition_template_project_path=transition_template_project_path,
     )
@@ -173,6 +178,7 @@ def _reorder_project_sequence_tracks(
     enable_auto_transitions: bool = False,
     enable_visual_transitions: bool = False,
     enable_auto_durations: bool = False,
+    enable_auto_transforms: bool = False,
     allow_transition_handle_trimming: bool = False,
     transition_template_project_path: Path | None = None,
 ) -> int:

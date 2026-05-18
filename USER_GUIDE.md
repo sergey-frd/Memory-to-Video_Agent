@@ -614,6 +614,9 @@ Example config fields:
   "enable_auto_transitions": true,
   "enable_visual_transitions": true,
   "enable_auto_durations": true,
+  "enable_auto_transforms": true,
+  "generate_premiere_transform_script": true,
+  "premiere_transform_script_add_video_effects": true,
   "include_visual_media": true,
   "generate_personalized_report": false,
   "human_detail_txt": "E:\\Git\\AI_PIC_DEF\\def\\Detail_1\\Igor\\Igor_detail.txt",
@@ -626,7 +629,9 @@ Example config fields:
 }
 ```
 
-Use `include_visual_media` when the source sequence contains photos and videos on the same visual track. Use `enable_auto_durations` to let the optimizer adjust timeline durations. Use `transition_mode: "apply"` together with `enable_auto_transitions` and `enable_visual_transitions` when the exported `.prproj` should receive transitions for mixed visual pairs, not only pure mp4 pairs.
+Use `include_visual_media` when the source sequence contains photos and videos on the same visual track. Use `enable_auto_durations` to let the optimizer adjust timeline durations. Use `transition_mode: "apply"` together with `enable_auto_transitions` and `enable_visual_transitions` when the exported `.prproj` should receive transitions for mixed visual pairs, not only pure mp4 pairs. Automatic transition selection now uses a broad safe template pool: dissolve/fade, dip, wipe/iris, slide/push/zoom, and light/stylized transitions. `Morph Cut` is intentionally excluded from automatic application because Premiere can fail with `Can't apply to a single clip`; keep it for manual use only after checking handles and clip conditions. Use `enable_auto_transforms` and `generate_premiere_transform_script` to create a companion `<sequence>_apply_transforms.jsx` file for still-image Transform effects such as `Grow`, `Shrink`, `Move`, and fallback `Transform`. `Offset` is intentionally manual-only because it needs careful composition tuning in Premiere. Transform choice is content- and neighbor-aware: portraits tend toward `Grow`, groups and wide/context frames toward `Shrink`, action frames toward `Move`, and adjacent similar frames are varied to avoid repeated zooms.
+
+The generated transform JSX is run from the same Premiere panel as transition scripts. Open the optimized sequence first, then run the `<sequence>_apply_transforms.jsx` script. With `premiere_transform_script_add_video_effects: true`, the script applies the named Premiere Transform effects (`Grow`, `Shrink`, `Move`) to the planned still images and skips intrinsic `Motion > Scale` keyframes. Set it to `false` only when you intentionally want the fallback scale-keyframe workflow. The transform effect list/template is documented in `styles\List of Video transform effects.txt`.
 
 The final optimized `.prproj` is stored next to the source `project_path`. During the batch, the program also keeps a temporary working `.prproj` inside `reports\temp_projects`, and cleanup may remove that temporary copy later.
 
