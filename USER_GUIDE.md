@@ -585,6 +585,15 @@ Important location rule:
 - `output` is a temporary workspace area.
 - If everything finishes successfully, `output` should ideally end up empty.
 
+The optimizer can now work not only with `mp4` clips, but also with visual timelines that mix photos and videos. When enabled in the batch config, it writes an edit plan into the JSON/TXT report and can apply the plan during `.prproj` export:
+
+- recommended still-image duration on the timeline;
+- gentle video-fragment duration adjustment;
+- transition recommendation for `image -> image`;
+- transition recommendation for `image -> video`;
+- transition recommendation for `video -> image`;
+- transition recommendation for `video -> video`.
+
 ## Sequence Optimization Batch
 
 Run the batch optimizer with a JSON config:
@@ -601,6 +610,11 @@ Example config fields:
   "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\regeneration_assets",
   "output_project_path": "E:\\Git\\video_projects\\Igor\\Proj\\Igor26_1A_o01.prproj",
   "reports_dir": "E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\reports",
+  "transition_mode": "apply",
+  "enable_auto_transitions": true,
+  "enable_visual_transitions": true,
+  "enable_auto_durations": true,
+  "include_visual_media": true,
   "generate_personalized_report": false,
   "human_detail_txt": "E:\\Git\\AI_PIC_DEF\\def\\Detail_1\\Igor\\Igor_detail.txt",
   "sequence_jobs": [
@@ -611,6 +625,8 @@ Example config fields:
   ]
 }
 ```
+
+Use `include_visual_media` when the source sequence contains photos and videos on the same visual track. Use `enable_auto_durations` to let the optimizer adjust timeline durations. Use `transition_mode: "apply"` together with `enable_auto_transitions` and `enable_visual_transitions` when the exported `.prproj` should receive transitions for mixed visual pairs, not only pure mp4 pairs.
 
 The final optimized `.prproj` is stored next to the source `project_path`. During the batch, the program also keeps a temporary working `.prproj` inside `reports\temp_projects`, and cleanup may remove that temporary copy later.
 

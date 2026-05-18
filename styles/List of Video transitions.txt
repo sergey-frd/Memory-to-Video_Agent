@@ -1,0 +1,154 @@
+List of Video transitions
+
+Checked against Premiere transition template:
+E:\Git\video_projects\Ivan\Proj\Premiere_Transition_Template.prproj
+
+Template sequence:
+Video_transitions_e01
+
+Detected in template:
+- 104 transition references
+- 102 unique transition display names
+- all checked template transitions have 1.000 second duration
+- duplicate display names in the template: Cross Dissolve x2, Dip to Color x2
+
+The transition names below are the names detected in the template sequence and can be used by the Premiere sequence optimizer when transition template cloning is enabled.
+
+Dissolve / Fade
+
+Additive Dissolve
+Additive Dissolve (Legacy)
+Blur Dissolve
+Cross Dissolve
+Cross Dissolve (Legacy)
+Dip to Black
+Dip to Black (Legacy)
+Dip to Color
+Dip to White
+Dip to White (Legacy)
+Film Dissolve
+Film Dissolve (Legacy)
+Luma Fade
+Morph Cut
+Non-Additive Dissolve
+
+Iris / Wipe / Shape
+
+Barn Doors
+Center Split
+Clock Wipe
+Clock Wipe (Legacy)
+Inset
+Iris Box
+Iris Cross
+Iris Diamond
+Iris Round
+Linear Wipe
+Neon Wipe
+Page Peel
+Panel Wipe
+Plateau Wipe
+Radial Wipe
+Radial Wipe (Legacy)
+Shape Flow
+Slice
+Soft Wipe
+Star Wipe
+Stretch Wipe
+Wipe
+
+Slide / Motion / 3D
+
+3D Roll
+3D Spin
+3D Spinback
+Block Motion
+Film Roll
+Flip Motion
+Motion Camera
+Motion Tween
+Pop Motion
+Pull Motion
+Push
+Roll
+Slide
+Slide (Legacy)
+Spin Motion
+Split
+Split (Legacy)
+Spring Motion
+Stretch
+Travel Motion
+Whip
+Whip (Legacy)
+
+Stylized / Distortion / Light
+
+Burn Alpha
+Burn Chroma
+Chaos
+Chroma Leak
+Directional Blur
+Earthquake
+Flare
+Flash
+Flicker
+Glass
+Glitch
+Glow
+Grunge
+Kaleidoscope
+Lens Blur
+Light Leak
+Light Sweep
+Liquid Distortion
+Mosaic
+Phosphor
+Radial Blur
+Ray
+Solarize
+Stripe
+TV Power
+VHS Damage
+Zoom Blur
+
+Immersive Video / VR
+
+VR Chroma Leaks
+VR Gradient Wipe
+VR Iris Wipe
+VR Light Leaks
+VR Light Rays
+VR Mobius Zoom
+VR Random Blocks
+VR Spherical Blur
+
+Text / Graphic
+
+Frame
+Louver
+Mirror
+Text Animator
+Typewriter
+Wave
+
+Zoom
+
+Cross Zoom
+Cross Zoom (Legacy)
+
+Names from the old text list that are not present in this template:
+
+Band Slide
+Band Wipe
+Checker Wipe
+CheckerBoard
+Page Turn
+Paint Splatter
+Pinwheel
+Random Blocks
+Random Wipe
+Spiral Boxes
+Venetian Blinds
+Wedge Wipe
+Zig-Zag Blocks

@@ -18,6 +18,7 @@ from utils.fcp_translation_results import (
     summarize_lost_effects,
 )
 from utils.premiere_project import extract_stage_id_from_project_media_name
+from utils.sequence_edit_plan import attach_sequence_edit_plan
 
 
 _TOKEN_PATTERN = re.compile(r"[A-Za-zА-Яа-яЁё0-9']{3,}")
@@ -289,6 +290,7 @@ def optimize_sequence(
     engine: str = "heuristic",
     translation_results_path: Path | None = None,
     enable_subject_series_grouping: bool = False,
+    enable_auto_durations: bool = False,
 ) -> SequenceOptimizationResult:
     candidates, warnings = build_sequence_candidates(clips, regeneration_assets_dir)
     if not candidates:
@@ -333,7 +335,7 @@ def optimize_sequence(
         )
         clips_with_lost_effects = summarize_lost_effects(lost_effect_issues, entries)
 
-    return SequenceOptimizationResult(
+    result = SequenceOptimizationResult(
         source_xml=str(source_xml),
         selected_sequence_name=selected_sequence_name,
         engine_requested=engine_requested,
@@ -347,6 +349,10 @@ def optimize_sequence(
         translation_warnings=translation_warnings,
         lost_effect_issues=lost_effect_issues,
         clips_with_lost_effects=clips_with_lost_effects,
+    )
+    return attach_sequence_edit_plan(
+        result,
+        enable_auto_durations=enable_auto_durations,
     )
 
 
@@ -454,8 +460,24 @@ def format_sequence_report(result: SequenceOptimizationResult) -> str:
                 f"{entry.recommended_index}. Original V{entry.original_index}: {clip.name}",
                 f"   Stage ID: {clip.stage_id}",
                 f"   Source path: {clip.source_path or '<missing in XML>'}",
+                (
+                    "   Recommended duration: "
+                    f"{entry.edit_plan.recommended_duration} "
+                    f"(was {entry.edit_plan.original_duration}, {entry.edit_plan.media_kind}; "
+                    f"{entry.edit_plan.duration_reason})"
+                    if entry.edit_plan
+                    else "   Recommended duration: <not planned>"
+                ),
                 f"   Heuristic score: {entry.score:.3f}",
                 f"   Reason: {entry.reason}",
+                (
+                    "   Transition to next: "
+                    f"{entry.transition_to_next.transition_name}, "
+                    f"{entry.transition_to_next.recommended_duration} "
+                    f"({entry.transition_to_next.media_pair}; {entry.transition_to_next.reason})"
+                    if entry.transition_to_next
+                    else "   Transition to next: <end of sequence>"
+                ),
                 "",
             ]
         )

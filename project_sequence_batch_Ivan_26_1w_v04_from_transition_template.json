@@ -1,0 +1,22 @@
+{
+  "project_path": "E:\\Git\\video_projects\\Ivan\\Proj\\Ivan26_w01.prproj",
+  "prin_path": "E:\\Git\\video_projects\\Ivan\\Proj\\Ivan26_w01.prin",
+  "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Ivan\\2026\\regeneration_assets",
+  "output_project_path": "E:\\Git\\video_projects\\Ivan\\Proj\\Ivan26_1o_v04_from_transition_template.prproj",
+  "reports_dir": "E:\\Git\\P_h_o_t_o\\Dv_Ivan\\2026\\reports_transition_template",
+  "engine": "heuristic",
+  "transition_mode": "apply",
+  "enable_auto_transitions": true,
+  "enable_visual_transitions": true,
+  "enable_auto_durations": true,
+  "include_visual_media": true,
+  "allow_transition_handle_trimming": false,
+  "transition_template_project_path": "E:\\Git\\video_projects\\Gal_Shatar26_1.prproj",
+  "enable_subject_series_grouping": false,
+  "sequence_jobs": [
+    {
+      "source_sequence_name": "Ivan26_e03",
+      "new_sequence_name": "Ivan26_o03_from_transition_template"
+    }
+  ]
+}

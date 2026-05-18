@@ -10,6 +10,7 @@ from uuid import uuid4
 from models.video_sequence import SequenceOptimizationResult
 from utils.premiere_project import (
     PremiereProjectError,
+    PREMIERE_TICKS_PER_SECOND,
     build_project_object_id_lookup,
     build_project_object_uid_lookup,
     find_project_sequence_node,
@@ -19,13 +20,16 @@ from utils.premiere_project import (
     resolve_project_track_item_clip,
     resolve_project_track_item_name,
     resolve_project_track_item_stage_id,
+    resolve_project_track_item_source_path,
     resolve_project_track_item_timeline,
+    is_supported_visual_media_path,
 )
 
 _UUID_TEXT_PATTERN = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
 _DEFAULT_VIDEO_TRANSITION_MEDIA_TYPE = "228cda18-3625-4d2d-951e-348879e4ed93"
+_MIN_VISIBLE_AUTO_TRANSITION_DURATION = PREMIERE_TICKS_PER_SECOND
 
 
 def export_optimized_premiere_project(
@@ -34,7 +38,10 @@ def export_optimized_premiere_project(
     optimization_result: SequenceOptimizationResult,
     output_project_path: Path,
     enable_auto_transitions: bool = False,
+    enable_visual_transitions: bool = False,
+    enable_auto_durations: bool = False,
     allow_transition_handle_trimming: bool = False,
+    transition_template_project_path: Path | None = None,
 ) -> Path:
     root = load_premiere_project_root(source_project_path)
     object_id_lookup = build_project_object_id_lookup(root)
@@ -58,7 +65,10 @@ def export_optimized_premiere_project(
         object_id_lookup=object_id_lookup,
         object_uid_lookup=object_uid_lookup,
         enable_auto_transitions=enable_auto_transitions,
+        enable_visual_transitions=enable_visual_transitions,
+        enable_auto_durations=enable_auto_durations,
         allow_transition_handle_trimming=allow_transition_handle_trimming,
+        transition_template_project_path=transition_template_project_path,
     )
     _update_sequence_duration_metadata(
         root,
@@ -79,7 +89,10 @@ def export_optimized_premiere_project_sequence_copy(
     output_project_path: Path,
     new_sequence_name: str,
     enable_auto_transitions: bool = False,
+    enable_visual_transitions: bool = False,
+    enable_auto_durations: bool = False,
     allow_transition_handle_trimming: bool = False,
+    transition_template_project_path: Path | None = None,
 ) -> Path:
     root = load_premiere_project_root(source_project_path)
     object_id_lookup = build_project_object_id_lookup(root)
@@ -132,7 +145,10 @@ def export_optimized_premiere_project_sequence_copy(
         object_id_lookup=updated_id_lookup,
         object_uid_lookup=updated_uid_lookup,
         enable_auto_transitions=enable_auto_transitions,
+        enable_visual_transitions=enable_visual_transitions,
+        enable_auto_durations=enable_auto_durations,
         allow_transition_handle_trimming=allow_transition_handle_trimming,
+        transition_template_project_path=transition_template_project_path,
     )
     _update_sequence_duration_metadata(
         root,
@@ -155,12 +171,28 @@ def _reorder_project_sequence_tracks(
     object_id_lookup: dict[str, ET.Element],
     object_uid_lookup: dict[str, ET.Element],
     enable_auto_transitions: bool = False,
+    enable_visual_transitions: bool = False,
+    enable_auto_durations: bool = False,
     allow_transition_handle_trimming: bool = False,
+    transition_template_project_path: Path | None = None,
 ) -> int:
     stage_id_set = set(ordered_stage_ids)
+    track_item_stage_ids = {
+        entry.candidate.clip.clipitem_id: entry.candidate.clip.stage_id
+        for entry in optimization_result.entries
+    }
+    track_item_stage_ids.update(
+        _build_sequence_track_item_stage_id_lookup(
+            sequence_node,
+            optimization_result=optimization_result,
+            object_id_lookup=object_id_lookup,
+            object_uid_lookup=object_uid_lookup,
+        )
+    )
     spans = _collect_project_stage_spans(
         sequence_node,
         stage_id_set=stage_id_set,
+        track_item_stage_ids=track_item_stage_ids,
         object_id_lookup=object_id_lookup,
         object_uid_lookup=object_uid_lookup,
     )
@@ -169,18 +201,31 @@ def _reorder_project_sequence_tracks(
         missing_display = ", ".join(missing_stage_ids)
         raise PremiereProjectError(f"Could not locate all stage clips in project sequence. Missing: {missing_display}")
 
+    stage_durations = _planned_stage_durations(
+        optimization_result,
+        spans=spans,
+        enable_auto_durations=enable_auto_durations,
+    )
     new_bases: dict[str, int] = {}
     cursor = 0
     for stage_id in ordered_stage_ids:
         new_bases[stage_id] = cursor
-        cursor += spans[stage_id]["duration"]
+        cursor += stage_durations[stage_id]
 
     candidate_by_stage_id = {
         entry.candidate.clip.stage_id: entry.candidate
         for entry in optimization_result.entries
     }
-    transition_template = _find_video_transition_template(root, object_id_lookup)
+    entry_by_stage_id = {
+        entry.candidate.clip.stage_id: entry
+        for entry in optimization_result.entries
+    }
     id_allocator = _ProjectObjectIdAllocator(root)
+    transition_templates, transition_template_lookup = _resolve_video_transition_templates(
+        root,
+        object_id_lookup,
+        transition_template_project_path=transition_template_project_path,
+    )
     max_track_end = 0
 
     for track_index, track_node in get_project_track_nodes(
@@ -189,12 +234,14 @@ def _reorder_project_sequence_tracks(
         object_id_lookup=object_id_lookup,
         object_uid_lookup=object_uid_lookup,
     ):
-        ordered_track_items, full_coverage, source_gap_pattern, is_mp4_track = _reorder_project_track(
+        ordered_track_items, full_coverage, source_gap_pattern, is_mp4_track, is_visual_track = _reorder_project_track(
             track_node,
             ordered_stage_ids=ordered_stage_ids,
             spans=spans,
+            stage_durations=stage_durations,
             new_bases=new_bases,
             object_id_lookup=object_id_lookup,
+            track_item_stage_ids=track_item_stage_ids,
         )
         _sync_project_track_transitions(
             root=root,
@@ -204,11 +251,15 @@ def _reorder_project_sequence_tracks(
             full_coverage=full_coverage,
             source_gap_pattern=source_gap_pattern,
             is_mp4_track=is_mp4_track,
+            is_visual_track=is_visual_track,
             candidate_by_stage_id=candidate_by_stage_id,
+            entry_by_stage_id=entry_by_stage_id,
             object_id_lookup=object_id_lookup,
-            transition_template=transition_template,
+            transition_template_lookup=transition_template_lookup,
+            transition_templates=transition_templates,
             id_allocator=id_allocator,
             enable_auto_transitions=enable_auto_transitions,
+            enable_visual_transitions=enable_visual_transitions,
             allow_transition_handle_trimming=allow_transition_handle_trimming,
         )
         max_track_end = max(max_track_end, _project_track_max_end(track_node, object_id_lookup))
@@ -223,8 +274,10 @@ def _reorder_project_sequence_tracks(
             track_node,
             ordered_stage_ids=ordered_stage_ids,
             spans=spans,
+            stage_durations=stage_durations,
             new_bases=new_bases,
             object_id_lookup=object_id_lookup,
+            track_item_stage_ids=track_item_stage_ids,
         )
         max_track_end = max(max_track_end, _project_track_max_end(track_node, object_id_lookup))
 
@@ -235,6 +288,7 @@ def _collect_project_stage_spans(
     sequence_node: ET.Element,
     *,
     stage_id_set: set[str],
+    track_item_stage_ids: dict[str, str],
     object_id_lookup: dict[str, ET.Element],
     object_uid_lookup: dict[str, ET.Element],
 ) -> dict[str, dict[str, int]]:
@@ -254,7 +308,7 @@ def _collect_project_stage_spans(
                 track_item_node = object_id_lookup.get(object_ref)
                 if track_item_node is None:
                     continue
-                stage_id = resolve_project_track_item_stage_id(track_item_node, object_id_lookup)
+                stage_id = _resolve_export_stage_id(track_item_node, object_id_lookup, track_item_stage_ids)
                 if stage_id is None or stage_id not in stage_id_set:
                     continue
                 start, end = resolve_project_track_item_timeline(track_item_node)
@@ -269,21 +323,123 @@ def _collect_project_stage_spans(
     return spans
 
 
+def _planned_stage_durations(
+    optimization_result: SequenceOptimizationResult,
+    *,
+    spans: dict[str, dict[str, int]],
+    enable_auto_durations: bool,
+) -> dict[str, int]:
+    durations: dict[str, int] = {}
+    for entry in optimization_result.entries:
+        stage_id = entry.candidate.clip.stage_id
+        original_duration = max(1, spans.get(stage_id, {}).get("duration", entry.candidate.clip.duration))
+        planned_duration = original_duration
+        if enable_auto_durations and entry.edit_plan is not None:
+            planned_duration = max(1, int(entry.edit_plan.recommended_duration))
+        durations[stage_id] = planned_duration
+    return durations
+
+
+def _resolve_export_stage_id(
+    track_item_node: ET.Element,
+    object_id_lookup: dict[str, ET.Element],
+    track_item_stage_ids: dict[str, str],
+) -> str | None:
+    object_id = track_item_node.attrib.get("ObjectID")
+    if object_id and object_id in track_item_stage_ids:
+        return track_item_stage_ids[object_id]
+    return resolve_project_track_item_stage_id(track_item_node, object_id_lookup)
+
+
+def _build_sequence_track_item_stage_id_lookup(
+    sequence_node: ET.Element,
+    *,
+    optimization_result: SequenceOptimizationResult,
+    object_id_lookup: dict[str, ET.Element],
+    object_uid_lookup: dict[str, ET.Element],
+) -> dict[str, str]:
+    stage_queues: dict[str, list[str]] = {}
+    for entry in sorted(optimization_result.entries, key=lambda item: item.candidate.clip.order_index):
+        stage_id = entry.candidate.clip.stage_id
+        for media_key in _project_media_match_keys(entry.candidate.clip.name, entry.candidate.clip.source_path):
+            stage_queues.setdefault(media_key, []).append(stage_id)
+
+    assigned: dict[str, str] = {}
+    used_stage_ids: set[str] = set()
+    track_items: list[tuple[int, int, int, ET.Element]] = []
+    for track_group_index in (0, 1):
+        for track_index, track_node in get_project_track_nodes(
+            sequence_node,
+            track_group_index=track_group_index,
+            object_id_lookup=object_id_lookup,
+            object_uid_lookup=object_uid_lookup,
+        ):
+            for item_index, track_item_ref in enumerate(iter_project_track_item_refs(track_node)):
+                object_ref = track_item_ref.attrib.get("ObjectRef")
+                if not object_ref:
+                    continue
+                track_item_node = object_id_lookup.get(object_ref)
+                if track_item_node is None:
+                    continue
+                start, end = resolve_project_track_item_timeline(track_item_node)
+                track_items.append((start, end, track_group_index * 1000 + track_index * 100 + item_index, track_item_node))
+
+    for _start, _end, _sort_index, track_item_node in sorted(track_items):
+        object_id = track_item_node.attrib.get("ObjectID")
+        if not object_id or object_id in assigned:
+            continue
+        clip_name = resolve_project_track_item_name(track_item_node, object_id_lookup)
+        source_path = resolve_project_track_item_source_path(
+            track_item_node,
+            object_id_lookup,
+            object_uid_lookup,
+        )
+        for media_key in _project_media_match_keys(clip_name, source_path):
+            stage_queue = stage_queues.get(media_key)
+            if not stage_queue:
+                continue
+            while stage_queue and stage_queue[0] in used_stage_ids:
+                stage_queue.pop(0)
+            if not stage_queue:
+                continue
+            stage_id = stage_queue.pop(0)
+            assigned[object_id] = stage_id
+            used_stage_ids.add(stage_id)
+            break
+
+    return assigned
+
+
+def _project_media_match_keys(clip_name: str, source_path: str) -> list[str]:
+    keys: list[str] = []
+    for value in (clip_name, source_path):
+        if not value:
+            continue
+        path = Path(value)
+        for candidate in (path.name, path.stem):
+            normalized = candidate.strip().casefold()
+            if normalized and normalized not in keys:
+                keys.append(normalized)
+    return keys
+
+
 def _reorder_project_track(
     track_node: ET.Element,
     *,
     ordered_stage_ids: list[str],
     spans: dict[str, dict[str, int]],
+    stage_durations: dict[str, int],
     new_bases: dict[str, int],
     object_id_lookup: dict[str, ET.Element],
-) -> tuple[list[tuple[str, ET.Element]], bool, list[int], bool]:
+    track_item_stage_ids: dict[str, str],
+) -> tuple[list[tuple[str, ET.Element]], bool, list[int], bool, bool]:
     track_items_container = track_node.find("./ClipTrack/ClipItems/TrackItems")
     if track_items_container is None:
-        return [], False, [], False
+        return [], False, [], False, False
 
     track_item_refs = list(track_items_container.findall("./TrackItem"))
     if not track_item_refs:
-        return [], False, [], False
+        return [], False, [], False, False
 
     matched_items_by_stage: dict[str, list[tuple[int, ET.Element, ET.Element]]] = {}
     unmatched_items: list[ET.Element] = []
@@ -297,7 +453,7 @@ def _reorder_project_track(
         if track_item_node is None:
             unmatched_items.append(track_item_ref)
             continue
-        stage_id = resolve_project_track_item_stage_id(track_item_node, object_id_lookup)
+        stage_id = _resolve_export_stage_id(track_item_node, object_id_lookup, track_item_stage_ids)
         if stage_id is None or stage_id not in new_bases:
             unmatched_items.append(track_item_ref)
             continue
@@ -306,7 +462,7 @@ def _reorder_project_track(
         )
 
     if not matched_items_by_stage or unmatched_items:
-        return [], False, [], False
+        return [], False, [], False, False
 
     for track_item_ref in track_item_refs:
         track_items_container.remove(track_item_ref)
@@ -330,6 +486,9 @@ def _reorder_project_track(
                 track_item_node,
                 original_base=spans[stage_id]["start"],
                 new_base=new_bases[stage_id],
+                original_span_duration=spans[stage_id]["duration"],
+                new_span_duration=stage_durations[stage_id],
+                object_id_lookup=object_id_lookup,
             )
             if item_index == 0:
                 ordered_track_items.append((stage_id, track_item_node))
@@ -347,8 +506,12 @@ def _reorder_project_track(
         resolve_project_track_item_name(track_item_node, object_id_lookup).lower().endswith(".mp4")
         for _stage_id, track_item_node in ordered_track_items
     )
+    is_visual_track = bool(ordered_track_items) and all(
+        is_supported_visual_media_path(resolve_project_track_item_name(track_item_node, object_id_lookup))
+        for _stage_id, track_item_node in ordered_track_items
+    )
 
-    return ordered_track_items, full_coverage, track_gap_pattern, is_mp4_track
+    return ordered_track_items, full_coverage, track_gap_pattern, is_mp4_track, is_visual_track
 
 
 def _project_track_max_end(
@@ -377,11 +540,15 @@ def _sync_project_track_transitions(
     full_coverage: bool,
     source_gap_pattern: list[int],
     is_mp4_track: bool,
+    is_visual_track: bool,
     candidate_by_stage_id: dict[str, object],
+    entry_by_stage_id: dict[str, object],
     object_id_lookup: dict[str, ET.Element],
-    transition_template: ET.Element | None,
+    transition_template_lookup: dict[str, ET.Element],
+    transition_templates: dict[str, ET.Element],
     id_allocator: "_ProjectObjectIdAllocator",
     enable_auto_transitions: bool = False,
+    enable_visual_transitions: bool = False,
     allow_transition_handle_trimming: bool = False,
 ) -> None:
     transition_container = _ensure_transition_items_container(track_node, track_index)
@@ -390,9 +557,9 @@ def _sync_project_track_transitions(
 
     if (
         not enable_auto_transitions
-        or transition_template is None
+        or not transition_templates
         or not full_coverage
-        or not is_mp4_track
+        or not (is_mp4_track or (enable_visual_transitions and is_visual_track))
         or any(source_gap_pattern)
         or len(ordered_track_items) < 2
     ):
@@ -401,8 +568,6 @@ def _sync_project_track_transitions(
     transition_refs = ET.Element("TrackItems")
     transition_refs.attrib["Version"] = "1"
     transition_index = 0
-    template_duration = _transition_duration(transition_template)
-    minimum_supported_duration = max(2, template_duration // 20)
 
     for item_index in range(len(ordered_track_items) - 1):
         previous_stage_id, previous_track_item = ordered_track_items[item_index]
@@ -417,9 +582,21 @@ def _sync_project_track_transitions(
         if previous_candidate is None or current_candidate is None:
             continue
 
-        transition_duration = _choose_transition_duration(
-            previous_candidate,
-            current_candidate,
+        previous_entry = entry_by_stage_id.get(previous_stage_id)
+        transition_template = _select_video_transition_template(
+            transition_templates,
+            previous_entry,
+            transition_template_lookup,
+        )
+        if transition_template is None:
+            continue
+        template_duration = _transition_duration(transition_template)
+        minimum_supported_duration = max(2, template_duration // 20)
+        transition_duration = _planned_transition_duration(
+            previous_entry,
+            current_stage_id=current_stage_id,
+            previous_candidate=previous_candidate,
+            current_candidate=current_candidate,
             previous_duration=previous_end - previous_start,
             current_duration=current_end - current_start,
             template_duration=template_duration,
@@ -444,20 +621,24 @@ def _sync_project_track_transitions(
             transition_duration = min(transition_duration, previous_tail_handle)
         if transition_duration < minimum_supported_duration:
             continue
+        transition_alignment = _planned_transition_alignment(transition_template, transition_duration)
+        transition_start = max(previous_start, current_start - transition_alignment)
+        transition_alignment = current_start - transition_start
+        transition_end = transition_start + transition_duration
 
         transition_node, related_nodes = _clone_transition_package(
             transition_template,
             root=root,
-            start=current_start,
-            end=current_start + transition_duration,
-            alignment=0,
+            start=transition_start,
+            end=transition_end,
+            alignment=transition_alignment,
             id_allocator=id_allocator,
-            object_id_lookup=object_id_lookup,
+            template_object_id_lookup=transition_template_lookup,
         )
-        root.append(transition_node)
+        _insert_project_object_near_same_type(root, transition_node)
         object_id_lookup[transition_node.attrib["ObjectID"]] = transition_node
         for related_node in related_nodes:
-            root.append(related_node)
+            _insert_project_object_near_same_type(root, related_node)
             object_id_lookup[related_node.attrib["ObjectID"]] = related_node
 
         transition_ref = ET.SubElement(transition_refs, "TrackItem")
@@ -467,6 +648,7 @@ def _sync_project_track_transitions(
 
     if list(transition_refs):
         transition_container.insert(0, transition_refs)
+        _make_transition_track_visible(track_node)
 
 
 def _ensure_transition_items_container(track_node: ET.Element, track_index: int) -> ET.Element:
@@ -490,18 +672,157 @@ def _ensure_transition_items_container(track_node: ET.Element, track_index: int)
     return transition_container
 
 
+def _make_transition_track_visible(track_node: ET.Element) -> None:
+    properties_node = track_node.find("./ClipTrack/Track/Node/Properties")
+    if properties_node is None:
+        return
+    expanded_height_node = properties_node.find("./TL.SQTrackExpandedHeight")
+    if expanded_height_node is None:
+        expanded_height_node = ET.SubElement(properties_node, "TL.SQTrackExpandedHeight")
+    current_height = _safe_int(expanded_height_node.text)
+    if current_height < 174:
+        expanded_height_node.text = "174"
+
+
 def _find_video_transition_template(
     root: ET.Element,
     object_id_lookup: dict[str, ET.Element],
 ) -> ET.Element | None:
+    templates = _collect_video_transition_templates(root, object_id_lookup)
+    return next(iter(templates.values()), None)
+
+
+def _resolve_video_transition_templates(
+    root: ET.Element,
+    object_id_lookup: dict[str, ET.Element],
+    *,
+    transition_template_project_path: Path | None,
+) -> tuple[dict[str, ET.Element], dict[str, ET.Element]]:
+    if transition_template_project_path is not None:
+        template_root = load_premiere_project_root(transition_template_project_path)
+        template_lookup = build_project_object_id_lookup(template_root)
+        transition_templates = _collect_video_transition_templates(template_root, template_lookup)
+        if not transition_templates:
+            raise PremiereProjectError(
+                f"Transition template project does not contain a usable video transition: {transition_template_project_path}"
+            )
+        return transition_templates, template_lookup
+
+    return _collect_video_transition_templates(root, object_id_lookup), object_id_lookup
+
+
+def _collect_video_transition_templates(
+    root: ET.Element,
+    object_id_lookup: dict[str, ET.Element],
+) -> dict[str, ET.Element]:
+    templates: dict[str, ET.Element] = {}
     for transition_node in root.iter("VideoTransitionTrackItem"):
         component_ref = transition_node.find("./VideoFilterComponent")
         if component_ref is None:
             continue
         if component_ref.attrib.get("ObjectRef") not in object_id_lookup:
             continue
-        return transition_node
-    return None
+        for key in _transition_template_keys(transition_node):
+            existing = templates.get(key)
+            if existing is None or _transition_template_score(
+                transition_node,
+                object_id_lookup,
+            ) > _transition_template_score(existing, object_id_lookup):
+                templates[key] = transition_node
+    return templates
+
+
+def _select_video_transition_template(
+    transition_templates: dict[str, ET.Element],
+    previous_entry: object | None,
+    transition_template_lookup: dict[str, ET.Element],
+) -> ET.Element | None:
+    transition_plan = getattr(previous_entry, "transition_to_next", None)
+    transition_names: list[str] = []
+    if transition_plan is not None:
+        transition_names.extend(
+            [
+                str(getattr(transition_plan, "transition_name", "") or ""),
+                str(getattr(transition_plan, "transition_key", "") or ""),
+            ]
+        )
+    transition_names.extend(["cross_dissolve", "Cross Dissolve (Legacy)", "Cross Dissolve"])
+    for transition_name in transition_names:
+        candidates: list[ET.Element] = []
+        for key in _transition_lookup_keys(transition_name):
+            template = transition_templates.get(key)
+            if template is not None:
+                candidates.append(template)
+        if candidates:
+            return max(candidates, key=lambda item: _transition_template_score(item, transition_template_lookup))
+    return next(iter(transition_templates.values()), None)
+
+
+def _transition_template_keys(transition_node: ET.Element) -> list[str]:
+    keys: list[str] = []
+    for value in (
+        transition_node.findtext("./TransitionTrackItem/DisplayName"),
+        transition_node.findtext("./TransitionTrackItem/MatchName"),
+    ):
+        keys.extend(_transition_lookup_keys(value or ""))
+    return keys
+
+
+def _transition_lookup_keys(value: str) -> list[str]:
+    raw = value.strip().casefold()
+    normalized = _normalize_transition_name(value)
+    aliases = {
+        "cross dissolve (legacy)": [
+            "cross dissolve (legacy)",
+            "cross dissolve legacy",
+            "ae adbe cross dissolve new",
+        ],
+        "cross_dissolve": [
+            "cross_dissolve",
+            "cross dissolve",
+            "cross dissolve legacy",
+            "ae adbe cross dissolve new",
+        ],
+        "dip_to_black": ["dip_to_black", "dip to black", "dip to black legacy"],
+        "film_dissolve": ["film_dissolve", "film dissolve"],
+        "morph_cut": ["morph_cut", "morph cut"],
+    }
+    keys = [raw, normalized]
+    keys.extend(aliases.get(raw, []))
+    keys.extend(aliases.get(normalized, []))
+    for alias_key, alias_values in aliases.items():
+        if raw in alias_values or normalized in alias_values:
+            keys.append(alias_key)
+            keys.extend(alias_values)
+    return list(dict.fromkeys(key for key in keys if key))
+
+
+def _normalize_transition_name(value: str) -> str:
+    lowered = value.strip().casefold()
+    lowered = re.sub(r"\([^)]*\)", " ", lowered)
+    lowered = re.sub(r"[^a-z0-9]+", " ", lowered)
+    return re.sub(r"\s+", " ", lowered).strip()
+
+
+def _transition_template_score(
+    transition_node: ET.Element,
+    object_id_lookup: dict[str, ET.Element],
+) -> int:
+    score = 0
+    if (transition_node.findtext("./TransitionTrackItem/HasOutgoingClip") or "").casefold() == "true":
+        score += 20
+    if (transition_node.findtext("./TransitionTrackItem/HasIncomingClip") or "").casefold() == "true":
+        score += 20
+    if transition_node.findtext("./TransitionTrackItem/TrackItem/Start") not in (None, ""):
+        score += 10
+    if _transition_duration(transition_node) >= _MIN_VISIBLE_AUTO_TRANSITION_DURATION:
+        score += 5
+    component_ref = transition_node.find("./VideoFilterComponent")
+    if component_ref is not None:
+        component_node = object_id_lookup.get(component_ref.attrib.get("ObjectRef", ""))
+        if component_node is not None:
+            score += min(30, len(component_node.findall("./Component/Params/Param")))
+    return score
 
 
 def _choose_transition_duration(
@@ -536,6 +857,43 @@ def _choose_transition_duration(
     if max_total_duration % 2 != 0:
         max_total_duration -= 1
     return max(max_total_duration, 0)
+
+
+def _planned_transition_duration(
+    previous_entry: object | None,
+    *,
+    current_stage_id: str,
+    previous_candidate: object,
+    current_candidate: object,
+    previous_duration: int,
+    current_duration: int,
+    template_duration: int,
+) -> int:
+    fallback_duration = _choose_transition_duration(
+        previous_candidate,
+        current_candidate,
+        previous_duration=previous_duration,
+        current_duration=current_duration,
+        template_duration=template_duration,
+    )
+    transition_plan = getattr(previous_entry, "transition_to_next", None)
+    if (
+        transition_plan is not None
+        and getattr(transition_plan, "to_stage_id", None) == current_stage_id
+        and getattr(transition_plan, "recommended_duration", 0)
+    ):
+        fallback_duration = max(fallback_duration, int(transition_plan.recommended_duration))
+    minimum_duration = (
+        _MIN_VISIBLE_AUTO_TRANSITION_DURATION
+        if previous_duration >= _MIN_VISIBLE_AUTO_TRANSITION_DURATION * 2
+        and current_duration >= _MIN_VISIBLE_AUTO_TRANSITION_DURATION * 2
+        else 2
+    )
+    return min(
+        max(fallback_duration, minimum_duration),
+        max(2, previous_duration),
+        max(2, current_duration),
+    )
 
 
 def _resolve_track_item_tail_handle(
@@ -630,7 +988,7 @@ def _clone_transition_package(
     end: int,
     alignment: int,
     id_allocator: "_ProjectObjectIdAllocator",
-    object_id_lookup: dict[str, ET.Element],
+    template_object_id_lookup: dict[str, ET.Element],
 ) -> tuple[ET.Element, list[ET.Element]]:
     transition_node = copy.deepcopy(template_node)
     transition_node.attrib["ObjectID"] = id_allocator.allocate()
@@ -654,7 +1012,7 @@ def _clone_transition_package(
     if not template_component_id:
         return transition_node, related_nodes
 
-    template_component = object_id_lookup.get(template_component_id)
+    template_component = template_object_id_lookup.get(template_component_id)
     if template_component is None:
         return transition_node, related_nodes
 
@@ -668,7 +1026,7 @@ def _clone_transition_package(
             template_param_id = param_ref.attrib.get("ObjectRef")
             if not template_param_id:
                 continue
-            template_param = object_id_lookup.get(template_param_id)
+            template_param = template_object_id_lookup.get(template_param_id)
             if template_param is None:
                 continue
             cloned_param = copy.deepcopy(template_param)
@@ -680,10 +1038,33 @@ def _clone_transition_package(
     return transition_node, related_nodes
 
 
+def _insert_project_object_near_same_type(root: ET.Element, node: ET.Element) -> None:
+    children = list(root)
+    insert_after = -1
+    for index, child in enumerate(children):
+        if child.tag == node.tag:
+            insert_after = index
+    if insert_after >= 0:
+        root.insert(insert_after + 1, node)
+    else:
+        root.append(node)
+
+
 def _transition_duration(transition_node: ET.Element) -> int:
     start = _safe_int(transition_node.findtext("./TransitionTrackItem/TrackItem/Start"))
     end = _safe_int(transition_node.findtext("./TransitionTrackItem/TrackItem/End"))
     return max(end - start, 2)
+
+
+def _transition_alignment(transition_node: ET.Element) -> int:
+    return _safe_int(transition_node.findtext("./TransitionTrackItem/Alignment"))
+
+
+def _planned_transition_alignment(transition_node: ET.Element, transition_duration: int) -> int:
+    template_alignment = _transition_alignment(transition_node)
+    if template_alignment <= 0 or template_alignment >= transition_duration:
+        return max(0, transition_duration // 2)
+    return template_alignment
 
 
 def _shift_project_track_item_timeline(
@@ -691,17 +1072,56 @@ def _shift_project_track_item_timeline(
     *,
     original_base: int,
     new_base: int,
+    original_span_duration: int | None = None,
+    new_span_duration: int | None = None,
+    object_id_lookup: dict[str, ET.Element] | None = None,
 ) -> None:
     timeline_node = track_item_node.find("./ClipTrackItem/TrackItem")
     if timeline_node is None:
         return
 
     original_start, original_end = resolve_project_track_item_timeline(track_item_node)
-    new_start = new_base + (original_start - original_base)
-    new_end = new_base + (original_end - original_base)
+    if (
+        original_span_duration is not None
+        and new_span_duration is not None
+        and original_span_duration > 0
+        and new_span_duration > 0
+        and original_span_duration != new_span_duration
+    ):
+        start_offset = original_start - original_base
+        end_offset = original_end - original_base
+        if start_offset == 0 and end_offset == original_span_duration:
+            new_start = new_base
+            new_end = new_base + new_span_duration
+        else:
+            ratio = new_span_duration / original_span_duration
+            new_start = new_base + int(round(start_offset * ratio))
+            new_end = new_base + int(round(end_offset * ratio))
+            if new_end <= new_start:
+                new_end = new_start + 1
+    else:
+        new_start = new_base + (original_start - original_base)
+        new_end = new_base + (original_end - original_base)
 
     _set_track_item_boundary(timeline_node, "Start", new_start)
     _set_track_item_boundary(timeline_node, "End", new_end)
+    if object_id_lookup is not None:
+        _sync_project_clip_duration(track_item_node, new_end - new_start, object_id_lookup)
+
+
+def _sync_project_clip_duration(
+    track_item_node: ET.Element,
+    duration: int,
+    object_id_lookup: dict[str, ET.Element],
+) -> None:
+    clip_node = resolve_project_track_item_clip(track_item_node, object_id_lookup)
+    if clip_node is None:
+        return
+    clip_payload = clip_node.find("./Clip")
+    if clip_payload is None:
+        return
+    in_point = _safe_int(clip_payload.findtext("./InPoint"))
+    _set_child_text(clip_payload, "OutPoint", str(in_point + max(1, duration)))
 
 
 def _set_track_item_boundary(timeline_node: ET.Element, tag_name: str, value: int) -> None:

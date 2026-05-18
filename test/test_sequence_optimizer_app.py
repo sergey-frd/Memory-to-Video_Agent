@@ -73,6 +73,27 @@ def test_optimize_sequence_prefers_establishing_then_related_clip() -> None:
     assert "shared context" in result.entries[1].reason
 
 
+def test_optimize_sequence_adds_timeline_duration_and_transition_plan() -> None:
+    _root, xml_path, regeneration_assets_dir = _build_sample_project()
+    selected_sequence_name, clips = parse_premiere_sequence_clips(xml_path)
+
+    result = optimize_sequence(
+        source_xml=xml_path,
+        selected_sequence_name=selected_sequence_name,
+        clips=clips,
+        regeneration_assets_dir=regeneration_assets_dir,
+        enable_auto_durations=True,
+    )
+
+    assert result.feature_flags["sequence_edit_plan"] is True
+    assert result.feature_flags["enable_auto_durations"] is True
+    assert all(entry.edit_plan is not None for entry in result.entries)
+    assert result.entries[0].edit_plan.media_kind == "video"
+    assert result.entries[0].transition_to_next is not None
+    assert result.entries[0].transition_to_next.media_pair == "video->video"
+    assert result.to_dict()["entries"][0]["edit_plan"]["recommended_duration"] >= 1
+
+
 def test_run_sequence_optimizer_writes_json_and_text_report() -> None:
     _root, xml_path, regeneration_assets_dir = _build_sample_project()
     output_root = Path("test_runtime") / f"sequence_optimizer_output_{uuid4().hex}"
@@ -1779,15 +1800,16 @@ def test_run_project_sequence_optimizer_can_enable_transitions_for_contiguous_cl
     ]
 
     assert len(generated_nodes) == 2
-    generated_boundaries = sorted(
+    generated_edit_points = sorted(
         int(node.findtext("./TransitionTrackItem/TrackItem/Start", "0"))
+        + int(node.findtext("./TransitionTrackItem/Alignment", "0"))
         for node in generated_nodes
     )
-    assert generated_boundaries == [120, 240]
-    assert {
-        node.findtext("./TransitionTrackItem/Alignment", "")
+    assert generated_edit_points == [120, 240]
+    assert all(
+        int(node.findtext("./TransitionTrackItem/Alignment", "0")) > 0
         for node in generated_nodes
-    } == {"0"}
+    )
     component_refs = [
         node.find("./VideoFilterComponent").attrib["ObjectRef"]
         for node in generated_nodes
@@ -1795,6 +1817,41 @@ def test_run_project_sequence_optimizer_can_enable_transitions_for_contiguous_cl
     ]
     assert len(component_refs) == len(generated_nodes)
     assert len(set(component_refs)) == len(generated_nodes)
+
+
+def test_run_project_sequence_optimizer_can_plan_visual_media_durations_and_transitions() -> None:
+    _root, project_path, _xml_path, regeneration_assets_dir = _build_sample_premiere_project_with_transition_template()
+    output_root = Path("test_runtime") / f"sequence_optimizer_prproj_visual_timing_{uuid4().hex}"
+    output_root.mkdir(parents=True, exist_ok=True)
+    output_project = output_root / "optimized_sequence.prproj"
+    output_json = output_root / "sequence.json"
+
+    run_project_sequence_optimizer(
+        project_path,
+        regeneration_assets_dir=regeneration_assets_dir,
+        output_json=output_json,
+        output_txt=output_root / "sequence.txt",
+        output_prproj=output_project,
+        include_visual_media=True,
+        enable_auto_durations=True,
+        enable_auto_transitions=True,
+        enable_visual_transitions=True,
+    )
+
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    assert payload["feature_flags"]["enable_auto_durations"] is True
+    assert payload["entries"][0]["edit_plan"]["media_kind"] == "image"
+    assert payload["entries"][0]["transition_to_next"]["media_pair"] == "image->image"
+
+    output_root_xml = ET.fromstring(gzip.decompress(output_project.read_bytes()))
+    generated_nodes = [
+        node
+        for node in output_root_xml.iter("VideoTransitionTrackItem")
+        if node.findtext("./TransitionTrackItem/HasIncomingClip") == "true"
+    ]
+    assert generated_nodes
+    video_sequence_source = next(output_root_xml.iter("VideoSequenceSource"))
+    assert int(video_sequence_source.findtext("./OriginalDuration", "0")) != 360
 
 
 def test_run_project_sequence_optimizer_enables_transitions_only_on_pure_mp4_track() -> None:

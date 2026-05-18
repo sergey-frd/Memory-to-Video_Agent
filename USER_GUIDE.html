@@ -697,6 +697,15 @@ python .\main_project_publication_push.py --repo-dir E:\Git\AI_PIC_DEF\Memory-to
         <li><code>output</code> is a temporary workspace area.</li>
         <li>If everything finishes successfully, <code>output</code> should ideally end up empty.</li>
         </ul>
+        <p>The optimizer can now work not only with <code>mp4</code> clips, but also with visual timelines that mix photos and videos. When enabled in the batch config, it writes an edit plan into the JSON/TXT report and can apply the plan during <code>.prproj</code> export:</p>
+        <ul>
+        <li>recommended still-image duration on the timeline;</li>
+        <li>gentle video-fragment duration adjustment;</li>
+        <li>transition recommendation for <code>image -&gt; image</code>;</li>
+        <li>transition recommendation for <code>image -&gt; video</code>;</li>
+        <li>transition recommendation for <code>video -&gt; image</code>;</li>
+        <li>transition recommendation for <code>video -&gt; video</code>.</li>
+        </ul>
         <h2 id="sequence-optimization-batch">Sequence Optimization Batch</h2>
         <p>Run the batch optimizer with a JSON config:</p>
         <div class="code-label">powershell</div><pre><code class="language-powershell">python .\main_project_sequence_batch.py --config .\project_sequence_batch_igor_26_1A.json</code></pre>
@@ -706,6 +715,11 @@ python .\main_project_publication_push.py --repo-dir E:\Git\AI_PIC_DEF\Memory-to
   &quot;regeneration_assets_dir&quot;: &quot;E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\regeneration_assets&quot;,
   &quot;output_project_path&quot;: &quot;E:\\Git\\video_projects\\Igor\\Proj\\Igor26_1A_o01.prproj&quot;,
   &quot;reports_dir&quot;: &quot;E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\reports&quot;,
+  &quot;transition_mode&quot;: &quot;apply&quot;,
+  &quot;enable_auto_transitions&quot;: true,
+  &quot;enable_visual_transitions&quot;: true,
+  &quot;enable_auto_durations&quot;: true,
+  &quot;include_visual_media&quot;: true,
   &quot;generate_personalized_report&quot;: false,
   &quot;human_detail_txt&quot;: &quot;E:\\Git\\AI_PIC_DEF\\def\\Detail_1\\Igor\\Igor_detail.txt&quot;,
   &quot;sequence_jobs&quot;: [
@@ -715,6 +729,7 @@ python .\main_project_publication_push.py --repo-dir E:\Git\AI_PIC_DEF\Memory-to
     }
   ]
 }</code></pre>
+        <p>Use <code>include_visual_media</code> when the source sequence contains photos and videos on the same visual track. Use <code>enable_auto_durations</code> to let the optimizer adjust timeline durations. Use <code>transition_mode: "apply"</code> together with <code>enable_auto_transitions</code> and <code>enable_visual_transitions</code> when the exported <code>.prproj</code> should receive transitions for mixed visual pairs, not only pure mp4 pairs.</p>
         <p>The final optimized <code>.prproj</code> is stored next to the source <code>project_path</code>. During the batch, the program also keeps a temporary working <code>.prproj</code> inside <code>reports\temp_projects</code>, and cleanup may remove that temporary copy later.</p>
         <p>If an older config still points <code>output_project_path</code> into <code>reports</code>, the file name is preserved, but the persistent optimized project is still written next to <code>project_path</code>.</p>
         <p>In normal work, keep one project-specific batch config next to the template, for example <code>project_sequence_batch_slava_26_1.json</code>, and re-run the batch from that file instead of editing the template each time.</p>

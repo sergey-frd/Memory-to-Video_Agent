@@ -1,0 +1,100 @@
+:root {
+    color-scheme: dark;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #232323;
+    color: #f2f2f2;
+}
+
+body {
+    margin: 0;
+    background: #232323;
+}
+
+.panel {
+    box-sizing: border-box;
+    padding: 14px;
+}
+
+h1 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.hint {
+    margin: 0 0 14px;
+    color: #bdbdbd;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+label,
+.status-title {
+    display: block;
+    margin-bottom: 6px;
+    color: #d7d7d7;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 68px;
+    resize: vertical;
+    border: 1px solid #515151;
+    border-radius: 4px;
+    padding: 8px;
+    background: #111;
+    color: #f4f4f4;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0 14px;
+}
+
+button {
+    border: 1px solid #5c5c5c;
+    border-radius: 4px;
+    padding: 7px 12px;
+    background: #3b3b3b;
+    color: #f4f4f4;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #474747;
+}
+
+button.primary {
+    margin-left: auto;
+    border-color: #6a8fd7;
+    background: #315a9d;
+}
+
+button.primary:hover {
+    background: #3c6bb7;
+}
+
+.status {
+    border-top: 1px solid #3d3d3d;
+    padding-top: 10px;
+}
+
+pre {
+    overflow: auto;
+    min-height: 46px;
+    max-height: 130px;
+    margin: 0;
+    white-space: pre-wrap;
+    color: #dcdcdc;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 11px;
+    line-height: 1.35;
+}

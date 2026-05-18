@@ -264,6 +264,7 @@
   "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Dv_Rita_1\\Dv_Rita\\2026\\regeneration_assets",
   "reports_dir": "E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\reports"
 }</code></pre>
+        <p>Оптимизатор теперь может работать не только с <code>mp4</code>, но и со смешанными визуальными дорожками, где рядом стоят фотографии и видео. <code>include_visual_media</code> включает такие клипы в анализ, <code>enable_auto_durations</code> добавляет подбор длительности, а <code>transition_mode: "apply"</code> вместе с <code>enable_auto_transitions</code> и <code>enable_visual_transitions</code> записывает переходы для пар <code>image -&gt; image</code>, <code>image -&gt; video</code>, <code>video -&gt; image</code> и <code>video -&gt; video</code>.</p>
         <h2 id="bat-файлы">BAT-файлы</h2>
         <h3 id="login-grok-profile-bat"><code>login_grok_profile.bat</code></h3>
         <p>Назначение:</p>
@@ -707,6 +708,11 @@ python .\main_project_publication_push.py --repo-dir E:\Git\AI_PIC_DEF\Memory-to
   "regeneration_assets_dir": "E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\regeneration_assets",
   "output_project_path": "E:\\Git\\video_projects\\Igor\\Proj\\Igor26_1A_o01.prproj",
   "reports_dir": "E:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026\\reports",
+  "transition_mode": "apply",
+  "enable_auto_transitions": true,
+  "enable_visual_transitions": true,
+  "enable_auto_durations": true,
+  "include_visual_media": true,
   "generate_personalized_report": false,
   "human_detail_txt": "E:\\Git\\AI_PIC_DEF\\def\\Detail_1\\Igor\\Igor_detail.txt",
   "sequence_jobs": [

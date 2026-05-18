@@ -127,6 +127,7 @@
         "models/video_sequence.py",
         "utils/sequence_optimizer.py",
         "utils/sequence_optimizer_runtime.py",
+        "utils/sequence_edit_plan.py",
         "utils/premiere_xml.py",
         "utils/premiere_project.py",
         "utils/premiere_xml_export.py",
@@ -298,6 +299,7 @@
         "main_sequence_optimizer.py",
         "utils/sequence_optimizer.py",
         "utils/sequence_optimizer_runtime.py",
+        "utils/sequence_edit_plan.py",
         "models/video_sequence.py"
       ],
       "must_review": [

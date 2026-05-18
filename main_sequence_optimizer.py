@@ -7,15 +7,17 @@ import sys
 from pathlib import Path
 
 from config import Settings
-from utils.premiere_project import parse_premiere_project_sequence_clips
+from utils.premiere_project import parse_premiere_project_sequence_clips, parse_premiere_project_sequence_visual_clips
 from utils.premiere_project_export import (
     export_optimized_premiere_project,
     export_optimized_premiere_project_sequence_copy,
 )
 from utils.premiere_xml_export import export_optimized_premiere_xml
 from utils.premiere_xml import parse_premiere_sequence_clips
+from utils.sequence_edit_plan import attach_sequence_edit_plan
 from utils.sequence_optimizer import format_sequence_report, optimize_sequence
 from utils.sequence_structure_report import derive_structure_report_path, write_sequence_structure_report
+from utils.transition_recommendations import _resolve_transition_template_duration
 
 
 def _configure_stdio() -> None:
@@ -97,6 +99,21 @@ def parse_args() -> argparse.Namespace:
         help="Enable auto-generated transitions between contiguous video clips in prproj export.",
     )
     parser.add_argument(
+        "--enable-visual-transitions",
+        action="store_true",
+        help="Allow auto transitions on mixed visual tracks, including image->image, image->video, video->image, and video->video.",
+    )
+    parser.add_argument(
+        "--enable-auto-durations",
+        action="store_true",
+        help="Enable heuristic timeline duration recommendations and apply them during prproj export.",
+    )
+    parser.add_argument(
+        "--include-visual-media",
+        action="store_true",
+        help="Optimize supported image and video clips instead of mp4 video clips only.",
+    )
+    parser.add_argument(
         "--enable-subject-series-grouping",
         action="store_true",
         help="Enable grouping of visually similar subject-series shots.",
@@ -105,6 +122,12 @@ def parse_args() -> argparse.Namespace:
         "--allow-transition-handle-trimming",
         action="store_true",
         help="Allow trimming clip tails to create handles for auto transitions in prproj export.",
+    )
+    parser.add_argument(
+        "--transition-template-project",
+        type=Path,
+        default=None,
+        help="Optional Premiere .prproj containing real transition items to clone for auto transitions.",
     )
     return parser.parse_args()
 
@@ -121,6 +144,7 @@ def run_sequence_optimizer(
     output_xml: Path | None = None,
     translation_results_path: Path | None = None,
     enable_subject_series_grouping: bool = False,
+    enable_auto_durations: bool = False,
 ) -> tuple[Path, Path]:
     settings = settings or Settings()
     settings.ensure_output()
@@ -137,6 +161,7 @@ def run_sequence_optimizer(
         engine=engine,
         translation_results_path=translation_results_path,
         enable_subject_series_grouping=enable_subject_series_grouping,
+        enable_auto_durations=enable_auto_durations,
     )
 
     file_stem = f"{xml_path.stem}_optimized_sequence"
@@ -171,8 +196,12 @@ def run_project_sequence_optimizer(
     new_sequence_name: str | None = None,
     translation_results_path: Path | None = None,
     enable_auto_transitions: bool = False,
+    enable_visual_transitions: bool = False,
+    enable_auto_durations: bool = False,
+    include_visual_media: bool = False,
     enable_subject_series_grouping: bool = False,
     allow_transition_handle_trimming: bool = False,
+    transition_template_project_path: Path | None = None,
 ) -> tuple[Path, Path]:
     settings = settings or Settings()
     settings.ensure_output()
@@ -180,7 +209,10 @@ def run_project_sequence_optimizer(
     if not regeneration_assets_dir.exists():
         raise FileNotFoundError(f"regeneration_assets directory not found: {regeneration_assets_dir}")
 
-    selected_sequence_name, clips = parse_premiere_project_sequence_clips(project_path, sequence_name)
+    if include_visual_media or enable_visual_transitions or enable_auto_durations:
+        selected_sequence_name, clips = parse_premiere_project_sequence_visual_clips(project_path, sequence_name)
+    else:
+        selected_sequence_name, clips = parse_premiere_project_sequence_clips(project_path, sequence_name)
     result = optimize_sequence(
         source_xml=project_path,
         selected_sequence_name=selected_sequence_name,
@@ -189,6 +221,15 @@ def run_project_sequence_optimizer(
         engine=engine,
         translation_results_path=translation_results_path,
         enable_subject_series_grouping=enable_subject_series_grouping,
+        enable_auto_durations=enable_auto_durations,
+    )
+    result = attach_sequence_edit_plan(
+        result,
+        enable_auto_durations=enable_auto_durations,
+        transition_template_duration=_resolve_transition_template_duration(
+            project_path,
+            transition_template_project_path=transition_template_project_path,
+        ),
     )
 
     file_stem = f"{project_path.stem}_optimized_sequence"
@@ -209,7 +250,10 @@ def run_project_sequence_optimizer(
                 output_project_path=output_prproj,
                 new_sequence_name=new_sequence_name,
                 enable_auto_transitions=enable_auto_transitions,
+                enable_visual_transitions=enable_visual_transitions,
+                enable_auto_durations=enable_auto_durations,
                 allow_transition_handle_trimming=allow_transition_handle_trimming,
+                transition_template_project_path=transition_template_project_path,
             )
         else:
             export_optimized_premiere_project(
@@ -217,7 +261,10 @@ def run_project_sequence_optimizer(
                 optimization_result=result,
                 output_project_path=output_prproj,
                 enable_auto_transitions=enable_auto_transitions,
+                enable_visual_transitions=enable_visual_transitions,
+                enable_auto_durations=enable_auto_durations,
                 allow_transition_handle_trimming=allow_transition_handle_trimming,
+                transition_template_project_path=transition_template_project_path,
             )
     return json_path, txt_path
 
@@ -377,8 +424,12 @@ def main() -> None:
             new_sequence_name=args.new_sequence_name,
             translation_results_path=args.translation_results,
             enable_auto_transitions=args.enable_auto_transitions,
+            enable_visual_transitions=args.enable_visual_transitions,
+            enable_auto_durations=args.enable_auto_durations,
+            include_visual_media=args.include_visual_media,
             enable_subject_series_grouping=args.enable_subject_series_grouping,
             allow_transition_handle_trimming=args.allow_transition_handle_trimming,
+            transition_template_project_path=args.transition_template_project,
         )
     else:
         json_path, txt_path = run_sequence_optimizer(
@@ -391,6 +442,7 @@ def main() -> None:
             output_xml=args.output_xml,
             translation_results_path=args.translation_results,
             enable_subject_series_grouping=args.enable_subject_series_grouping,
+            enable_auto_durations=args.enable_auto_durations,
         )
     print(f"Sequence optimization JSON saved to: {json_path}")
     print(f"Sequence optimization text report saved to: {txt_path}")

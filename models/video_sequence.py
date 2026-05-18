@@ -64,12 +64,41 @@ class SequenceCandidate:
 
 
 @dataclass
+class SequenceClipEditPlan:
+    media_kind: str
+    original_duration: int
+    recommended_duration: int
+    duration_reason: str
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self)
+
+
+@dataclass
+class SequenceTransitionPlan:
+    to_recommended_index: int
+    to_original_index: int
+    to_stage_id: str
+    to_clip_name: str
+    media_pair: str
+    transition_key: str
+    transition_name: str
+    recommended_duration: int
+    reason: str
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self)
+
+
+@dataclass
 class SequenceRecommendationEntry:
     recommended_index: int
     original_index: int
     score: float
     reason: str
     candidate: SequenceCandidate
+    edit_plan: SequenceClipEditPlan | None = None
+    transition_to_next: SequenceTransitionPlan | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -78,6 +107,8 @@ class SequenceRecommendationEntry:
             "score": self.score,
             "reason": self.reason,
             "candidate": self.candidate.to_dict(),
+            "edit_plan": self.edit_plan.to_dict() if self.edit_plan else None,
+            "transition_to_next": self.transition_to_next.to_dict() if self.transition_to_next else None,
         }
 
 

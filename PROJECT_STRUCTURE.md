@@ -150,6 +150,12 @@ This route is high-risk: any lifecycle change can affect source-file safety.
 5. Reporting utilities создают structure reports, transition recommendations, human-profile overlays.
 6. Финальный optimized `.prproj` сохраняется рядом с исходным `project_path`; `reports/temp_projects` хранит только временную batch-копию.
 
+Sequence timing extension:
+
+- `utils/sequence_edit_plan.py` adds media kind, recommended clip duration, and next-transition metadata to `SequenceRecommendationEntry`.
+- `main_sequence_optimizer.py` exposes `--include-visual-media`, `--enable-auto-durations`, and `--enable-visual-transitions`.
+- `utils/premiere_project_export.py` can apply the edit plan to `.prproj` exports, including mixed `image -> image`, `image -> video`, `video -> image`, and `video -> video` transition pairs when enabled.
+
 ### Multi-Scene Prompt Composer Route
 
 1. `main_video_prompt_composer.py` читает JSON request или полный `--config-file` JSON/JSONC.

@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Run Transition Script</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <main class="panel">
+        <h1>Run Transition Script</h1>
+        <p class="hint">Open the target Premiere sequence first, then run the generated JSX.</p>
+
+        <label for="scriptPath">JSX file</label>
+        <textarea id="scriptPath" spellcheck="false">E:\Git\P_h_o_t_o\Dv_Ivan\2026\reports\Ivan26_o04_apply_transitions.jsx</textarea>
+
+        <div class="actions">
+            <button id="browseButton" type="button">Browse</button>
+            <button id="defaultButton" type="button">Ivan default</button>
+            <button id="runButton" type="button" class="primary">Run</button>
+        </div>
+
+        <section class="status">
+            <div class="status-title">Status</div>
+            <pre id="statusText">Ready.</pre>
+        </section>
+    </main>
+
+    <script src="./js/main.js"></script>
+</body>
+</html>

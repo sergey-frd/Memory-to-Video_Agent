@@ -7,10 +7,12 @@ from types import SimpleNamespace
 
 from models.video_sequence import SequenceOptimizationResult, SequenceRecommendationEntry
 from utils.premiere_project import (
+    PREMIERE_TICKS_PER_SECOND,
     build_project_object_id_lookup,
     build_project_object_uid_lookup,
     find_project_sequence_node,
     get_project_track_nodes,
+    is_supported_visual_media_path,
     iter_project_track_item_refs,
     load_premiere_project_root,
     resolve_project_track_item_name,
@@ -201,7 +203,7 @@ def build_transition_recommendations_report(
         object_uid_lookup=object_uid_lookup,
     ):
         ordered_items: list[tuple[str, object, str]] = []
-        pure_mp4_track = True
+        pure_visual_track = True
 
         for track_item_ref in iter_project_track_item_refs(track_node):
             object_ref = track_item_ref.attrib.get("ObjectRef")
@@ -213,16 +215,17 @@ def build_transition_recommendations_report(
             clip_name = resolve_project_track_item_name(track_item_node, object_id_lookup)
             if not clip_name:
                 continue
-            if not clip_name.lower().endswith(".mp4"):
-                pure_mp4_track = False
+            if not is_supported_visual_media_path(clip_name):
+                pure_visual_track = False
                 break
             stage_id = resolve_project_track_item_stage_id(track_item_node, object_id_lookup)
-            if stage_id is None or stage_id not in candidate_by_stage_id:
-                pure_mp4_track = False
+            candidate_key = stage_id if stage_id in candidate_by_stage_id else track_item_node.attrib.get("ObjectID")
+            if not candidate_key or candidate_key not in candidate_by_stage_id:
+                pure_visual_track = False
                 break
-            ordered_items.append((stage_id, track_item_node, Path(clip_name).name))
+            ordered_items.append((candidate_key, track_item_node, Path(clip_name).name))
 
-        if not pure_mp4_track or len(ordered_items) < 2:
+        if not pure_visual_track or len(ordered_items) < 2:
             continue
 
         recommended_tracks += 1
@@ -274,13 +277,13 @@ def build_transition_recommendations_report(
             )
 
         if contiguous_pairs == 0:
-            lines.append("- No contiguous clip pairs were found on this pure mp4 track.")
+            lines.append("- No contiguous clip pairs were found on this pure visual track.")
         lines.append("")
 
     if recommended_tracks == 0:
         lines.extend(
             [
-                "No pure mp4 video track with at least two clips was found for transition recommendations.",
+                "No pure visual track with at least two clips was found for transition recommendations.",
                 "",
             ]
         )
@@ -323,30 +326,38 @@ def build_transition_recommendations_from_result(
         return "\n".join(lines).strip() + "\n"
 
     for previous_entry, current_entry in zip(result.entries, result.entries[1:]):
-        previous_candidate = _candidate_namespace_from_entry(previous_entry)
-        current_candidate = _candidate_namespace_from_entry(current_entry)
-        transition_type, transition_reason = _select_recommended_transition_type(
-            previous_candidate,
-            current_candidate,
-        )
-        duration = _adjust_recommended_duration_for_transition_type(
-            transition_type.key,
-            _choose_transition_duration(
+        if previous_entry.transition_to_next is not None:
+            transition_name = previous_entry.transition_to_next.transition_name
+            duration = previous_entry.transition_to_next.recommended_duration
+            transition_reason = previous_entry.transition_to_next.reason
+            media_pair = previous_entry.transition_to_next.media_pair
+        else:
+            previous_candidate = _candidate_namespace_from_entry(previous_entry)
+            current_candidate = _candidate_namespace_from_entry(current_entry)
+            transition_type, transition_reason = _select_recommended_transition_type(
                 previous_candidate,
                 current_candidate,
-                previous_duration=max(2, previous_entry.candidate.clip.duration),
-                current_duration=max(2, current_entry.candidate.clip.duration),
+            )
+            duration = _adjust_recommended_duration_for_transition_type(
+                transition_type.key,
+                _choose_transition_duration(
+                    previous_candidate,
+                    current_candidate,
+                    previous_duration=max(2, previous_entry.candidate.clip.duration),
+                    current_duration=max(2, current_entry.candidate.clip.duration),
+                    template_duration=template_duration,
+                ),
                 template_duration=template_duration,
-            ),
-            template_duration=template_duration,
-        )
+            )
+            transition_name = transition_type.display_name
+            media_pair = "visual->visual"
         previous_name = Path(previous_entry.candidate.clip.name).name or previous_entry.candidate.clip.stage_id
         current_name = Path(current_entry.candidate.clip.name).name or current_entry.candidate.clip.stage_id
         lines.append(
             (
                 f"- #{previous_entry.recommended_index} (orig {previous_entry.original_index}) {previous_name} -> "
                 f"#{current_entry.recommended_index} (orig {current_entry.original_index}) {current_name}: "
-                f"{transition_type.display_name}, recommended duration {duration}. {transition_reason}. "
+                f"{transition_name}, recommended duration {duration}, media {media_pair}. {transition_reason}. "
                 "Feasibility should be checked in Premiere after applying the recommended order."
             )
         )
@@ -481,7 +492,7 @@ def _candidate_payload_by_stage_id(optimization_payload: dict[str, object]) -> d
         stage_id = str(clip.get("stage_id") or "").strip()
         if not stage_id:
             continue
-        candidate_by_stage_id[stage_id] = SimpleNamespace(
+        candidate_payload = SimpleNamespace(
             series_subject_tokens=list(candidate.get("series_subject_tokens") or []),
             series_appearance_tokens=list(candidate.get("series_appearance_tokens") or []),
             keywords=list(candidate.get("keywords") or []),
@@ -496,6 +507,10 @@ def _candidate_payload_by_stage_id(optimization_payload: dict[str, object]) -> d
             relationships=[str(item) for item in (scene_analysis.get("relationships") or []) if item],
             prompt_text=str(assets.get("prompt_text") or ""),
         )
+        candidate_by_stage_id[stage_id] = candidate_payload
+        clipitem_id = str(clip.get("clipitem_id") or "").strip()
+        if clipitem_id:
+            candidate_by_stage_id[clipitem_id] = candidate_payload
     return candidate_by_stage_id
 
 
@@ -518,7 +533,15 @@ def _candidate_namespace_from_entry(entry: SequenceRecommendationEntry) -> Simpl
     )
 
 
-def _resolve_transition_template_duration(project_path: Path | None) -> int:
+def _resolve_transition_template_duration(
+    project_path: Path | None,
+    *,
+    transition_template_project_path: Path | None = None,
+) -> int:
+    if transition_template_project_path is not None:
+        template_duration = _resolve_transition_template_duration(transition_template_project_path)
+        if template_duration > 2:
+            return template_duration
     if project_path is None:
         return 2
     try:
@@ -527,6 +550,9 @@ def _resolve_transition_template_duration(project_path: Path | None) -> int:
         transition_template = _find_video_transition_template(root, object_id_lookup)
         if transition_template is None:
             return 2
-        return _transition_duration(transition_template)
+        duration = _transition_duration(transition_template)
+        if duration > 1_000_000:
+            return max(duration, PREMIERE_TICKS_PER_SECOND)
+        return duration
     except Exception:
         return 2
