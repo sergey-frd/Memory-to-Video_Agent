@@ -99,7 +99,7 @@
 | Sequence Optimization | `main_sequence_optimizer.py`, `utils/sequence_optimizer.py`, `utils/sequence_optimizer_runtime.py`, `utils/premiere_xml.py`, `utils/premiere_project.py`, `models/video_sequence.py` | Рекомендованный порядок клипов и export | optimized JSON/TXT/XML/PRPROJ |
 | Reports & Batch Orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/premiere_transition_script.py`, `utils/premiere_transform_script.py`, `utils/fcp_translation_results.py` | Reports, batch delivery, human-profile overlays, transition and transform scripts | reports, batch summaries, transition reports, Premiere JSX scripts |
 | Desktop/Web Automation | `main_desktop.py`, `api/chatgpt_desktop.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/chatgpt_web.py`, `api/grok_web.py` | Prompt-driven interaction with external UIs | submitted prompts, saved media |
-| Portrait/Image Batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `run_chatgpt_portrait_batch_existing.bat`, `run_gemini_portrait_batch_existing.bat`, `run_grok_portrait_batch_existing.bat` | Batch generation of artistic portraits and image-edit tasks through ChatGPT, Gemini, Grok, OpenAI API, or local stylizer | `output/chatgpt_*`, `output/gemini_*`, `output/grok_*`, optional `final_output_dir` copy, optional response text |
+| Portrait/Image Batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `chatgpt_pair_base_config.json`, `run_chatgpt_portrait_batch_existing.bat`, `run_chatgpt_pair_batch_existing.bat`, `run_gemini_portrait_batch_existing.bat`, `run_grok_portrait_batch_existing.bat` | Batch generation of artistic portraits, pair portraits, and image-edit tasks through ChatGPT, Gemini, Grok, OpenAI API, or local stylizer | `output/chatgpt_*`, `output/gemini_*`, `output/grok_*`, `output/pair`, optional `final_output_dir` copy, optional response text |
 
 </section>
 
@@ -194,6 +194,14 @@ Portrait batch rules:
 6. Grok uses `.browser-profile/grok-web` and `https://grok.com/imagine` through Playwright image mode.
 7. `--delivery-config-file config_*.json` preserves the project-side restart copy in `output/...` and also copies every newly saved PNG into `final_output_dir` while mirroring the same relative subfolder path, such as `output/grok_portraits/...` -> `final_output_dir/grok_portraits/...`.
 
+Pair portrait rules:
+
+1. `run_chatgpt_pair_batch_existing.bat` uses `input_pair/<pair_id>/` folders, where each folder must contain two source images.
+2. The pair prompt bank lives in `chatgpt_pair_base_config.json`.
+3. For desktop reliability, the two source photos are first combined into one temporary side-by-side reference image under `output/pair/_pair_references`.
+4. Results are saved to `output/pair` as `<pair_id>_art_pair_<YYYYMMDD_HHMMSS>.png`, for example `01_art_pair_20260522_153000.png`.
+5. With `--delivery-config-file config_SF.json`, the same file is copied to `final_output_dir/pair/...`, for example `E:\Git\P_h_o_t_o\dv_sf_1\dv_sf\Sf_1\2026\output\pair\...`.
+
 </section>
 
 ---
@@ -211,18 +219,21 @@ flowchart LR
   B5["run_chatgpt_portrait_batch_existing.bat"] --> P6["main_chatgpt_portrait_batch.py"]
   B6["run_gemini_portrait_batch_existing.bat"] --> P6
   B7["run_grok_portrait_batch_existing.bat"] --> P6
+  B8["run_chatgpt_pair_batch_existing.bat"] --> P6
 
   C1["config.json / config.local.json / config_*.json"] --> G1["GenerationConfig"]
   G1 --> P1
   G1 --> P2
 
   C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nspecial portrait configs"] --> P6
+  C6["chatgpt_pair_base_config.json"] --> P6
 
   P1 --> O1["final_videos_dir\nregeneration_assets_dir"]
   P2 --> O2["*_video_*.mp4\n*_bg_image_16x9.*"]
   P3 --> O3["reports\noptimized sequence artifacts"]
   P4 --> O4["publication bundle"]
   P6 --> O5["output/chatgpt_*\noutput/gemini_*\noutput/grok_*"]
+  P6 --> O6["output/pair\nfinal_output_dir/pair"]
 ```
 
 ### Common Commands
@@ -241,6 +252,10 @@ flowchart LR
 
 ```bat
 .\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+```bat
+.\run_chatgpt_pair_batch_existing.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error
 ```
 
 ```bat

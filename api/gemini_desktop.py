@@ -100,6 +100,7 @@ class GeminiDesktopAgent(ChatGPTDesktopAgent):
     def __init__(self, config: DesktopAgentConfig) -> None:
         if not config.target_url:
             config.target_url = GEMINI_APP_URL
+        self._composer_cleared_for_source_attachments = False
         super().__init__(config)
 
     def _log(self, message: str) -> None:
@@ -256,8 +257,10 @@ class GeminiDesktopAgent(ChatGPTDesktopAgent):
         )
 
     def _attach_image(self, window: BaseWrapper, image_path: Path) -> None:
-        self._close_lingering_save_dialogs_before_request(window)
-        self._clear_composer_before_new_request(window)
+        if not self._composer_cleared_for_source_attachments:
+            self._close_lingering_save_dialogs_before_request(window)
+            self._clear_composer_before_new_request(window)
+            self._composer_cleared_for_source_attachments = True
         super()._attach_image(window, image_path)
 
     def _close_lingering_save_dialogs_before_request(self, window: BaseWrapper) -> None:

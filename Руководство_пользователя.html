@@ -335,12 +335,14 @@ run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300</cod
         <li><code>api/gemini_desktop.py</code> — desktop-адаптер для существующего окна Gemini.</li>
         <li><code>api/grok_web.py</code> — web-автоматизация Grok, переиспользуемая из video pipeline, но в image-режиме.</li>
         <li><code>run_chatgpt_portrait_batch_existing.bat</code> — рекомендуемый launcher для уже открытой ChatGPT-сессии.</li>
+        <li><code>run_chatgpt_pair_batch_existing.bat</code> — launcher ChatGPT для парных портретов из двух фотографий в <code>input_pair\01</code>, <code>input_pair\02</code> и так далее.</li>
         <li><code>login_gemini_profile.bat</code> — открывает отдельный Chrome-профиль Gemini на <code>https://gemini.google.com/app</code>.</li>
         <li><code>run_gemini_portrait_batch_existing.bat</code> — launcher Gemini, который использует те же portrait JSON-конфиги.</li>
         <li><code>login_grok_profile.bat</code> — ручной вход в отдельный Chrome-профиль Grok на <code>https://grok.com/imagine</code>.</li>
         <li><code>run_grok_portrait_batch_existing.bat</code> — launcher Grok, который использует те же portrait JSON-конфиги.</li>
         <li><code>chatgpt_portrait_config.json</code> — короткий рабочий набор стилей, сейчас watercolor и pastel.</li>
         <li><code>chatgpt_portrait_base_config.json</code> — полный базовый банк художественных портретных стилей и image-edit сервисов.</li>
+        <li><code>chatgpt_pair_base_config.json</code> — банк prompt для построения одной общей кинематографической художественной фотографии пары из двух исходных фотографий.</li>
         <li><code>chatgpt_watercolor_scene_expansion_config.json</code> — специальный конфиг для <code>watercolor</code> и <code>scene_expansion</code>.</li>
         <li><code>BATCH_RUN_HISTORY.md</code> — неповторяющиеся примеры запуска всех batch-файлов с параметрами.</li>
         <li><code>styles\art_styles_Prompt_list.txt</code> — исходный человекочитаемый список style prompts.</li>
@@ -356,12 +358,22 @@ run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300</cod
         <li>имя файла строится как <code>&lt;image_stem&gt;_&lt;style_slug&gt;.png</code>, например <code>IMG-001_rembrandt.png</code>;</li>
         <li><code>--skip-existing</code> позволяет безопасно перезапускать batch и пропускать уже сохраненные портреты.</li>
         </ul>
+        <p>Результаты парных портретов:</p>
+        <ul>
+        <li>положите две исходные фотографии в каждую номерную папку <code>input_pair</code>, например <code>input_pair\01\person_a.jpg</code> и <code>input_pair\01\person_b.jpg</code>;</li>
+        <li>перед отправкой в ChatGPT batch создает одну временную side-by-side reference-картинку в <code>output\pair\_pair_references</code>, поэтому desktop composer должен принять только одно вложение;</li>
+        <li>pair batch создает по одному изображению пары для каждой номерной папки и сохраняет его в <code>output\pair</code>;</li>
+        <li>имя файла строится как <code>&lt;pair_id&gt;_art_pair_&lt;YYYYMMDD_HHMMSS&gt;.png</code>, например <code>01_art_pair_20260522_153000.png</code>;</li>
+        <li>если передан <code>--delivery-config-file .\config_SF.json</code>, результат также копируется в <code>final_output_dir\pair</code> этого пользовательского конфига.</li>
+        </ul>
         <p>Рекомендуемая автоматическая команда:</p>
         <div class="code-label">bat</div><pre><code class="language-bat">.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
         <p>Команда для watercolor + scene expansion:</p>
         <div class="code-label">bat</div><pre><code class="language-bat">.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_watercolor_scene_expansion_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
         <p>Команда для короткого рабочего набора:</p>
         <div class="code-label">bat</div><pre><code class="language-bat">.\run_chatgpt_portrait_batch_existing.bat --skip-existing</code></pre>
+        <p>Команда для парных портретов:</p>
+        <div class="code-label">bat</div><pre><code class="language-bat">.\run_chatgpt_pair_batch_existing.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error</code></pre>
         <p>Gemini desktop-flow с теми же config-файлами:</p>
         <div class="code-label">bat</div><pre><code class="language-bat">.\login_gemini_profile.bat
 .\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>

@@ -31,7 +31,6 @@ ATTACH_BUTTON_PATTERNS = (
     "Attach",
     "Upload",
     "Open file picker",
-    "Plus",
     "Добавить",
     "Добавляйте файлы и многое другое",
     "Прикрепить",
@@ -42,6 +41,10 @@ ATTACH_MENU_PATTERNS = (
     "Upload from computer",
     "Upload file",
     "Upload files",
+    "Open file",
+    "Open file.",
+    "Open files",
+    "Access open file",
     "Choose file",
     "Add photos and files",
     "Add files",
@@ -49,6 +52,24 @@ ATTACH_MENU_PATTERNS = (
     "Загрузить с компьютера",
     "Загрузить файл",
     "Выбрать файл",
+)
+ATTACH_UPLOAD_MENU_PATTERNS = (
+    "Photos and files",
+    "Upload from computer",
+    "Upload file",
+    "Upload files",
+    "Open file",
+    "Open file.",
+    "Open files",
+    "Access open file",
+    "Choose file",
+    "Choose from computer",
+    "Upload from device",
+    "Фото и файлы",
+    "Загрузить с компьютера",
+    "Загрузить файл",
+    "Выбрать файл",
+    "Выбрать с компьютера",
 )
 OPEN_DIALOG_TITLE_RE = ".*(Open|Open File|Открыть|Открытие|Выбор файла).*"
 SAVE_DIALOG_TITLE_RE = ".*(Save As|Save Image|Save|Save File|Сохранить|Сохранить как|Сохранение).*"
@@ -194,6 +215,7 @@ VK_DOWN = 0x28
 VK_ESCAPE = 0x1B
 VK_L = 0x4C
 VK_MENU = 0x12
+VK_N = 0x4E
 VK_O = 0x4F
 VK_RETURN = 0x0D
 VK_S = 0x53
@@ -220,8 +242,14 @@ class POINT(ctypes.Structure):
 
 
 def _copy_file_to_windows_clipboard(image_path: Path) -> None:
-    path_text = str(image_path.resolve())
-    payload = (path_text + "\0\0").encode("utf-16le")
+    _copy_files_to_windows_clipboard((image_path,))
+
+
+def _copy_files_to_windows_clipboard(image_paths: Iterable[Path]) -> None:
+    resolved_paths = [str(path.resolve()) for path in image_paths]
+    if not resolved_paths:
+        raise DesktopAutomationError("No files were provided for clipboard attachment.")
+    payload = ("\0".join(resolved_paths) + "\0\0").encode("utf-16le")
     header_size = ctypes.sizeof(DROPFILES)
     total_size = header_size + len(payload)
 
@@ -285,6 +313,7 @@ def _copy_file_to_windows_clipboard(image_path: Path) -> None:
 class DesktopAgentConfig:
     image_path: Optional[Path]
     prompt_text: str
+    image_paths: Optional[tuple[Path, ...]] = None
     output_path: Optional[Path] = None
     response_text_path: Optional[Path] = None
     executable_path: Optional[Path] = None
@@ -301,9 +330,11 @@ class DesktopAgentConfig:
     min_result_wait_sec: float = 90.0
     result_stable_sec: float = 8.0
     open_new_chat_before_run: bool = False
+    force_new_chat_navigation: bool = False
     use_active_window: bool = False
     prefer_single_tab_window: bool = False
     require_single_tab_window: bool = False
+    require_new_attachment_preview: bool = False
     attach_via_clipboard: bool = False
     skip_capture_result: bool = False
     save_result_via_context_menu: bool = False
@@ -343,12 +374,22 @@ class ChatGPTDesktopAgent:
         if self.config.open_new_chat_before_run:
             self._log("opening a new chat")
             self._open_new_chat(self._window)
-        if self.config.image_path is not None:
-            self._log(f"attaching image: {self.config.image_path.name}")
-            self._attach_image(self._window, self.config.image_path)
-            self._log("image attached")
+        source_image_paths = self._source_image_paths()
+        if len(source_image_paths) > 1 and self.config.attach_via_clipboard:
+            names = ", ".join(path.name for path in source_image_paths)
+            self._log(f"attaching {len(source_image_paths)} images as one clipboard batch: {names}")
+            self._attach_images_via_clipboard(self._window, source_image_paths)
+            self._log(f"{len(source_image_paths)} images attached")
+        else:
+            for index, image_path in enumerate(source_image_paths, start=1):
+                suffix = "" if len(source_image_paths) == 1 else f" ({index}/{len(source_image_paths)})"
+                self._log(f"attaching image{suffix}: {image_path.name}")
+                self._attach_image(self._window, image_path)
+                self._log(f"image attached{suffix}")
         self._log("pasting prompt")
         self._paste_prompt(self._window, self.config.prompt_text)
+        if len(source_image_paths) > 1:
+            self._wait_for_prompt_after_multi_image_paste(self._window, self.config.prompt_text)
         if self.config.submit:
             self._capture_manual_send_position_after_paste()
             self._log("capturing baseline state")
@@ -376,6 +417,13 @@ class ChatGPTDesktopAgent:
     def _log(self, message: str) -> None:
         if self.config.verbose:
             print(f"[desktop] {message}", flush=True)
+
+    def _source_image_paths(self) -> tuple[Path, ...]:
+        if self.config.image_paths:
+            return tuple(self.config.image_paths)
+        if self.config.image_path is not None:
+            return (self.config.image_path,)
+        return ()
 
     def _preserve_manual_composer_focus(self) -> bool:
         return (
@@ -734,6 +782,17 @@ class ChatGPTDesktopAgent:
         )
 
     def _open_new_chat(self, window: BaseWrapper) -> None:
+        if self.config.force_new_chat_navigation:
+            target_url = self.config.target_url or "https://chatgpt.com/"
+            self._log("forcing current tab to ChatGPT home before this job")
+            self._navigate_to_url(target_url, window)
+            if self._wait_for_clean_new_chat_surface(
+                window,
+                timeout_sec=max(self.config.post_new_chat_delay_sec, 6.0),
+            ):
+                return
+            raise DesktopAutomationError("Could not confirm a clean ChatGPT chat after forced navigation.")
+
         if self.config.target_url:
             self._open_new_browser_tab(self.config.target_url, window)
             if self._wait_for_clean_new_chat_surface(
@@ -887,23 +946,48 @@ class ChatGPTDesktopAgent:
         baseline_attachment_text = self._collect_attachment_surface_text(window)
         if self.config.attach_via_clipboard:
             self._log("attaching image via Windows clipboard")
-            self._paste_file_clipboard(window, image_path)
-            time.sleep(self.config.post_attach_delay_sec)
-            self._wait_for_attached_source_image(
-                window,
-                image_path,
-                baseline_attachment_signatures,
-                baseline_attachment_text,
+            last_error: Optional[DesktopAutomationError] = None
+            max_attempts = (
+                1
+                if self.config.require_new_attachment_preview
+                else 2 if self.config.force_new_chat_navigation else 1
             )
+            for attempt in range(1, max_attempts + 1):
+                self._paste_file_clipboard(window, image_path)
+                time.sleep(self.config.post_attach_delay_sec)
+                try:
+                    self._wait_for_attached_source_image(
+                        window,
+                        image_path,
+                        baseline_attachment_signatures,
+                        baseline_attachment_text,
+                    )
+                    return
+                except DesktopAutomationError as exc:
+                    last_error = exc
+                    if attempt >= max_attempts:
+                        break
+                    self._log(
+                        "source image attachment was not confirmed after clipboard paste; "
+                        "refocusing composer and retrying once"
+                    )
+                    time.sleep(1.5)
+            if last_error is not None:
+                raise last_error
             return
 
-        attach_button = self._find_button(window, ATTACH_BUTTON_PATTERNS)
+        attach_button = self._wait_for_attach_button(window)
         if attach_button is None:
             raise DesktopAutomationError(
                 "Could not find the attach/upload button in the ChatGPT desktop window."
             )
         self._ensure_foreground_window(window, "click ChatGPT attach button")
-        attach_button.click_input()
+        if not self._click_wrapper_center(
+            attach_button,
+            expected_window=window,
+            purpose="click ChatGPT attach button",
+        ):
+            attach_button.click_input()
 
         dialog = self._wait_for_dialog_or_attach_menu(window)
         self._fill_open_dialog(dialog, image_path)
@@ -915,6 +999,21 @@ class ChatGPTDesktopAgent:
             baseline_attachment_text,
         )
 
+    def _attach_images_via_clipboard(self, window: BaseWrapper, image_paths: tuple[Path, ...]) -> None:
+        baseline_attachment_signatures = self._result_signatures(
+            self._find_attachment_image_candidates(window)
+        )
+        baseline_attachment_text = self._collect_attachment_surface_text(window)
+        self._log("attaching image pair via one Windows clipboard payload")
+        self._paste_files_clipboard(window, image_paths)
+        time.sleep(max(self.config.post_attach_delay_sec, 5.0))
+        self._wait_for_attached_source_images(
+            window,
+            image_paths,
+            baseline_attachment_signatures,
+            baseline_attachment_text,
+        )
+
     def _wait_for_attached_source_image(
         self,
         window: BaseWrapper,
@@ -922,7 +1021,7 @@ class ChatGPTDesktopAgent:
         baseline_signatures: list[ImageSignature],
         baseline_surface_text: str,
     ) -> None:
-        timeout_sec = max(20.0, self.config.post_attach_delay_sec + 16.0)
+        timeout_sec = max(45.0, self.config.post_attach_delay_sec + 30.0)
         deadline = time.time() + timeout_sec
         baseline_set = set(baseline_signatures)
         baseline_digests = {
@@ -932,17 +1031,54 @@ class ChatGPTDesktopAgent:
         }
         baseline_text_cf = baseline_surface_text.casefold()
         last_log_at = 0.0
+        started_at = time.time()
+        first_seen_preview_at: dict[ImageSignature, float] = {}
+        first_seen_remove_control_at: Optional[float] = None
+        preview_stable_sec = 3.0 if self.config.require_new_attachment_preview else 0.0
+        remove_control_min_elapsed_sec = 30.0 if self.config.require_new_attachment_preview else 0.0
+        remove_control_stable_sec = 12.0 if self.config.require_new_attachment_preview else 0.0
 
         while time.time() < deadline:
+            now = time.time()
             attachment_text = self._collect_attachment_surface_text(window)
-            evidence = self._attachment_text_evidence(
-                image_path=image_path,
-                current_text=attachment_text,
-                baseline_text_cf=baseline_text_cf,
+            evidence = (
+                self._attachment_file_name_evidence(
+                    image_path=image_path,
+                    current_text=attachment_text,
+                    baseline_text_cf=baseline_text_cf,
+                )
+                if self.config.require_new_attachment_preview
+                else self._attachment_text_evidence(
+                    image_path=image_path,
+                    current_text=attachment_text,
+                    baseline_text_cf=baseline_text_cf,
+                )
             )
             if evidence is not None:
                 self._log(f"confirmed source image attachment by visible UI text: {evidence!r}")
+                if self.config.require_new_attachment_preview:
+                    self._log("waiting for source image upload to settle before prompt paste")
+                    time.sleep(10.0)
                 return
+
+            if self.config.require_new_attachment_preview:
+                remove_control_delta = (
+                    self._attachment_remove_control_count(window)
+                    - self._attachment_remove_control_count_from_text(baseline_surface_text)
+                )
+                if remove_control_delta > 0:
+                    if first_seen_remove_control_at is None:
+                        first_seen_remove_control_at = now
+                    if (
+                        now - started_at >= remove_control_min_elapsed_sec
+                        and now - first_seen_remove_control_at >= remove_control_stable_sec
+                    ):
+                        self._log(
+                            "confirmed source image attachment by stable remove control after wait: "
+                            f"{remove_control_delta}"
+                        )
+                        time.sleep(6.0)
+                        return
 
             candidates = self._find_attachment_image_candidates(window)
             new_candidates: list[BaseWrapper] = []
@@ -956,13 +1092,24 @@ class ChatGPTDesktopAgent:
                     continue
                 new_candidates.append(candidate)
             if new_candidates:
+                signature = self._result_signature(new_candidates[-1])
+                if signature is not None:
+                    first_seen_at = first_seen_preview_at.setdefault(signature, now)
+                    if now - first_seen_at < preview_stable_sec:
+                        if self.config.verbose and now - last_log_at >= 3.0:
+                            self._log(
+                                "source image preview appeared; waiting for it to stabilize "
+                                "before prompt paste"
+                            )
+                            last_log_at = now
+                        time.sleep(0.5)
+                        continue
                 self._log(
                     "confirmed source image attachment by new visible preview candidate: "
                     f"{self._wrapper_rect_text(new_candidates[-1])}"
                 )
                 return
 
-            now = time.time()
             if self.config.verbose and now - last_log_at >= 5.0:
                 self._log(
                     "waiting for ChatGPT to expose the attached source image before prompt paste"
@@ -974,6 +1121,88 @@ class ChatGPTDesktopAgent:
             "The source image paste/open action completed, but ChatGPT never exposed a confirmed "
             "attachment preview. Stopping before prompt paste so the request cannot run without "
             f"the source image: {image_path.name}."
+        )
+
+    def _wait_for_attached_source_images(
+        self,
+        window: BaseWrapper,
+        image_paths: tuple[Path, ...],
+        baseline_signatures: list[ImageSignature],
+        baseline_surface_text: str,
+    ) -> None:
+        timeout_sec = max(35.0, self.config.post_attach_delay_sec + 25.0)
+        deadline = time.time() + timeout_sec
+        expected_count = len(image_paths)
+        baseline_set = set(baseline_signatures)
+        baseline_digests = {
+            digest
+            for digest in (self._result_signature_digest(signature) for signature in baseline_signatures)
+            if digest
+        }
+        baseline_text_cf = baseline_surface_text.casefold()
+        last_log_at = 0.0
+
+        while time.time() < deadline:
+            attachment_text = self._collect_attachment_surface_text(window)
+            confirmed_names = [
+                image_path.name
+                for image_path in image_paths
+                if self._attachment_file_name_evidence(
+                    image_path=image_path,
+                    current_text=attachment_text,
+                    baseline_text_cf=baseline_text_cf,
+                )
+                is not None
+            ]
+            if len(confirmed_names) >= expected_count:
+                self._log(
+                    "confirmed source image batch attachment by visible UI text: "
+                    + ", ".join(confirmed_names)
+                )
+                return
+
+            remove_control_delta = (
+                self._attachment_remove_control_count(window)
+                - self._attachment_remove_control_count_from_text(baseline_surface_text)
+            )
+            if remove_control_delta >= expected_count:
+                self._log(
+                    "confirmed source image batch attachment by remove controls: "
+                    f"{remove_control_delta} new controls"
+                )
+                return
+
+            candidates = self._find_attachment_image_candidates(window)
+            new_candidates: list[BaseWrapper] = []
+            for candidate in candidates:
+                signature = self._result_signature(candidate)
+                if signature is None or self._signature_matches_baseline(
+                    signature,
+                    baseline_set=baseline_set,
+                    baseline_digests=baseline_digests,
+                ):
+                    continue
+                new_candidates.append(candidate)
+            if len(new_candidates) >= expected_count:
+                self._log(
+                    "confirmed source image batch attachment by new visible preview candidates: "
+                    + ", ".join(self._wrapper_rect_text(candidate) for candidate in new_candidates[-expected_count:])
+                )
+                return
+
+            now = time.time()
+            if self.config.verbose and now - last_log_at >= 5.0:
+                self._log(
+                    "waiting for ChatGPT to expose both attached source images before prompt paste"
+                )
+                last_log_at = now
+            time.sleep(0.5)
+
+        names = ", ".join(image_path.name for image_path in image_paths)
+        raise DesktopAutomationError(
+            "The source image batch paste completed, but ChatGPT never exposed confirmed previews "
+            f"for all {expected_count} source images. Stopping before prompt paste so the request "
+            f"cannot run with an incomplete pair: {names}."
         )
 
     def _attachment_text_evidence(
@@ -997,6 +1226,36 @@ class ChatGPTDesktopAgent:
                 return pattern
         return None
 
+    def _attachment_file_name_evidence(
+        self,
+        *,
+        image_path: Path,
+        current_text: str,
+        baseline_text_cf: str,
+    ) -> Optional[str]:
+        current_text_cf = current_text.casefold()
+        for token in (image_path.name.casefold(), image_path.stem.casefold()):
+            if len(token) >= 3 and token in current_text_cf and token not in baseline_text_cf:
+                return token
+        return None
+
+    def _attachment_remove_control_count(self, window: BaseWrapper) -> int:
+        count = 0
+        for wrapper in self._safe_descendants(window, control_type="Button"):
+            try:
+                if not wrapper.is_visible():
+                    continue
+                search_text = self._control_search_text(wrapper).casefold()
+            except Exception:
+                continue
+            if any(pattern.casefold() in search_text for pattern in ATTACHMENT_CONFIRMATION_PATTERNS):
+                count += 1
+        return count
+
+    def _attachment_remove_control_count_from_text(self, text: str) -> int:
+        text_cf = text.casefold()
+        return sum(text_cf.count(pattern.casefold()) for pattern in ATTACHMENT_CONFIRMATION_PATTERNS)
+
     def _paste_file_clipboard(self, window: BaseWrapper, image_path: Path) -> None:
         if self._preserve_manual_composer_focus() and not self.config.click_composer_before_paste:
             self._click_manual_composer_position(window)
@@ -1007,12 +1266,26 @@ class ChatGPTDesktopAgent:
         self._log("file paste shortcut sent")
         time.sleep(2.5)
 
+    def _paste_files_clipboard(self, window: BaseWrapper, image_paths: tuple[Path, ...]) -> None:
+        if self._preserve_manual_composer_focus() and not self.config.click_composer_before_paste:
+            self._click_manual_composer_position(window)
+        elif not self._preserve_manual_composer_focus() or self.config.click_composer_before_paste:
+            self._focus_prompt_input_or_composer(window)
+        _copy_files_to_windows_clipboard(image_paths)
+        self._paste_from_clipboard(window)
+        self._log(f"{len(image_paths)}-file paste shortcut sent")
+        time.sleep(3.5)
+
     def _paste_prompt(self, window: BaseWrapper, prompt_text: str) -> None:
         self._close_unexpected_open_dialog_if_needed()
-        if not self._preserve_manual_composer_focus() or self.config.click_composer_before_paste:
+        if (
+            len(self._source_image_paths()) > 1
+            or not self._preserve_manual_composer_focus()
+            or self.config.click_composer_before_paste
+        ):
             self._focus_prompt_input_or_composer(window)
         pyperclip.copy(prompt_text)
-        if not self.config.attach_via_clipboard:
+        if not self.config.attach_via_clipboard and not self.config.require_new_attachment_preview:
             self._press_ctrl_key(window, VK_A)
             time.sleep(0.1)
             self._press_key(window, VK_BACK)
@@ -1021,13 +1294,61 @@ class ChatGPTDesktopAgent:
         self._log("prompt paste shortcut sent")
         time.sleep(self.config.post_paste_delay_sec)
 
+    def _wait_for_prompt_after_multi_image_paste(self, window: BaseWrapper, prompt_text: str) -> None:
+        deadline = time.time() + 8.0
+        while time.time() < deadline:
+            if self._composer_still_has_text(window):
+                self._log("confirmed prompt text in composer after multi-image paste")
+                return
+            if self._prompt_text_anchor_is_visible(window, prompt_text):
+                self._log("confirmed prompt text by visible UI after multi-image paste")
+                return
+            time.sleep(0.4)
+        raise DesktopAutomationError(
+            "Two source images were attached, but the prompt text was not confirmed in the composer. "
+            "Stopping before submit and before the next pair so another pair image cannot be pasted into "
+            "the same request."
+        )
+
+    def _prompt_text_anchor_is_visible(self, window: BaseWrapper, prompt_text: str) -> bool:
+        anchors = self._prompt_text_anchors(prompt_text)
+        if not anchors:
+            return False
+        try:
+            visible_text = self._collect_visible_text(window=window).casefold()
+        except Exception:
+            return False
+        return any(anchor in visible_text for anchor in anchors)
+
+    def _prompt_text_anchors(self, prompt_text: str) -> list[str]:
+        normalized = " ".join(prompt_text.casefold().split())
+        if not normalized:
+            return []
+        anchors: list[str] = []
+        for candidate in (
+            normalized[:48],
+            "construct a single",
+            "cinematic",
+            "do not respond with text",
+        ):
+            candidate = candidate.strip()
+            if len(candidate) >= 12 and candidate in normalized and candidate not in anchors:
+                anchors.append(candidate)
+        return anchors
+
     def _focus_prompt_input_or_composer(self, window: BaseWrapper) -> bool:
-        input_box = self._find_prompt_input(window)
+        input_box = self._wait_for_prompt_input(window, timeout_sec=8.0)
         if input_box is not None:
             try:
                 self._ensure_foreground_window(window, "click detected ChatGPT prompt input")
                 input_box.click_input()
                 rect = input_box.rectangle()
+                if rect.width() <= 0 or rect.height() <= 0:
+                    self._log(
+                        "detected prompt input became invalid after click; "
+                        f"x={rect.left}, y={rect.top}, w={rect.width()}, h={rect.height()}"
+                    )
+                    return self._click_composer_area(window)
                 self._log(
                     "clicked detected prompt input: "
                     f"x={rect.left}, y={rect.top}, w={rect.width()}, h={rect.height()}"
@@ -1036,7 +1357,28 @@ class ChatGPTDesktopAgent:
                 return True
             except Exception as exc:
                 self._log(f"could not click detected prompt input: {exc}")
+        else:
+            self._log("detected prompt input was not ready; using expected composer area")
         return self._click_composer_area(window)
+
+    def _wait_for_prompt_input(self, window: BaseWrapper, *, timeout_sec: float) -> Optional[BaseWrapper]:
+        deadline = time.time() + max(0.1, timeout_sec)
+        while time.time() < deadline:
+            input_box = self._find_prompt_input(window)
+            if input_box is not None:
+                try:
+                    rect = input_box.rectangle()
+                    if (
+                        input_box.is_visible()
+                        and input_box.is_enabled()
+                        and rect.width() > 0
+                        and rect.height() > 0
+                    ):
+                        return input_box
+                except Exception:
+                    pass
+            time.sleep(0.35)
+        return None
 
     def _paste_from_clipboard(self, window: BaseWrapper) -> None:
         self._press_ctrl_key(window, VK_V)
@@ -1283,7 +1625,7 @@ class ChatGPTDesktopAgent:
 
     def _has_generation_running_indicator(self, window: BaseWrapper) -> bool:
         patterns = [pattern.casefold() for pattern in GENERATION_RUNNING_PATTERNS]
-        for wrapper in window.descendants(control_type="Button"):
+        for wrapper in self._safe_descendants(window, control_type="Button"):
             try:
                 if not wrapper.is_visible() or not wrapper.is_enabled():
                     continue
@@ -1322,7 +1664,7 @@ class ChatGPTDesktopAgent:
             return None
 
         candidates: list[tuple[float, BaseWrapper]] = []
-        for wrapper in window.descendants(control_type="Button"):
+        for wrapper in self._safe_descendants(window, control_type="Button"):
             try:
                 if not wrapper.is_visible() or not wrapper.is_enabled():
                     continue
@@ -1611,8 +1953,8 @@ class ChatGPTDesktopAgent:
             return last_text
         raise DesktopAutomationError("Could not capture a text response from the ChatGPT desktop window.")
 
-    def _wait_for_dialog(self) -> BaseWrapper:
-        deadline = time.time() + self.config.dialog_timeout_sec
+    def _wait_for_dialog(self, timeout_sec: Optional[float] = None) -> BaseWrapper:
+        deadline = time.time() + (self.config.dialog_timeout_sec if timeout_sec is None else timeout_sec)
         last_error: Optional[Exception] = None
         while time.time() < deadline:
             try:
@@ -1626,17 +1968,76 @@ class ChatGPTDesktopAgent:
     def _find_open_dialog(self) -> BaseWrapper:
         desktop = Desktop(backend="uia")
         dialogs = []
+        foreground = self._foreground_window()
+        if foreground is not None and self._is_open_dialog_candidate(foreground, prefer_foreground=True):
+            try:
+                title = foreground.window_text()
+            except Exception:
+                title = ""
+            self._log(f"accepted foreground open dialog: {title!r}")
+            return foreground
+
         for dialog in desktop.windows(title_re=OPEN_DIALOG_TITLE_RE, visible_only=True):
             try:
                 title = dialog.window_text()
-                dialog.wait("visible ready", timeout=0.5)
-                dialogs.append((title, dialog))
+                if self._is_open_dialog_candidate(dialog, prefer_foreground=False):
+                    dialog.wait("visible ready", timeout=0.5)
+                    dialogs.append((title, dialog))
             except Exception:
                 continue
+        if not dialogs:
+            for dialog in desktop.windows(visible_only=True):
+                try:
+                    if not self._is_open_dialog_candidate(dialog, prefer_foreground=False):
+                        continue
+                    title = dialog.window_text()
+                    self._log(f"accepted open dialog candidate by controls: {title!r}")
+                    dialogs.append((title, dialog))
+                except Exception:
+                    continue
+        if not dialogs and self.config.verbose:
+            titles = []
+            for window in desktop.windows(visible_only=True):
+                try:
+                    titles.append(window.window_text())
+                except Exception:
+                    continue
+            self._log(f"visible top-level windows while waiting for open dialog: {titles[:20]}")
         if not dialogs:
             raise DesktopAutomationError("Open-file dialog did not appear.")
         self._log(f"open dialogs: {[title for title, _ in dialogs]}")
         return dialogs[-1][1]
+
+    def _is_open_dialog_candidate(self, dialog: BaseWrapper, *, prefer_foreground: bool) -> bool:
+        try:
+            title = dialog.window_text().strip()
+        except Exception:
+            title = ""
+        title_cf = title.casefold()
+        if any(part in title_cf for part in SAVE_DIALOG_EXCLUDED_TITLE_PARTS):
+            return False
+        if "save" in title_cf or "сохран" in title_cf:
+            return False
+
+        class_name = self._window_class_name(dialog).casefold()
+        title_looks_like_dialog = bool(re.search(OPEN_DIALOG_TITLE_RE, title, re.I))
+        class_looks_like_dialog = class_name in {"#32770", "directuihwnd"} or "dialog" in class_name
+        blank_foreground = prefer_foreground and not title
+        if not (title_looks_like_dialog or class_looks_like_dialog or blank_foreground):
+            return False
+
+        edit = self._find_file_dialog_edit(dialog)
+        action_button = self._find_dialog_action_button(dialog, OPEN_DIALOG_BUTTONS)
+        if self.config.verbose:
+            self._log(
+                "open-dialog candidate check: "
+                f"title={title!r}, class={self._window_class_name(dialog)!r}, "
+                f"has_edit={edit is not None}, has_action={action_button is not None}, "
+                f"foreground={prefer_foreground}"
+            )
+        if edit is None and action_button is None:
+            return False
+        return True
 
     def _wait_for_save_dialog(self, timeout_sec: Optional[float] = None) -> BaseWrapper:
         deadline = time.time() + (self.config.dialog_timeout_sec if timeout_sec is None else timeout_sec)
@@ -1730,15 +2131,11 @@ class ChatGPTDesktopAgent:
             handle = ctypes.windll.user32.GetForegroundWindow()
             if not handle:
                 return None
-            for window in Desktop(backend="uia").windows(visible_only=True):
-                try:
-                    if window.handle == handle:
-                        return window
-                except Exception:
-                    continue
+            if Application is not None:
+                return Application(backend="uia").connect(handle=handle).window(handle=handle)
+            return Desktop(backend="uia").window(handle=handle)
         except Exception:
             return None
-        return None
 
     def _is_save_dialog_candidate(self, dialog: BaseWrapper, *, prefer_foreground: bool) -> bool:
         try:
@@ -1994,7 +2391,7 @@ class ChatGPTDesktopAgent:
 
     def _find_file_dialog_edit(self, dialog: BaseWrapper) -> Optional[BaseWrapper]:
         candidates = []
-        for wrapper in dialog.descendants(control_type="Edit"):
+        for wrapper in self._safe_descendants(dialog, control_type="Edit"):
             try:
                 if not wrapper.is_visible() or not wrapper.is_enabled():
                     continue
@@ -2016,7 +2413,7 @@ class ChatGPTDesktopAgent:
     ) -> Optional[BaseWrapper]:
         matches = []
         normalized_patterns = [pattern.casefold() for pattern in patterns]
-        for wrapper in dialog.descendants(control_type="Button"):
+        for wrapper in self._safe_descendants(dialog, control_type="Button"):
             try:
                 if not wrapper.is_visible() or not wrapper.is_enabled():
                     continue
@@ -2098,47 +2495,369 @@ class ChatGPTDesktopAgent:
     def _wait_for_dialog_or_attach_menu(self, window: BaseWrapper) -> BaseWrapper:
         deadline = time.time() + self.config.dialog_timeout_sec
         last_error: Optional[Exception] = None
+        activated_menu_items: set[str] = set()
+        attach_button_retries = 0
         while time.time() < deadline:
             try:
-                return self._wait_for_dialog()
+                return self._wait_for_dialog(timeout_sec=1.0)
             except Exception as exc:  # pragma: no cover - GUI specific
                 last_error = exc
 
-            menu_button = self._find_button(window, ATTACH_MENU_PATTERNS)
-            if menu_button is not None:
-                self._ensure_foreground_window(window, "click ChatGPT attachment menu item")
-                menu_button.click_input()
-                time.sleep(0.5)
+            if self._activate_attach_menu_item(window, activated_menu_items):
                 try:
-                    return self._wait_for_dialog()
+                    return self._wait_for_dialog(timeout_sec=3.0)
                 except Exception as exc:  # pragma: no cover - GUI specific
                     last_error = exc
+
+            menu_button = self._find_page_button(window, ATTACH_UPLOAD_MENU_PATTERNS)
+            if menu_button is not None:
+                self._ensure_foreground_window(window, "click ChatGPT attachment menu item")
+                if not self._click_wrapper_center(
+                    menu_button,
+                    expected_window=window,
+                    purpose="click ChatGPT attachment menu item",
+                ):
+                    menu_button.click_input()
+                time.sleep(0.5)
+                try:
+                    return self._wait_for_dialog(timeout_sec=3.0)
+                except Exception as exc:  # pragma: no cover - GUI specific
+                    last_error = exc
+
+            if attach_button_retries < 2:
+                attach_button = self._find_page_button(window, ATTACH_BUTTON_PATTERNS)
+                if attach_button is not None:
+                    attach_button_retries += 1
+                    self._log(f"retrying ChatGPT attach plus button: attempt {attach_button_retries}")
+                    self._ensure_foreground_window(window, "retry click ChatGPT attach plus button")
+                    if not self._click_wrapper_center(
+                        attach_button,
+                        expected_window=window,
+                        purpose="retry click ChatGPT attach plus button",
+                    ):
+                        attach_button.click_input()
+                    try:
+                        return self._wait_for_dialog(timeout_sec=3.0)
+                    except Exception as exc:  # pragma: no cover - GUI specific
+                        last_error = exc
             time.sleep(0.5)
         raise DesktopAutomationError("Open-file dialog did not appear.") from last_error
+
+    def _activate_attach_menu_item(self, window: BaseWrapper, activated_items: set[str]) -> bool:
+        desktop = Desktop(backend="uia")
+        menu_items: list[tuple[str, BaseWrapper]] = []
+        window_rect = window.rectangle()
+        anchor_x, anchor_y = self._attach_menu_anchor_point(window)
+        for popup in desktop.windows(visible_only=True):
+            try:
+                popup_title = popup.window_text().casefold()
+                popup_class = self._window_class_name(popup).casefold()
+                if self._is_non_chatgpt_attach_popup_text(popup_title) or "consolewindowclass" in popup_class:
+                    continue
+                popup_rect = popup.rectangle()
+                if not self._rects_overlap(popup_rect, window_rect, margin=20):
+                    continue
+            except Exception:
+                continue
+            for control_type in ("MenuItem", "Button", "Text"):
+                try:
+                    descendants = popup.descendants(control_type=control_type)
+                except Exception:
+                    continue
+                for item in descendants:
+                    try:
+                        if not item.is_visible():
+                            continue
+                        rect = item.rectangle()
+                        if not self._is_compact_attach_menu_item_rect(rect):
+                            continue
+                        if not self._rect_center_inside(rect, window_rect):
+                            if self.config.verbose:
+                                self._log(
+                                    "skipping attach popup item outside selected ChatGPT window: "
+                                    f"{self._wrapper_rect_text(item)}, title={self._control_label(item)!r}"
+                                )
+                            continue
+                        title = self._control_search_text(item).strip()
+                        if not title:
+                            continue
+                        if self._is_non_chatgpt_attach_popup_text(title):
+                            continue
+                        menu_items.append((title, item))
+                    except Exception:
+                        continue
+        if self.config.verbose and menu_items:
+            self._log(f"attach popup items: {[title for title, _ in menu_items][:20]}")
+        excluded = (
+            "add files and more",
+            "добавляйте файлы",
+            "bookmark",
+            "заклад",
+            "extension",
+            "расшир",
+            "chrome",
+            "powershell",
+            "command prompt",
+            "terminal",
+            "console",
+            "copyright",
+            "directory:",
+            "can't open file",
+            "python.exe",
+            "claude",
+            "api key",
+        )
+        matches: list[tuple[float, str, BaseWrapper]] = []
+        for pattern in ATTACH_UPLOAD_MENU_PATTERNS:
+            normalized = pattern.casefold()
+            for title, item in menu_items:
+                title_cf = title.casefold()
+                if normalized not in title_cf:
+                    continue
+                if any(token in title_cf for token in excluded):
+                    continue
+                try:
+                    rect = item.rectangle()
+                    if not self._is_compact_attach_menu_item_rect(rect):
+                        continue
+                    center_x = rect.left + rect.width() // 2
+                    center_y = rect.top + rect.height() // 2
+                    distance = abs(center_x - anchor_x) + abs(center_y - anchor_y)
+                    if "open file" in title_cf or "access open file" in title_cf:
+                        distance -= 1000
+                    if center_y < window_rect.top + window_rect.height() * 0.16:
+                        distance += 10000
+                    matches.append((float(distance), title, item))
+                except Exception:
+                    continue
+        matches.sort(key=lambda candidate: candidate[0])
+        if self.config.verbose and matches:
+            self._log(
+                "attach upload menu matches: "
+                f"{[(round(score, 1), self._wrapper_rect_text(item), title[:80]) for score, title, item in matches[:8]]}"
+            )
+        for score, title, item in matches:
+            try:
+                rect = item.rectangle()
+                if not self._is_compact_attach_menu_item_rect(rect):
+                    self._log(
+                        "skipping stale attach menu item with invalid geometry: "
+                        f"{self._wrapper_rect_text(item)}, title={title[:80]!r}"
+                    )
+                    continue
+                rect_key = f"{rect.left},{rect.top},{rect.right},{rect.bottom}"
+            except Exception:
+                continue
+            key = f"{' '.join(title.casefold().split())}|{rect_key}"
+            if key in activated_items:
+                continue
+            activated_items.add(key)
+            self._log(
+                f"activating attach menu item: {title[:120]!r} "
+                f"at {self._wrapper_rect_text(item)} score={score:.1f}"
+            )
+            if self._activate_attach_menu_item_by_keyboard(window, title):
+                return True
+            if self._click_exact_open_file_menu_item(window, title, item):
+                return True
+            if self._click_attach_menu_row(window, item):
+                return True
+            try:
+                self._ensure_foreground_window(window, "click ChatGPT attach menu item")
+                item.click_input()
+                time.sleep(0.5)
+                try:
+                    self._find_open_dialog()
+                    return True
+                except Exception:
+                    pass
+            except Exception as exc:
+                self._log(f"attach menu item click_input failed: {exc}")
+        return False
+
+    def _is_non_chatgpt_attach_popup_text(self, text: str) -> bool:
+        text_cf = text.casefold()
+        if "\r" in text_cf or "\n" in text_cf or len(text_cf) > 260:
+            return True
+        blocked = (
+            "windows powershell",
+            "powershell",
+            "command prompt",
+            "terminal",
+            "copyright",
+            "directory:",
+            "can't open file",
+            "python.exe",
+            "api key",
+            "claude api",
+        )
+        return any(token in text_cf for token in blocked)
+
+    def _is_compact_attach_menu_item_rect(self, rect) -> bool:
+        width = rect.width()
+        height = rect.height()
+        if width <= 0 or height <= 0:
+            return False
+        return height <= 90 and width <= 760
+
+    def _activate_attach_menu_item_by_keyboard(self, window: BaseWrapper, _title: str) -> bool:
+        title_cf = _title.casefold()
+        attempts: list[tuple[str, str]] = []
+        if "control u" in title_cf or "ctrl+u" in title_cf or "контролировать u" in title_cf:
+            attempts.append(("Ctrl+U", "^u"))
+
+        for label, keys in attempts:
+            try:
+                self._ensure_foreground_window(window, f"activate ChatGPT attach menu item with {label}")
+                self._log(f"trying attach menu keyboard activation: {label}")
+                send_keys(keys)
+                time.sleep(0.7)
+                self._find_open_dialog()
+                return True
+            except Exception as exc:
+                self._log(f"attach menu keyboard activation {label} did not open dialog: {exc}")
+        return False
+
+    def _click_exact_open_file_menu_item(self, window: BaseWrapper, title: str, item: BaseWrapper) -> bool:
+        normalized = " ".join(title.casefold().replace(".", " ").split())
+        if normalized not in {"open file", "open files", "access open file"}:
+            return False
+        try:
+            self._ensure_foreground_window(window, "click exact Open file menu item")
+            self._log("clicking exact Open file menu item via UIA click_input")
+            item.click_input()
+            time.sleep(0.7)
+            self._find_open_dialog()
+            return True
+        except Exception as exc:
+            self._log(f"exact Open file menu item click did not open dialog: {exc}")
+            return False
+
+    def _attach_menu_anchor_point(self, window: BaseWrapper) -> tuple[int, int]:
+        try:
+            button = self._find_page_button(window, ATTACH_BUTTON_PATTERNS)
+            if button is not None:
+                rect = button.rectangle()
+                return (rect.left + rect.width() // 2, rect.top + rect.height() // 2)
+        except Exception:
+            pass
+        try:
+            prompt_input = self._find_prompt_input(window)
+            if prompt_input is not None:
+                rect = prompt_input.rectangle()
+                return (rect.left, rect.top + rect.height() // 2)
+        except Exception:
+            pass
+        rect = window.rectangle()
+        return (rect.left + rect.width() // 2, rect.bottom - 120)
+
+    def _click_attach_menu_row(self, window: BaseWrapper, item: BaseWrapper) -> bool:
+        try:
+            rect = item.rectangle()
+            window_rect = window.rectangle()
+            y = rect.top + max(1, rect.height() // 2)
+            x_candidates = [
+                rect.left + max(1, rect.width() // 2),
+                rect.left + 20,
+                rect.left - 30,
+                rect.left - 80,
+                rect.left - 140,
+                rect.right + 30,
+            ]
+            for x in x_candidates:
+                if x <= 0 or y <= 0:
+                    continue
+                if not self._point_inside_rect(int(x), int(y), window_rect):
+                    self._log(
+                        "skipping attach menu row click outside selected ChatGPT window: "
+                        f"x={int(x)}, y={int(y)}, title={item.window_text()!r}"
+                    )
+                    continue
+                self._click_screen_point(
+                    int(x),
+                    int(y),
+                    expected_window=window,
+                    purpose="click ChatGPT attach menu row",
+                )
+                self._log(
+                    "clicked attach menu row candidate: "
+                    f"x={int(x)}, y={int(y)}, title={item.window_text()!r}"
+                )
+                time.sleep(0.5)
+                try:
+                    self._find_open_dialog()
+                    return True
+                except Exception:
+                    pass
+            return False
+        except Exception as exc:
+            self._log(f"attach menu row click failed: {exc}")
+            return False
 
     def _fill_open_dialog(self, dialog: BaseWrapper, image_path: Path) -> None:
         edit = self._find_descendant(dialog, control_type="Edit")
         if edit is None:
-            raise DesktopAutomationError("Could not find the filename field in the open-file dialog.")
-        self._click_wrapper_center(edit, expected_window=dialog, purpose="click open filename field")
-        self._press_ctrl_key(dialog, VK_A)
-        time.sleep(0.1)
-        self._press_key(dialog, VK_BACK)
-        pyperclip.copy(str(image_path))
-        self._paste_from_clipboard(dialog)
-        time.sleep(0.2)
-
-        open_button = self._find_button(dialog, OPEN_DIALOG_BUTTONS)
-        if open_button is not None:
-            self._click_wrapper_center(open_button, expected_window=dialog, purpose="click Open dialog button")
+            self._log("open filename field was not visible to UIA; trying blind open dialog fill")
+            self._blind_fill_open_dialog(dialog, image_path)
             return
-        self._press_enter(dialog)
+        try:
+            self._click_wrapper_center(edit, expected_window=dialog, purpose="click open filename field")
+            self._press_ctrl_key(dialog, VK_A)
+            time.sleep(0.1)
+            self._press_key(dialog, VK_BACK)
+            pyperclip.copy(str(image_path))
+            self._paste_from_clipboard(dialog)
+            time.sleep(0.2)
+
+            open_button = self._find_button(dialog, OPEN_DIALOG_BUTTONS)
+            if open_button is not None:
+                self._click_wrapper_center(dialog, expected_window=dialog, purpose="focus open dialog")
+                self._click_wrapper_center(open_button, expected_window=dialog, purpose="click Open dialog button")
+            else:
+                self._press_enter(dialog)
+            if self._wait_for_wrapper_to_close(dialog, timeout_sec=3.0):
+                return
+            self._log("open dialog stayed visible after normal fill; trying blind open dialog fill")
+        except Exception as exc:
+            self._log(f"normal open dialog fill failed: {exc}; trying blind open dialog fill")
+        self._blind_fill_open_dialog(dialog, image_path)
+
+    def _blind_fill_open_dialog(self, dialog: BaseWrapper, image_path: Path) -> None:
+        self._ensure_foreground_window(dialog, "blind fill open dialog")
+        pyperclip.copy(str(image_path))
+        attempts = [
+            ("Alt+N paste Enter", lambda: (self._press_alt_key(dialog, VK_N), time.sleep(0.2), self._paste_from_clipboard(dialog), self._press_enter(dialog))),
+            ("Ctrl+L paste Enter", lambda: (send_keys("^l"), time.sleep(0.2), self._paste_from_clipboard(dialog), self._press_enter(dialog))),
+            ("filename paste Enter", lambda: (self._paste_from_clipboard(dialog), self._press_enter(dialog))),
+            ("Alt+O", lambda: self._press_alt_key(dialog, VK_O)),
+            ("Enter retry", lambda: self._press_enter(dialog)),
+        ]
+        for name, action in attempts:
+            self._log(f"open dialog blind submit via {name}")
+            try:
+                self._ensure_foreground_window(dialog, f"open dialog {name}")
+                action()
+                time.sleep(1.0)
+                if self._wait_for_wrapper_to_close(dialog, timeout_sec=2.0):
+                    self._log(f"open dialog closed after {name}")
+                    return
+            except Exception as exc:
+                self._log(f"open dialog blind attempt failed via {name}: {exc}")
+        raise DesktopAutomationError("Open-file dialog stayed open after all file path submit attempts.")
+
+    def _safe_descendants(self, window: BaseWrapper, *, control_type: Optional[str] = None) -> list[BaseWrapper]:
+        try:
+            return list(window.descendants(control_type=control_type))
+        except Exception as exc:
+            label = control_type or "any"
+            self._log(f"could not enumerate UIA descendants ({label}); ignoring unstable Chrome element: {exc}")
+            return []
 
     def _find_prompt_input(self, window: BaseWrapper) -> Optional[BaseWrapper]:
         candidates = []
         window_rect = window.rectangle()
         for control_type in ("Edit", "Document"):
-            for wrapper in window.descendants(control_type=control_type):
+            for wrapper in self._safe_descendants(window, control_type=control_type):
                 try:
                     rect = wrapper.rectangle()
                     if rect.width() <= 0 or rect.height() <= 0:
@@ -2178,7 +2897,7 @@ class ChatGPTDesktopAgent:
         lines: list[str] = []
         seen: set[str] = set()
         for control_type in ("Text", "Document", "Edit"):
-            for wrapper in window.descendants(control_type=control_type):
+            for wrapper in self._safe_descendants(window, control_type=control_type):
                 try:
                     if not wrapper.is_visible():
                         continue
@@ -2197,7 +2916,7 @@ class ChatGPTDesktopAgent:
         lines = [self._collect_visible_text(window)]
         seen = {line for line in lines if line}
         for control_type in ("Button", "Image"):
-            for wrapper in window.descendants(control_type=control_type):
+            for wrapper in self._safe_descendants(window, control_type=control_type):
                 try:
                     if not wrapper.is_visible():
                         continue
@@ -2223,7 +2942,7 @@ class ChatGPTDesktopAgent:
     def _find_result_images(self, window: BaseWrapper) -> list[BaseWrapper]:
         candidates = []
         window_rect = window.rectangle()
-        for wrapper in window.descendants(control_type="Image"):
+        for wrapper in self._safe_descendants(window, control_type="Image"):
             try:
                 rect = wrapper.rectangle()
                 if rect.width() < 128 or rect.height() < 128:
@@ -2241,7 +2960,7 @@ class ChatGPTDesktopAgent:
     def _find_attachment_image_candidates(self, window: BaseWrapper) -> list[BaseWrapper]:
         candidates = []
         window_rect = window.rectangle()
-        for wrapper in window.descendants(control_type="Image"):
+        for wrapper in self._safe_descendants(window, control_type="Image"):
             try:
                 rect = wrapper.rectangle()
                 if rect.width() < 24 or rect.height() < 24:
@@ -2276,6 +2995,17 @@ class ChatGPTDesktopAgent:
         return (
             container_rect.left <= center_x <= container_rect.right
             and container_rect.top <= center_y <= container_rect.bottom
+        )
+
+    def _point_inside_rect(self, x: int, y: int, rect) -> bool:
+        return rect.left <= x <= rect.right and rect.top <= y <= rect.bottom
+
+    def _rects_overlap(self, first, second, *, margin: int = 0) -> bool:
+        return not (
+            first.right < second.left - margin
+            or first.left > second.right + margin
+            or first.bottom < second.top - margin
+            or first.top > second.bottom + margin
         )
 
     def _wrapper_rect_text(self, wrapper: BaseWrapper) -> str:
@@ -2323,7 +3053,7 @@ class ChatGPTDesktopAgent:
 
     def _find_button(self, window: BaseWrapper, patterns: Iterable[str]) -> Optional[BaseWrapper]:
         buttons = []
-        for wrapper in window.descendants(control_type="Button"):
+        for wrapper in self._safe_descendants(window, control_type="Button"):
             try:
                 if not wrapper.is_visible() or not wrapper.is_enabled():
                     continue
@@ -2344,10 +3074,95 @@ class ChatGPTDesktopAgent:
                     return wrapper
         return None
 
+    def _wait_for_attach_button(self, window: BaseWrapper) -> Optional[BaseWrapper]:
+        deadline = time.time() + 20.0
+        while time.time() < deadline:
+            button = self._find_page_button(window, ATTACH_BUTTON_PATTERNS)
+            if button is not None:
+                return button
+            time.sleep(0.5)
+        return None
+
+    def _find_page_button(self, window: BaseWrapper, patterns: Iterable[str]) -> Optional[BaseWrapper]:
+        window_rect = window.rectangle()
+        prompt_input = self._find_prompt_input(window)
+        prompt_rect = None
+        try:
+            prompt_rect = prompt_input.rectangle() if prompt_input is not None else None
+        except Exception:
+            prompt_rect = None
+        excluded = (
+            "bookmark",
+            "bookmarks",
+            "extension",
+            "extensions",
+            "chrome",
+            "google keep",
+            "account",
+            "profile",
+            "plan",
+            "sergey",
+            "freidman",
+            "tab",
+            "tabs",
+            "page",
+            "аккаунт",
+            "профил",
+            "изображение профиля",
+            "план",
+            "заклад",
+            "расшир",
+            "страниц",
+            "вклад",
+            "групп",
+            "keep",
+        )
+        normalized_patterns = [pattern.casefold() for pattern in patterns]
+        candidates: list[tuple[float, BaseWrapper]] = []
+        for wrapper in self._safe_descendants(window, control_type="Button"):
+            try:
+                if not wrapper.is_visible() or not wrapper.is_enabled():
+                    continue
+                rect = wrapper.rectangle()
+                if rect.width() <= 0 or rect.height() <= 0:
+                    continue
+                if rect.top < window_rect.top + window_rect.height() * 0.16:
+                    continue
+                if not self._rect_center_inside(rect, window_rect):
+                    continue
+                searchable = self._control_search_text(wrapper).casefold()
+                if any(token in searchable for token in excluded):
+                    continue
+                if not any(pattern in searchable for pattern in normalized_patterns):
+                    continue
+                score = rect.bottom / 100.0
+                if prompt_rect is not None:
+                    horizontal_near = (
+                        prompt_rect.left - 180 <= rect.left <= prompt_rect.right + 180
+                        or prompt_rect.left - 180 <= rect.right <= prompt_rect.right + 180
+                    )
+                    vertical_gap = min(abs(rect.bottom - prompt_rect.top), abs(rect.top - prompt_rect.bottom))
+                    if horizontal_near and vertical_gap <= 220:
+                        score += 1000.0
+                    else:
+                        score -= 500.0
+                candidates.append((score, wrapper))
+            except Exception:
+                continue
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: item[0])
+        if self.config.verbose:
+            self._log(
+                "page attach/menu candidates: "
+                f"{[(round(score, 1), self._wrapper_rect_text(wrapper), self._control_label(wrapper)) for score, wrapper in candidates[-5:]]}"
+            )
+        return candidates[-1][1]
+
     def _find_tab(self, window: BaseWrapper, title_re: str) -> Optional[BaseWrapper]:
         pattern = re.compile(title_re)
         candidates = []
-        for wrapper in window.descendants(control_type="TabItem"):
+        for wrapper in self._safe_descendants(window, control_type="TabItem"):
             try:
                 title = wrapper.window_text().strip()
                 if not title:
@@ -2365,7 +3180,7 @@ class ChatGPTDesktopAgent:
 
     def _visible_tab_titles(self, window: BaseWrapper) -> list[str]:
         candidates: list[tuple[int, str]] = []
-        for wrapper in window.descendants(control_type="TabItem"):
+        for wrapper in self._safe_descendants(window, control_type="TabItem"):
             try:
                 if not wrapper.is_visible() or not wrapper.is_enabled():
                     continue
@@ -2382,7 +3197,7 @@ class ChatGPTDesktopAgent:
         return len(self._visible_tab_titles(window)) == 1
 
     def _find_descendant(self, window: BaseWrapper, *, control_type: str) -> Optional[BaseWrapper]:
-        for wrapper in window.descendants(control_type=control_type):
+        for wrapper in self._safe_descendants(window, control_type=control_type):
             try:
                 if wrapper.is_visible() and wrapper.is_enabled():
                     return wrapper

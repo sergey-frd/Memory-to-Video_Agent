@@ -7,6 +7,7 @@ import re
 import time
 import unicodedata
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -21,6 +22,8 @@ from utils.image_analysis import analyze_image
 SUPPORTED_INPUT_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 DEFAULT_CONFIG_NAME = "chatgpt_portrait_config.json"
 DEFAULT_OUTPUT_SUBDIR = "chatgpt_portraits"
+DEFAULT_PAIR_INPUT_SUBDIR = "input_pair"
+DEFAULT_PAIR_OUTPUT_SUBDIR = "pair"
 CHATGPT_TARGET_URL = "https://chatgpt.com/"
 DEFAULT_CHATGPT_TAB_TITLE_RE = ".*ChatGPT.*"
 DEFAULT_PROMPT_TEMPLATE = "\n".join(
@@ -72,6 +75,25 @@ class PortraitJob:
     prompt_text: str
     output_path: Path
     response_text_path: Optional[Path]
+    image_paths: tuple[Path, ...] = ()
+    source_label: Optional[str] = None
+    input_image_paths: tuple[Path, ...] = ()
+
+    @property
+    def source_image_paths(self) -> tuple[Path, ...]:
+        return self.image_paths or (self.image_path,)
+
+    @property
+    def original_input_image_paths(self) -> tuple[Path, ...]:
+        return self.input_image_paths or self.source_image_paths
+
+    @property
+    def display_name(self) -> str:
+        return self.source_label or self.image_path.name
+
+    @property
+    def is_multi_source(self) -> bool:
+        return len(self.source_image_paths) > 1
 
 
 PortraitRunner = Callable[[ChatGPTWebConfig], Optional[Path]]
@@ -82,6 +104,12 @@ def parse_args() -> argparse.Namespace:
         description="Generate styled portraits for all images from input/."
     )
     parser.add_argument("--input-dir", type=Path, default=None, help="Directory with source images. Defaults to input/.")
+    parser.add_argument(
+        "--input-pair-dir",
+        type=Path,
+        default=None,
+        help=f"Directory with pair subfolders. Pair launchers use {DEFAULT_PAIR_INPUT_SUBDIR}/ by default.",
+    )
     parser.add_argument("--output-dir", type=Path, default=None, help="Directory for generated portraits.")
     parser.add_argument(
         "--config-file",
@@ -197,6 +225,7 @@ def load_portrait_config(path: Path) -> PortraitBatchConfig:
 
     allowed = {
         "portrait_styles",
+        "pair_styles",
         "styles",
         "prompt_template",
         "output_dir",
@@ -207,10 +236,11 @@ def load_portrait_config(path: Path) -> PortraitBatchConfig:
     unknown = sorted(set(data) - allowed)
     if unknown:
         raise PortraitConfigError(f"Unknown portrait config key(s): {', '.join(unknown)}")
-    if "portrait_styles" in data and "styles" in data:
-        raise PortraitConfigError("Use either 'portrait_styles' or 'styles', not both.")
+    style_keys = [key for key in ("portrait_styles", "pair_styles", "styles") if key in data]
+    if len(style_keys) > 1:
+        raise PortraitConfigError("Use only one of 'portrait_styles', 'pair_styles', or 'styles'.")
 
-    styles_payload = data.get("portrait_styles", data.get("styles"))
+    styles_payload = data.get("portrait_styles", data.get("pair_styles", data.get("styles")))
     styles = _parse_styles(styles_payload)
     prompt_template = _non_empty_string(data.get("prompt_template", DEFAULT_PROMPT_TEMPLATE), "prompt_template")
     output_dir = _optional_path(data.get("output_dir"), "output_dir")
@@ -321,9 +351,143 @@ def build_portrait_jobs(
     return jobs
 
 
+def list_input_image_pairs(input_pair_dir: Path) -> list[tuple[str, tuple[Path, Path]]]:
+    if not input_pair_dir.exists():
+        raise FileNotFoundError(f"Pair input directory was not found: {input_pair_dir}")
+    if not input_pair_dir.is_dir():
+        raise NotADirectoryError(f"Pair input path is not a directory: {input_pair_dir}")
+
+    pairs: list[tuple[str, tuple[Path, Path]]] = []
+    skipped: list[str] = []
+    for pair_dir in sorted(path for path in input_pair_dir.iterdir() if path.is_dir()):
+        images = sorted(
+            path
+            for path in pair_dir.iterdir()
+            if path.is_file() and path.suffix.lower() in SUPPORTED_INPUT_SUFFIXES
+        )
+        if len(images) < 2:
+            skipped.append(f"{pair_dir.name} ({len(images)} image(s))")
+            continue
+        if len(images) > 2:
+            print(
+                f"Pair input folder {pair_dir} contains {len(images)} images; using the first two sorted files.",
+                flush=True,
+            )
+        pairs.append((pair_dir.name, (images[0], images[1])))
+    if skipped:
+        print(f"Skipped pair folders without two images: {', '.join(skipped)}", flush=True)
+    return pairs
+
+
+def build_pair_jobs(
+    pairs: list[tuple[str, tuple[Path, Path]]],
+    pair_config: PortraitBatchConfig,
+    output_dir: Path,
+    response_text_dir: Optional[Path] = None,
+    run_timestamp: Optional[str] = None,
+    reference_image_paths: Optional[dict[str, Path]] = None,
+) -> list[PortraitJob]:
+    style_slugs = _style_slugs(pair_config.styles)
+    timestamp = run_timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
+    include_style_slug = len(style_slugs) > 1
+    jobs: list[PortraitJob] = []
+    for pair_name, image_paths in pairs:
+        attached_image_paths: tuple[Path, ...] = (
+            (reference_image_paths[pair_name],)
+            if reference_image_paths is not None and pair_name in reference_image_paths
+            else image_paths
+        )
+        for style, style_slug in zip(pair_config.styles, style_slugs):
+            prompt_text = _render_pair_prompt(
+                style.prompt or pair_config.prompt_template,
+                style=style.name,
+                pair_name=pair_name,
+                image_paths=image_paths,
+            )
+            pair_slug = _slugify(pair_name) or pair_name
+            style_part = f"_{style_slug}" if include_style_slug else ""
+            output_path = output_dir / f"{pair_slug}_art_pair{style_part}_{timestamp}.png"
+            response_path = None
+            if response_text_dir is not None:
+                response_path = response_text_dir / f"{output_path.stem}_response.txt"
+            jobs.append(
+                PortraitJob(
+                    image_path=attached_image_paths[0],
+                    image_paths=attached_image_paths,
+                    input_image_paths=image_paths,
+                    source_label=pair_name,
+                    style=style,
+                    prompt_text=prompt_text,
+                    output_path=output_path,
+                    response_text_path=response_path,
+                )
+            )
+    return jobs
+
+
+def create_pair_reference_images(
+    pairs: list[tuple[str, tuple[Path, Path]]],
+    reference_dir: Path,
+    run_timestamp: str,
+) -> dict[str, Path]:
+    reference_dir.mkdir(parents=True, exist_ok=True)
+    references: dict[str, Path] = {}
+    for pair_name, image_paths in pairs:
+        pair_slug = _slugify(pair_name) or pair_name
+        reference_path = reference_dir / f"{pair_slug}_pair_reference_{run_timestamp}.jpg"
+        _create_pair_reference_image(image_paths, reference_path)
+        references[pair_name] = reference_path
+    return references
+
+
+def _create_pair_reference_image(image_paths: tuple[Path, Path], output_path: Path) -> Path:
+    slot_width = 900
+    slot_height = 1200
+    gutter = 80
+    canvas = Image.new("RGB", (slot_width * 2 + gutter, slot_height), (255, 255, 255))
+    for index, image_path in enumerate(image_paths):
+        panel = _pair_reference_panel(image_path, slot_width, slot_height)
+        x = index * (slot_width + gutter)
+        canvas.paste(panel, (x, 0))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    canvas.save(output_path, format="JPEG", quality=95, subsampling=0)
+    return output_path
+
+
+def _pair_reference_panel(image_path: Path, slot_width: int, slot_height: int) -> Image.Image:
+    with Image.open(image_path) as source:
+        image = ImageOps.exif_transpose(source).convert("RGB")
+    image.thumbnail((slot_width, slot_height), Image.Resampling.LANCZOS)
+    panel = Image.new("RGB", (slot_width, slot_height), (248, 248, 248))
+    x = (slot_width - image.width) // 2
+    y = (slot_height - image.height) // 2
+    panel.paste(image, (x, y))
+    return panel
+
+
 def _render_prompt(template: str, *, style: str, image_path: Path) -> str:
     try:
         return template.format(style=style, image_name=image_path.name, image_stem=image_path.stem)
+    except KeyError as exc:
+        raise PortraitConfigError(f"Unknown prompt template placeholder: {exc}") from exc
+
+
+def _render_pair_prompt(
+    template: str,
+    *,
+    style: str,
+    pair_name: str,
+    image_paths: tuple[Path, Path],
+) -> str:
+    try:
+        return template.format(
+            style=style,
+            pair_name=pair_name,
+            image_1_name=image_paths[0].name,
+            image_1_stem=image_paths[0].stem,
+            image_2_name=image_paths[1].name,
+            image_2_stem=image_paths[1].stem,
+        )
     except KeyError as exc:
         raise PortraitConfigError(f"Unknown prompt template placeholder: {exc}") from exc
 
@@ -422,10 +586,47 @@ def _sync_final_portrait_output(
     settings: Settings,
     delivery_config: GenerationConfig | None,
     output_path: Path,
-) -> None:
+) -> Optional[Path]:
     if delivery_config is None:
-        return
-    sync_final_output_file(settings, delivery_config, output_path)
+        return None
+    delivered_path = sync_final_output_file(settings, delivery_config, output_path)
+    if not output_path.exists():
+        raise FileNotFoundError(f"Generated output is missing and cannot be delivered: {output_path}")
+    if delivered_path == output_path:
+        return delivered_path
+    if not delivered_path.exists():
+        raise FileNotFoundError(f"Delivery target was not created: {delivered_path}")
+    source_size = output_path.stat().st_size
+    delivered_size = delivered_path.stat().st_size
+    if delivered_size != source_size:
+        raise OSError(
+            "Delivery target size mismatch: "
+            f"{delivered_path} has {delivered_size} bytes, expected {source_size} bytes."
+        )
+    return delivered_path
+
+
+def _existing_output_for_skip(job: PortraitJob) -> Optional[Path]:
+    if job.output_path.exists():
+        return job.output_path
+    if job.source_label is None:
+        return None
+    pair_slug = _slugify(job.source_label) or job.source_label
+    candidates = sorted(job.output_path.parent.glob(f"{pair_slug}_art_pair*.png"))
+    if not candidates:
+        return None
+    try:
+        source_mtime = max(path.stat().st_mtime for path in job.original_input_image_paths if path.exists())
+    except ValueError:
+        source_mtime = 0.0
+    valid_candidates = [
+        path
+        for path in candidates
+        if path.is_file() and path.stat().st_mtime >= source_mtime
+    ]
+    if not valid_candidates:
+        return None
+    return max(valid_candidates, key=lambda path: path.stat().st_mtime)
 
 
 def run_batch(
@@ -440,6 +641,12 @@ def run_batch(
     portrait_config = load_portrait_config(config_path)
     delivery_config = _load_delivery_config(args, settings)
     backend = getattr(args, "backend", "web")
+    input_pair_dir = getattr(args, "input_pair_dir", None)
+    pair_mode = input_pair_dir is not None
+    if pair_mode and backend not in {"desktop", "gemini-desktop", "gemini"}:
+        raise PortraitConfigError(
+            "Pair generation currently requires a desktop backend because two source images must be attached."
+        )
     input_dir = args.input_dir or settings.input_dir
     cli_output_dir = _resolve_under_project(args.output_dir, settings)
     output_dir = cli_output_dir
@@ -448,7 +655,7 @@ def run_batch(
         if output_dir is not None:
             output_dir = _output_dir_for_backend(output_dir, backend, settings)
     if output_dir is None:
-        output_dir = settings.output_dir / DEFAULT_OUTPUT_SUBDIR
+        output_dir = settings.output_dir / (DEFAULT_PAIR_OUTPUT_SUBDIR if pair_mode else DEFAULT_OUTPUT_SUBDIR)
         output_dir = _output_dir_for_backend(output_dir, backend, settings)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -463,10 +670,30 @@ def run_batch(
             response_text_dir = _output_dir_for_backend(response_text_dir, backend, settings)
         response_text_dir.mkdir(parents=True, exist_ok=True)
 
-    images = list_input_images(input_dir)
-    if not images:
-        raise FileNotFoundError(f"No source images found in: {input_dir}")
-    jobs = build_portrait_jobs(images, portrait_config, output_dir, response_text_dir)
+    if pair_mode:
+        resolved_pair_dir = _resolve_under_project(input_pair_dir, settings) or (settings.project_root / DEFAULT_PAIR_INPUT_SUBDIR)
+        pairs = list_input_image_pairs(resolved_pair_dir)
+        if not pairs:
+            raise FileNotFoundError(f"No pair folders with two source images found in: {resolved_pair_dir}")
+        run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        reference_image_paths = create_pair_reference_images(
+            pairs,
+            output_dir / "_pair_references",
+            run_timestamp,
+        )
+        jobs = build_pair_jobs(
+            pairs,
+            portrait_config,
+            output_dir,
+            response_text_dir,
+            run_timestamp=run_timestamp,
+            reference_image_paths=reference_image_paths,
+        )
+    else:
+        images = list_input_images(input_dir)
+        if not images:
+            raise FileNotFoundError(f"No source images found in: {input_dir}")
+        jobs = build_portrait_jobs(images, portrait_config, output_dir, response_text_dir)
     if backend in {"desktop", "gemini-desktop", "gemini"}:
         return _run_desktop_jobs(args, jobs, portrait_config, settings, delivery_config)
     if _is_grok_backend(backend):
@@ -550,10 +777,13 @@ def _run_desktop_jobs(
 
     outputs: list[Path] = []
     for job in jobs:
-        if args.skip_existing and job.output_path.exists():
-            _sync_final_portrait_output(settings, delivery_config, job.output_path)
-            print(f"Skipped existing portrait: {job.output_path}")
-            outputs.append(job.output_path)
+        existing_output_path = _existing_output_for_skip(job) if args.skip_existing else None
+        if existing_output_path is not None:
+            delivered_path = _sync_final_portrait_output(settings, delivery_config, existing_output_path)
+            print(f"Skipped existing portrait: {existing_output_path}")
+            if delivered_path is not None and delivered_path != job.output_path:
+                print(f"Delivered existing copy: {delivered_path}", flush=True)
+            outputs.append(existing_output_path)
             continue
         reactivate_delay = float(getattr(args, "desktop_reactivate_delay", 0.0) or 0.0)
         manual_composer_position: tuple[int, int] | None = None
@@ -568,7 +798,7 @@ def _run_desktop_jobs(
             manual_composer_position = _cursor_position()
             print(f"Captured {service_name} message-box point: {manual_composer_position}", flush=True)
         print(
-            f"Using existing {service_name} window: {job.image_path.name} / {job.style.name}",
+            f"Using existing {service_name} window: {job.display_name} / {job.style.name}",
             flush=True,
         )
 
@@ -592,6 +822,7 @@ def _run_desktop_jobs(
 
         config = DesktopAgentConfig(
             image_path=job.image_path,
+            image_paths=job.source_image_paths,
             prompt_text=job.prompt_text,
             output_path=job.output_path,
             response_text_path=job.response_text_path,
@@ -607,9 +838,11 @@ def _run_desktop_jobs(
             min_result_wait_sec=getattr(args, "desktop_min_result_wait", 90.0),
             result_stable_sec=getattr(args, "desktop_result_stable_wait", 8.0),
             open_new_chat_before_run=open_new_chat_before_run,
+            force_new_chat_navigation=job.source_label is not None,
             use_active_window=getattr(args, "desktop_active_window", False),
             prefer_single_tab_window=getattr(args, "desktop_prefer_single_tab_window", False),
             require_single_tab_window=getattr(args, "desktop_require_single_tab_window", False),
+            require_new_attachment_preview=job.source_label is not None,
             attach_via_clipboard=getattr(args, "desktop_clipboard_attach", False),
             skip_capture_result=not getattr(args, "desktop_capture_result", False),
             save_result_via_context_menu=getattr(args, "desktop_save_context_menu", False),
@@ -623,7 +856,25 @@ def _run_desktop_jobs(
         try:
             agent_cls(config).run()
         except Exception as exc:
+            if job.output_path.exists() and not args.no_submit:
+                try:
+                    delivered_path = _sync_final_portrait_output(settings, delivery_config, job.output_path)
+                    if delivered_path is not None and delivered_path != job.output_path:
+                        print(f"Delivered copy after desktop error: {delivered_path}", flush=True)
+                except Exception as delivery_exc:
+                    print(
+                        f"Delivery failed after desktop error for {job.output_path}: {delivery_exc}",
+                        flush=True,
+                    )
             unsafe_continue = _is_desktop_unsafe_continue_error(exc)
+            if job.source_label is not None:
+                print(
+                    "Pair desktop safety stop: "
+                    f"{job.display_name} / {job.style.name}: {exc}. "
+                    "Stopping before the next pair so source photos from different pair folders cannot mix.",
+                    flush=True,
+                )
+                raise
             if _is_desktop_window_selection_error(exc) or unsafe_continue:
                 label = "Desktop safety stop" if unsafe_continue else "Desktop window selection failed"
                 print(f"{label}: {exc}", flush=True)
@@ -631,15 +882,17 @@ def _run_desktop_jobs(
             if not getattr(args, "continue_on_error", False):
                 raise
             print(
-                f"Desktop job failed: {job.image_path.name} / {job.style.name}: {exc}",
+                f"Desktop job failed: {job.display_name} / {job.style.name}: {exc}",
                 flush=True,
             )
             continue
         outputs.append(job.output_path)
         if not args.no_submit:
-            _sync_final_portrait_output(settings, delivery_config, job.output_path)
+            delivered_path = _sync_final_portrait_output(settings, delivery_config, job.output_path)
+            if delivered_path is not None and delivered_path != job.output_path:
+                print(f"Delivered copy: {delivered_path}", flush=True)
         if args.no_submit:
-            print(f"Existing {service_name} window prepared: {job.image_path.name} / {job.style.name}")
+            print(f"Existing {service_name} window prepared: {job.display_name} / {job.style.name}")
         else:
             print(f"Existing {service_name} window saved: {job.output_path}")
         if getattr(args, "pause_between_jobs", False):

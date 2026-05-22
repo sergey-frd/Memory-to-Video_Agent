@@ -53,6 +53,8 @@ def sync_final_output_file(settings: Settings, generation_config: GenerationConf
         relative_output_path = Path(artifact_path.name)
     target_path = target_dir / relative_output_path
     target_path.parent.mkdir(parents=True, exist_ok=True)
+    if target_path.exists() and target_path.stat().st_size == artifact_path.stat().st_size:
+        return target_path
     copy2(artifact_path, target_path)
     return target_path
 

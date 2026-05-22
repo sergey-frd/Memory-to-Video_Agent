@@ -434,6 +434,8 @@
           <li><code>--skip-existing</code> is the restart contract.</li>
           <li>Gemini and Grok mirror <code>output/chatgpt_*</code> into <code>output/gemini_*</code> and <code>output/grok_*</code> unless <code>--output-dir</code> is explicit.</li>
           <li><code>--delivery-config-file config_*.json</code> keeps restart copies in project <code>output/...</code> and also copies each saved PNG into <code>final_output_dir</code> with the same relative subfolder path, such as <code>output/grok_portraits/...</code> → <code>final_output_dir/grok_portraits/...</code>.</li>
+          <li>Pair portraits use two source images from each <code>input_pair/&lt;pair_id&gt;/</code> folder, create one temporary side-by-side reference image in <code>output/pair/_pair_references</code>, use the prompt bank <code>chatgpt_pair_base_config.json</code>, and save to <code>output/pair</code> as <code>&lt;pair_id&gt;_art_pair_&lt;YYYYMMDD_HHMMSS&gt;.png</code>.</li>
+          <li>With a delivery config, pair portraits are mirrored to <code>final_output_dir/pair</code>, for example <code>E:\Git\P_h_o_t_o\dv_sf_1\dv_sf\Sf_1\2026\output\pair\...</code> when using <code>config_SF.json</code>.</li>
         </ul>
       </section>
 
@@ -449,6 +451,7 @@
             <tr><td><code>run_project_sequence_batch*.bat</code></td><td><code>main_project_sequence_batch.py</code></td><td>reports, optimized sequence artifacts</td></tr>
             <tr><td><code>run_project_publication*.bat</code></td><td><code>main_project_publication_push.py</code></td><td>publication bundle</td></tr>
             <tr><td><code>run_chatgpt_portrait_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/chatgpt_*</code>, optional <code>final_output_dir</code> copy</td></tr>
+            <tr><td><code>run_chatgpt_pair_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/pair</code>, optional <code>final_output_dir/pair</code> copy</td></tr>
             <tr><td><code>run_gemini_portrait_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/gemini_*</code>, optional <code>final_output_dir</code> copy</td></tr>
             <tr><td><code>run_grok_portrait_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/grok_*</code>, optional <code>final_output_dir</code> copy</td></tr>
           </tbody>
@@ -459,6 +462,7 @@
         <pre><code>.\run_grok_automation_all.bat --skip-existing --upload-timeout 300</code></pre>
         <pre><code>.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
         <pre><code>.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
+        <pre><code>.\run_chatgpt_pair_batch_existing.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error</code></pre>
         <pre><code>.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
         <pre><code>.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error</code></pre>
 

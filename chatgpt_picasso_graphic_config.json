@@ -1,0 +1,13 @@
+{
+  "portrait_styles": [
+    {
+      "name": "PICASSO_GRAPHIC Pablo Picasso graphic drawing portrait",
+      "slug": "picasso_graphic",
+      "prompt": "Use ChatGPT image generation to create the final edited image now from the attached photo. Generate the actual image; do not answer with text. Do not write a prompt, description, explanation, checklist, or instructions. Return only one generated image file in the chat.\n\nPICASSO_GRAPHIC:\nCreate an artistic portrait based on the uploaded photo in the style of Pablo Picasso's graphic drawings.\n\nPreserve the person's precise recognizability:\n- preserve the true shape of the face\n- preserve the eyes, nose, lips, age, and facial expression\n- do not alter the person's personality\n- preserve the emotional character of the original photo\n\nStyle:\n- Picasso-style graphic art\n- black-and-white artistic drawing\n- expressive lines\n- minimalist artistic drawing\n- the feel of an original ink and pencil drawing\n- museum-quality artwork\n\nThe image should look like an authentic graphic drawing by Pablo Picasso.\n\nCreate one complete portrait. No collage, no text, no frames, no watermarks, no additional people."
+    }
+  ],
+  "prompt_template": "{style}",
+  "output_dir": "output/chatgpt_picasso_graphic",
+  "save_response_text": false,
+  "new_chat_per_job": true
+}

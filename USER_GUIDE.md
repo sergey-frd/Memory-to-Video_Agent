@@ -135,12 +135,14 @@ Main files:
 - `api/gemini_desktop.py` - desktop automation adapter for an existing Gemini window.
 - `api/grok_web.py` - Grok web automation reused from the video pipeline, with image mode enabled.
 - `run_chatgpt_portrait_batch_existing.bat` - recommended launcher for an already-open ChatGPT session.
+- `run_chatgpt_pair_batch_existing.bat` - ChatGPT launcher for two-photo pair portraits from `input_pair\01`, `input_pair\02`, and so on.
 - `login_gemini_profile.bat` - opens a dedicated Gemini Chrome profile at `https://gemini.google.com/app`.
 - `run_gemini_portrait_batch_existing.bat` - Gemini launcher that reuses the same portrait JSON configs.
 - `login_grok_profile.bat` - signs in the dedicated Grok Chrome profile at `https://grok.com/imagine`.
 - `run_grok_portrait_batch_existing.bat` - Grok launcher that reuses the same portrait JSON configs.
 - `chatgpt_portrait_config.json` - short working style set, currently watercolor and pastel.
 - `chatgpt_portrait_base_config.json` - full base style bank for artistic portraits and image-edit service styles.
+- `chatgpt_pair_base_config.json` - pair portrait prompt bank for constructing one cinematic artistic couple image from two source photos.
 - `chatgpt_watercolor_scene_expansion_config.json` - special two-style config for `watercolor` and `scene_expansion`.
 - `BATCH_RUN_HISTORY.md` - non-repeating examples for all batch launchers and their parameters.
 - `styles\art_styles_Prompt_list.txt` - source human-readable style prompt list.
@@ -155,6 +157,13 @@ Output:
 - for example, project output `output\grok_portraits\portrait.png` is copied to `E:\Git\P_h_o_t_o\Dv_Yakov_1\Dv_Yakov\2026\output\grok_portraits\portrait.png`;
 - file names use `<image_stem>_<style_slug>.png`, for example `IMG-001_rembrandt.png`;
 - `--skip-existing` lets the batch restart safely and skip already saved portraits.
+
+Pair portrait output:
+- put two source photos into each numbered folder under `input_pair`, for example `input_pair\01\person_a.jpg` and `input_pair\01\person_b.jpg`;
+- before sending to ChatGPT, the batch creates one temporary side-by-side reference image in `output\pair\_pair_references`, so the desktop composer only has to accept one attachment;
+- the pair batch writes one generated image per numbered folder into `output\pair`;
+- file names use `<pair_id>_art_pair_<YYYYMMDD_HHMMSS>.png`, for example `01_art_pair_20260522_153000.png`, so the same numbered folder can be reused later with different photos;
+- with `--delivery-config-file .\config_SF.json`, the result is also copied to that config's `final_output_dir\pair`.
 
 Recommended automatic command:
 
@@ -172,6 +181,12 @@ Short working set command:
 
 ```bat
 .\run_chatgpt_portrait_batch_existing.bat --skip-existing
+```
+
+Pair portrait command:
+
+```bat
+.\run_chatgpt_pair_batch_existing.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error
 ```
 
 Gemini desktop-flow with the same config files:
