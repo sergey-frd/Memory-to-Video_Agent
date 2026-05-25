@@ -6,6 +6,10 @@
 
 Правило для Grok web-flow: portrait batch использует тот же профиль `.browser-profile\grok-web`, что и Grok video pipeline, но запускает `api/grok_web.py` в image-режиме. Перед первым запуском или после разлогина выполните `login_grok_profile.bat`, проверьте `https://grok.com/imagine`, затем закройте login-окно Chrome.
 
+Правило для Grok API-flow: `run_full_grok_pipeline_api.bat` не использует Chrome и не зависит от `.browser-profile\grok-web`. Перед запуском проверьте, что в `.env` заполнен `XAI_API_KEY`, а быстрый ping выполняется командой `python .\scripts\xai_ping.py`. Веб- и API-варианты используют одинаковую структуру `input/` → `output/` → `final_videos_dir`/`regeneration_assets_dir`, поэтому скрипты доставки и cleanup не меняются.
+
+Правило по длительности видео: `run_full_grok_pipeline.bat` теперь читает `video_duration_seconds` из активного конфига и принудительно нажимает соответствующую кнопку в Grok UI до загрузки изображения и prompt. Скоринг в `_nudge_prompt_submit_controls` ставит запрошенную длительность выше уже выделенной (даже если по умолчанию UI предлагал, например, 6s, а в конфиге стоит 10s).
+
 Правило безопасности ввода: перед кликами, вставкой, Enter и сохранением desktop-агент проверяет, что foreground-окно — выбранный ChatGPT или настоящий диалог `Save As`/`Open`. Если сверху Premiere Pro, Total Commander или другое приложение, batch должен остановиться, а не отправлять туда клавиши.
 
 ## Текущие уникальные команды
@@ -34,6 +38,7 @@
 | B020 | `login_gemini_profile.bat` | Ручной вход в Gemini profile для отдельного single-tab окна генерации | `.\login_gemini_profile.bat` |
 | B021 | `run_gemini_portrait_batch_existing.bat` | Gemini desktop-flow с теми же portrait JSON-конфигами, quiet by default; output-каталоги зеркалятся из `output\chatgpt_*` в `output\gemini_*`, сохранение идет через full-size download button | `.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer` |
 | B022 | `run_grok_portrait_batch_existing.bat` | Grok web-flow с теми же portrait JSON-конфигами и профилем `.browser-profile\grok-web`; output-каталоги зеркалятся из `output\chatgpt_*` в `output\grok_*` | `.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error` |
+| B023 | `run_full_grok_pipeline_api.bat` | Полный Grok video pipeline через прямой xAI API (`grok-imagine-video`), без Chrome и Playwright; требует `XAI_API_KEY` в `.env` | `.\run_full_grok_pipeline_api.bat --config-file .\config_SF.json` |
 
 ## Рабочая команда для текущей задачи
 

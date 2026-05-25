@@ -55,6 +55,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--generate-styled-images", action="store_true", help="Generate extra style variations from the original image.")
     parser.add_argument("--generate-final-frames", action="store_true", dest="generate_final_frames", default=None, help="Generate final frames through the API.")
     parser.add_argument("--skip-final-frames", action="store_false", dest="generate_final_frames", help="Do not call the API for final frame generation.")
+    parser.add_argument(
+        "--video-duration-seconds",
+        type=int,
+        choices=(6, 10),
+        help="Video prompt duration: 6 seconds uses 2-2-2, 10 seconds uses 4-3-3.",
+    )
     parser.add_argument("--read-input-list", action="store_true", dest="read_input_list", default=None, help="Read source frames as a list from input/.")
     parser.add_argument("--single-image", action="store_false", dest="read_input_list", help="Process only --image and ignore input/ list mode.")
     parser.add_argument(
@@ -87,6 +93,7 @@ def build_generation_config(args: argparse.Namespace) -> GenerationConfig:
         read_input_list=getattr(args, "read_input_list", None),
         generate_music=getattr(args, "generate_music", None),
         motion_model=getattr(args, "motion_model", None),
+        video_duration_seconds=getattr(args, "video_duration_seconds", None),
         generate_source_background=getattr(args, "generate_source_background", None),
         generate_video=getattr(args, "generate_video", None),
         prefer_loving_kindness_tone=getattr(args, "prefer_loving_kindness_tone", None),
@@ -175,6 +182,7 @@ def write_pipeline_manifest(
             "video_count": generation_config.video_count,
             "total_video_outputs": generation_config.total_video_outputs(),
             "camera_segments": generation_config.camera_segments,
+            "video_duration_seconds": generation_config.video_duration_seconds,
             "motion_source": generation_config.motion_source.value,
             "write_description": generation_config.write_description,
             "generate_music": generation_config.generate_music,

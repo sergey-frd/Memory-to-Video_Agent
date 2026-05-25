@@ -92,9 +92,10 @@
 | Multi-Scene Composer | `main_video_prompt_composer.py`, `video_prompt_config.py`, `api/openai_video_prompt_composer.py`, `utils/video_prompt_composer.py`, `services/Seedance_2.0_Director.md` | Один EN/RU prompt, Seedance EN/RU JSON, scenario variants | `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt`, `Gen_Video_Seedance_<VariantId>_<ts>.json`, `Gen_Video_Seedance_RU_<VariantId>_<ts>.json` |
 | Main Generation | `main.py` | Склеивает analysis, scene, motion, prompt generation, optional final frames | stage-артефакты в `output/` |
 | API Final Frames | `main_desktop_pipeline.py` | Многокадровый pipeline, manifest, non-video sync | `*_api_pipeline_manifest.json`, final-frame outputs |
-| Grok Runtime | `api/grok_web.py`, `main_grok_web.py` | Background image/video generation для одной prompt-пары | `*_bg_image_16x9.png`, `*_video_*.mp4` |
+| Grok Runtime | `api/grok_web.py`, `main_grok_web.py` | Background image/video generation для одной prompt-пары через web-UI Playwright; `GrokWebConfig.duration_seconds` управляет выбором кнопки длительности | `*_bg_image_16x9.png`, `*_video_*.mp4` |
+| Grok API Runtime | `api/grok_video.py`, `api/grok_video_runner.py` | Прямой вызов xAI Video API (`grok-imagine-video`) через `xai-sdk`; используется тем же `AgentRunner`-протоколом, что и web-вариант | `*_video_*.mp4` |
 | Grok Batch | `main_grok_batch.py` | Пакетный Grok-run по готовым `*_v_prompt_*` | videos и bg-images по всем stages |
-| Full Sequential Pipeline | `main_full_pipeline.py` | Prompt generation + Grok-run для каждого изображения из `input/` | delivered stage outputs, cleanup of `input/` and `output/` |
+| Full Sequential Pipeline | `main_full_pipeline.py`, `main_full_pipeline_api.py` | Prompt generation + Grok-run для каждого изображения из `input/`; `main_full_pipeline_api.py` использует `GrokVideoAPISessionRunner` вместо браузера | delivered stage outputs, cleanup of `input/` and `output/` |
 | Delivery & Lifecycle | `utils/project_delivery.py`, `utils/artifact_cleanup.py`, `main_cleanup_artifacts.py` | Доставка, очистка, перенос ошибок, архивирование | `final_videos_dir`, `final_output_dir`, `regeneration_assets_dir`, `error/`, cleanup reports |
 | Sequence Optimization | `main_sequence_optimizer.py`, `utils/sequence_optimizer.py`, `utils/sequence_optimizer_runtime.py`, `utils/premiere_xml.py`, `utils/premiere_project.py`, `models/video_sequence.py` | Рекомендованный порядок клипов и export | optimized JSON/TXT/XML/PRPROJ |
 | Reports & Batch Orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/premiere_transition_script.py`, `utils/premiere_transform_script.py`, `utils/fcp_translation_results.py` | Reports, batch delivery, human-profile overlays, transition and transform scripts | reports, batch summaries, transition reports, Premiere JSX scripts |
@@ -213,6 +214,7 @@ Pair portrait rules:
 ```mermaid
 flowchart LR
   B1["run_full_grok_pipeline*.bat"] --> P1["main_full_pipeline.py"]
+  B1A["run_full_grok_pipeline_api.bat"] --> P1A["main_full_pipeline_api.py"]
   B2["run_grok_automation*.bat"] --> P2["main_grok_web.py / main_grok_batch.py"]
   B3["run_project_sequence_batch*.bat"] --> P3["main_project_sequence_batch.py"]
   B4["run_project_publication*.bat"] --> P4["main_project_publication_push.py"]
@@ -223,7 +225,9 @@ flowchart LR
 
   C1["config.json / config.local.json / config_*.json"] --> G1["GenerationConfig"]
   G1 --> P1
+  G1 --> P1A
   G1 --> P2
+  ENV["XAI_API_KEY (.env)"] --> P1A
 
   C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nspecial portrait configs"] --> P6
   C6["chatgpt_pair_base_config.json"] --> P6
@@ -240,6 +244,10 @@ flowchart LR
 
 ```bat
 .\run_full_grok_pipeline.bat --config-file .\config_Yakov.json --upload-timeout 300
+```
+
+```bat
+.\run_full_grok_pipeline_api.bat --config-file .\config_SF.json
 ```
 
 ```bat

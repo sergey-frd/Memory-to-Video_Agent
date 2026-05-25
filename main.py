@@ -139,6 +139,12 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument("--videos", type=int, help="How many videos to generate from one source frame.")
     parser.add_argument("--segments", type=int, help="How many camera motion segments each video should use.")
     parser.add_argument(
+        "--video-duration-seconds",
+        type=int,
+        choices=(6, 10),
+        help="Video prompt duration: 6 seconds uses 2-2-2, 10 seconds uses 4-3-3.",
+    )
+    parser.add_argument(
         "--motion-source",
         choices=[motion.value for motion in MotionSource],
         help="Motion source selection.",
@@ -193,6 +199,7 @@ def _build_generation_config(args: argparse.Namespace, settings: Settings) -> Ge
         "video_count": args.videos,
         "generate_video": getattr(args, "generate_video", None),
         "camera_segments": args.segments,
+        "video_duration_seconds": getattr(args, "video_duration_seconds", None),
         "motion_source": args.motion_source,
         "motion_model": getattr(args, "motion_model", None),
         "generate_source_background": getattr(args, "generate_source_background", None),
@@ -674,6 +681,7 @@ def _run_generation(
                 prefer_loving_kindness_tone=generation_config.prefer_loving_kindness_tone,
                 max_chars=generation_config.grok_multiscene_prompt_size,
                 max_words=generation_config.grok_multiscene_prompt_max_words,
+                duration_seconds=generation_config.video_duration_seconds,
             )
             video_file = settings.output_dir / f"{stage_id}_v_prompt_{plan.prompt_index}.json"
             _write_prompt(video_file, json_bundle.video_prompt_json_en)
@@ -696,6 +704,7 @@ def _run_generation(
                     hide_phone_in_selfie=generation_config.hide_phone_in_selfie,
                     prefer_loving_kindness_tone=generation_config.prefer_loving_kindness_tone,
                     hybrid_ai_optimal_percent=generation_config.ai_optimal_then_identity_safe_ai_optimal_percent,
+                    video_duration_seconds=generation_config.video_duration_seconds,
                     model=prompt_model,
                 )
             except Exception:
@@ -707,6 +716,7 @@ def _run_generation(
                     hide_phone_in_selfie=generation_config.hide_phone_in_selfie,
                     prefer_loving_kindness_tone=generation_config.prefer_loving_kindness_tone,
                     hybrid_ai_optimal_percent=generation_config.ai_optimal_then_identity_safe_ai_optimal_percent,
+                    video_duration_seconds=generation_config.video_duration_seconds,
                 )
                 bundle = builder.build_video_prompt(
                     prompt_index=plan.prompt_index,
@@ -738,6 +748,7 @@ def _run_generation(
                         hide_phone_in_selfie=generation_config.hide_phone_in_selfie,
                         prefer_loving_kindness_tone=generation_config.prefer_loving_kindness_tone,
                         hybrid_ai_optimal_percent=generation_config.ai_optimal_then_identity_safe_ai_optimal_percent,
+                        video_duration_seconds=generation_config.video_duration_seconds,
                         model=prompt_model,
                     )
                 except Exception:
@@ -749,6 +760,7 @@ def _run_generation(
                         hide_phone_in_selfie=generation_config.hide_phone_in_selfie,
                         prefer_loving_kindness_tone=generation_config.prefer_loving_kindness_tone,
                         hybrid_ai_optimal_percent=generation_config.ai_optimal_then_identity_safe_ai_optimal_percent,
+                        video_duration_seconds=generation_config.video_duration_seconds,
                     ).build_video_prompt(
                         prompt_index=plan.prompt_index,
                         total_videos=total_videos,

@@ -54,7 +54,8 @@ def sync_final_output_file(settings: Settings, generation_config: GenerationConf
     target_path = target_dir / relative_output_path
     target_path.parent.mkdir(parents=True, exist_ok=True)
     if target_path.exists() and target_path.stat().st_size == artifact_path.stat().st_size:
-        return target_path
+        if target_path.stat().st_mtime >= artifact_path.stat().st_mtime:
+            return target_path
     copy2(artifact_path, target_path)
     return target_path
 

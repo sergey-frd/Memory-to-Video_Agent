@@ -3,11 +3,19 @@
 ## One-Minute Quick Start
 
 1. Put source images into `input`.
-2. If you need to sign in to Grok or refresh the session, run `login_grok_profile.bat`, sign in, open `https://grok.com/imagine` once to verify access, and then fully close that Chrome window.
+2. Pick one of two Grok backends:
+   - Web automation (default): if you need to sign in to Grok or refresh the session, run `login_grok_profile.bat`, sign in, open `https://grok.com/imagine` once to verify access, and then fully close that Chrome window.
+   - Direct API: copy `.env.template` to `.env`, fill `XAI_API_KEY=...`, and skip the Chrome login step entirely. Use `python .\scripts\xai_ping.py` to confirm the key works.
 3. Run the main pipeline:
 
 ```bat
 run_full_grok_pipeline.bat --upload-timeout 300
+```
+
+Or the API equivalent (no Chrome required):
+
+```bat
+run_full_grok_pipeline_api.bat
 ```
 
 4. After a successful run:
@@ -120,6 +128,49 @@ run_full_grok_pipeline.bat --upload-timeout 300
 run_full_grok_pipeline.bat --skip-video --generate-source-background --upload-timeout 300
 run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300
 ```
+
+Duration selection fix:
+- The launcher now reads `video_duration_seconds` from the active config and forces the matching duration button in the Grok UI before uploading the image and prompt.
+- The selection logic prefers the requested duration over an already highlighted button with a different value, so a config requesting 10 seconds no longer falls back to whatever default Grok had pre-selected (for example 6 seconds).
+- Override the value with `--video-duration-seconds N`. Acceptable Grok values are `6`, `10`, and `15` seconds.
+
+### `run_full_grok_pipeline_api.bat`
+
+Direct xAI API alternative to `run_full_grok_pipeline.bat`. Same input/output layout, but instead of driving Chrome through Playwright the pipeline calls the xAI `grok-imagine-video` model through the official `xai-sdk` Python client. There is no Chrome session, no `login_grok_profile.bat` step, and no debug profile to manage.
+
+Prerequisites:
+- A valid `XAI_API_KEY` in `.env`. Use `.env.template` as a reference.
+- Optional sanity check: `python .\scripts\xai_ping.py` performs a cheap chat call and prints `pong` when the key is healthy.
+
+Examples:
+
+```bat
+run_full_grok_pipeline_api.bat
+run_full_grok_pipeline_api.bat --config-file .\config_SF.json
+run_full_grok_pipeline_api.bat --skip-video --generate-source-background
+```
+
+What it does:
+1. Reads images from `input` exactly like the web launcher.
+2. Builds video/background prompts the same way as `run_full_grok_pipeline.bat`.
+3. Submits each prompt + input image to the xAI Video API through `api/grok_video.py`.
+4. Downloads the resulting `mp4` to the project `output/` folder, then delivers it to `final_videos_dir` / `regeneration_assets_dir` through the existing delivery code.
+5. Honors `video_duration_seconds`, `video_aspect_ratio`, and `video_resolution` from the config.
+
+When to choose the API launcher:
+- Headless / CI environments where Chrome cannot run.
+- When you want determinism and no UI state to maintain.
+- Cost-controlled batches where per-second pricing is acceptable.
+
+When to keep the web launcher:
+- When you need the Grok web-only UI features (chat-style refinements, manual variants).
+- When the xAI Video API quota is exhausted or temporarily unavailable.
+
+Related files:
+- `main_full_pipeline_api.py` - entry point that wires the API runner into the existing pipeline.
+- `api/grok_video.py` - low-level xAI Video API client (image_url + prompt + duration).
+- `api/grok_video_runner.py` - adapter that implements the same `AgentRunner` interface as `GrokWebSessionRunner` so the rest of the pipeline does not change.
+- `scripts/xai_ping.py` - cheap chat-mode test for `XAI_API_KEY`.
 
 ## ChatGPT, Gemini, And Grok Artistic Portrait Batch
 

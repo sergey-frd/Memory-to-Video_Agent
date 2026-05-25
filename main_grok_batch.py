@@ -26,6 +26,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target-url", type=str, default="https://grok.com/imagine", help="Grok Web URL.")
     parser.add_argument("--chrome-exe", type=Path, default=None, help="Optional explicit Chrome executable path.")
     parser.add_argument("--chrome-debug-port", type=int, default=None, help="Optional Chrome remote debugging port for reusing an already opened Grok login window.")
+    parser.add_argument("--require-debug-port", action="store_true", help="Fail instead of opening a fallback Chrome window when --chrome-debug-port cannot be used.")
+    parser.add_argument("--reuse-existing-page", action="store_true", help="Reuse the current Grok page instead of navigating before each prompt.")
     parser.add_argument("--result-timeout", type=float, default=600.0, help="How long to wait for each generated video, in seconds.")
     parser.add_argument("--launch-timeout", type=float, default=60.0, help="How long to wait for Grok Web to open, in seconds.")
     parser.add_argument("--upload-timeout", type=float, default=180.0, help="How long to wait for image upload readiness before submit, in seconds.")
@@ -152,6 +154,8 @@ def run_batch(args: argparse.Namespace, settings: Settings | None = None, runner
                     target_url=args.target_url,
                     chrome_exe=args.chrome_exe,
                     chrome_debug_port=getattr(args, "chrome_debug_port", None),
+                    require_debug_port=getattr(args, "require_debug_port", False),
+                    reuse_existing_page=getattr(args, "reuse_existing_page", False),
                     result_timeout=args.result_timeout,
                 launch_timeout=args.launch_timeout,
                 upload_timeout=args.upload_timeout,

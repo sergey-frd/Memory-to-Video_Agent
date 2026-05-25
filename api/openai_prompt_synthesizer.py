@@ -8,6 +8,7 @@ from config import VideoFramingMode
 from models.scene_analysis import SceneAnalysis
 from utils.image_analysis import ImageMetadata
 from utils.prompt_builder import BackgroundPromptBundle, PromptBundle
+from utils.video_timing import video_segment_duration_pattern
 
 try:
     from openai import OpenAI
@@ -46,6 +47,7 @@ def synthesize_prompt_bundle_with_openai(
     hide_phone_in_selfie: bool = True,
     prefer_loving_kindness_tone: bool = True,
     hybrid_ai_optimal_percent: int = 70,
+    video_duration_seconds: int = 6,
     model: str | None = None,
 ) -> PromptBundle:
     resolved_hybrid_percent = _normalize_hybrid_ai_optimal_percent(hybrid_ai_optimal_percent)
@@ -70,6 +72,8 @@ def synthesize_prompt_bundle_with_openai(
         "prefer_loving_kindness_tone": prefer_loving_kindness_tone,
         "hybrid_ai_optimal_percent": resolved_hybrid_percent,
         "hybrid_identity_safe_percent": 100 - resolved_hybrid_percent,
+        "video_duration_seconds": video_duration_seconds,
+        "video_duration_pattern": video_segment_duration_pattern(video_duration_seconds),
     }
     response = client.responses.create(
         model=model or DEFAULT_PROMPT_MODEL,
@@ -159,11 +163,13 @@ def _synthesizer_prompt(
         "4. The prompts must be specific to the exact scene and must noticeably differ for different frames with different people or actions.\n"
         "5. Tie the chosen camera motions to the content of the scene instead of listing them mechanically.\n"
         f"{_framing_mode_prompt_requirements(framing_mode, hybrid_ai_optimal_percent)}"
-        "9. If hide_phone_in_selfie is true and the scene analysis indicates a selfie or self-portrait, preserve the selfie-authored feel but avoid showing the phone, smartphone, photo camera, video camera, their reflections, or any visible recording device whenever plausible. Reconstruct occluded details naturally.\n"
-        "10. If prefer_loving_kindness_tone is true, and only where it naturally fits the source image, gently bias the prompts toward loving-kindness, friendliness, benevolence, and warm goodwill through light, color, background, and environmental atmosphere. Keep this delicate and scene-appropriate, not sentimental or forced.\n"
-        "11. final_frame_prompt must stay in Russian and describe only the resulting image and required changes relative to frame A, without describing camera motion.\n"
-        "12. If prompt_index is first or last, image_edit_prompt may be null. Otherwise return a Russian prompt with the camera-motion section removed.\n"
-        "13. Do not use markdown fences or any prose outside JSON.\n"
+        "9. Use exactly three timing phases based on video_duration_seconds: 6 seconds means 0-2s, 2-4s, 4-6s; 10 seconds means 0-4s, 4-7s, 7-10s. State the total duration and the three timing phases in both video prompts.\n"
+        "10. The final phase may open to a wider view, but keep the main people or heroes clearly readable at human scale. Do not pull back so far that they become tiny, and do not invent excessive new environment details.\n"
+        "11. If hide_phone_in_selfie is true and the scene analysis indicates a selfie or self-portrait, preserve the selfie-authored feel but avoid showing the phone, smartphone, photo camera, video camera, their reflections, or any visible recording device whenever plausible. Reconstruct occluded details naturally.\n"
+        "12. If prefer_loving_kindness_tone is true, and only where it naturally fits the source image, gently bias the prompts toward loving-kindness, friendliness, benevolence, and warm goodwill through light, color, background, and environmental atmosphere. Keep this delicate and scene-appropriate, not sentimental or forced.\n"
+        "13. final_frame_prompt must stay in Russian and describe only the resulting image and required changes relative to frame A, without describing camera motion.\n"
+        "14. If prompt_index is first or last, image_edit_prompt may be null. Otherwise return a Russian prompt with the camera-motion section removed.\n"
+        "15. Do not use markdown fences or any prose outside JSON.\n"
         "Input JSON:\n"
         f"{json.dumps(payload, ensure_ascii=False, indent=2)}"
     )
@@ -184,7 +190,7 @@ def _framing_mode_prompt_requirements(
         identity_safe_percent = 100 - optimal_percent
         return (
             f"6. Build one continuous video where roughly the first {optimal_percent}% uses the strongest cinematic framing for the source image, but do not let the face become significantly enlarged or distorted.\n"
-            f"7. In the final {identity_safe_percent}%, transition toward identity-safe framing: medium-wide or distant observation, side / top / low / drone-like or other spatial camera plans that reduce face-drift risk.\n"
+            f"7. In the final {identity_safe_percent}%, transition toward identity-safe framing: medium-wide or moderately wide observation, side / top / low or other spatial camera plans that reduce face-drift risk without making people tiny.\n"
             "8. Make the transition feel natural and continuous, as if the camera opens the scene and settles into a safer identity-preserving distance by the end.\n"
         )
     if framing_mode == VideoFramingMode.AI_OPTIMAL:
@@ -194,7 +200,7 @@ def _framing_mode_prompt_requirements(
             "8. The prompts may stay wide, medium, or gently closer depending on what best serves the original frame without pushing the face into risky enlargement.\n"
         )
     return (
-        "6. If visible people or faces are present, prefer identity-safe framing: medium-wide or distant observation, side angles, top or bottom view, overhead, crane, drone-like, or other oblique spatial camera plans.\n"
+        "6. If visible people or faces are present, prefer identity-safe framing: medium-wide or moderately wide observation, side angles, top or bottom view, overhead, crane, or other oblique spatial camera plans that keep people readable.\n"
         "7. Avoid aggressive facial enlargement, tight frontal close-ups, extreme push-ins, or any camera plan that risks face distortion.\n"
         "8. When emotion matters, express it through gesture, silhouette, pose, body language, environment, and spatial relation rather than through an oversized facial close-up.\n"
     )

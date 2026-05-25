@@ -50,6 +50,7 @@ def test_write_pipeline_manifest_tracks_generated_files() -> None:
     assert '"m_prompt":' in manifest
     assert '"prompt_model": "gpt-4.1-mini"' in manifest
     assert '"motion_model": "gpt-4.1-mini"' in manifest
+    assert '"video_duration_seconds": 6' in manifest
 
 
 def test_write_pipeline_manifest_uses_json_prompt_paths_for_grok_multiscene_mode() -> None:

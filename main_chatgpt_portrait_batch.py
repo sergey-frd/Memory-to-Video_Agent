@@ -160,9 +160,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--desktop-dialog-timeout", type=float, default=20.0, help="Seconds to wait for the Windows open-file dialog.")
     parser.add_argument("--desktop-new-chat-timeout", type=float, default=15.0, help="Seconds to wait while opening a new service chat.")
     parser.add_argument("--desktop-active-window", action="store_true", help="Use the currently active window instead of searching Chrome windows/tabs.")
+    parser.add_argument("--desktop-reuse-selected-window", action="store_true", help="Select the desktop service window once, then reuse its window handle for the remaining jobs.")
     parser.add_argument("--desktop-prefer-single-tab-window", action="store_true", help="Prefer a service Chrome window with exactly one visible tab when several service windows are open.")
     parser.add_argument("--desktop-require-single-tab-window", action="store_true", help="Only use a service Chrome window with exactly one visible tab; fail fast if the selected window has extra tabs.")
     parser.add_argument("--desktop-new-chat", action="store_true", help="Try to open a new service chat before every desktop job.")
+    parser.add_argument("--desktop-no-home-navigation", action="store_true", help="Use only the visible New chat control between jobs; do not navigate the browser address bar to the service home URL.")
     parser.add_argument("--desktop-clipboard-attach", action="store_true", help="Attach images by pasting the file from Windows clipboard into the active service composer.")
     parser.add_argument("--desktop-capture-result", action="store_true", help="Capture a generated image from the desktop UI after submitting.")
     parser.add_argument("--desktop-save-context-menu", action="store_true", help="Try to save the generated image through the browser image context menu.")
@@ -172,6 +174,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--desktop-post-attach-delay", type=float, default=3.0, help="Seconds to wait after pasting the source image into the service composer.")
     parser.add_argument("--desktop-min-result-wait", type=float, default=90.0, help="Minimum seconds to wait after submitting before auto-saving a result image.")
     parser.add_argument("--desktop-result-stable-wait", type=float, default=8.0, help="Seconds a result image must stay stable before auto-saving.")
+    parser.add_argument("--desktop-wait-mouse-idle-sec", type=float, default=0.0, help="Require this many seconds of no mouse movement before desktop clicks/keystrokes.")
+    parser.add_argument("--desktop-mouse-idle-timeout-sec", type=float, default=60.0, help="Maximum seconds to wait for the mouse to become idle before a desktop action.")
     parser.add_argument("--pause-between-jobs", action="store_true", help="After each submitted job, wait for Enter before continuing.")
     parser.add_argument("--desktop-verbose", action="store_true", help="Print detailed desktop automation progress.")
     parser.add_argument(
@@ -579,6 +583,8 @@ def _load_delivery_config(args: argparse.Namespace, settings: Settings) -> Gener
         return None
     if not config_path.is_absolute() and not config_path.exists():
         config_path = settings.project_root / config_path
+    if not config_path.exists():
+        raise FileNotFoundError(f"Delivery config was not found: {config_path}")
     return load_generation_config(config_path)
 
 
@@ -776,6 +782,10 @@ def _run_desktop_jobs(
         default_target_url = None
 
     outputs: list[Path] = []
+    reuse_selected_window = bool(getattr(args, "desktop_reuse_selected_window", False))
+    selected_window_handle: int | None = None
+    selected_manual_composer_position: tuple[int, int] | None = None
+    selected_manual_send_position: tuple[int, int] | None = None
     for job in jobs:
         existing_output_path = _existing_output_for_skip(job) if args.skip_existing else None
         if existing_output_path is not None:
@@ -787,8 +797,10 @@ def _run_desktop_jobs(
             continue
         reactivate_delay = float(getattr(args, "desktop_reactivate_delay", 0.0) or 0.0)
         manual_composer_position: tuple[int, int] | None = None
-        manual_send_position: tuple[int, int] | None = None
-        if reactivate_delay > 0:
+        manual_send_position: tuple[int, int] | None = selected_manual_send_position if selected_window_handle else None
+        if selected_window_handle:
+            manual_composer_position = selected_manual_composer_position
+        elif reactivate_delay > 0:
             print(
                 f"Activate the already-open {service_name} window and click in the message box "
                 f"away from the send arrow. Continuing in {reactivate_delay:g} seconds...",
@@ -820,6 +832,12 @@ def _run_desktop_jobs(
         open_new_chat_before_run = getattr(args, "desktop_new_chat", False) or portrait_config.new_chat_per_job
         click_composer_before_paste = getattr(args, "desktop_click_composer", False) or open_new_chat_before_run
 
+        attach_via_clipboard = getattr(args, "desktop_clipboard_attach", False)
+        force_clean_chat = job.source_label is not None
+        require_new_attachment_preview = bool(job.source_image_paths) and (
+            attach_via_clipboard or job.source_label is not None
+        )
+
         config = DesktopAgentConfig(
             image_path=job.image_path,
             image_paths=job.source_image_paths,
@@ -838,23 +856,33 @@ def _run_desktop_jobs(
             min_result_wait_sec=getattr(args, "desktop_min_result_wait", 90.0),
             result_stable_sec=getattr(args, "desktop_result_stable_wait", 8.0),
             open_new_chat_before_run=open_new_chat_before_run,
-            force_new_chat_navigation=job.source_label is not None,
+            force_new_chat_navigation=force_clean_chat,
+            allow_new_chat_navigation=not getattr(args, "desktop_no_home_navigation", False),
             use_active_window=getattr(args, "desktop_active_window", False),
+            fixed_window_handle=selected_window_handle if reuse_selected_window else None,
             prefer_single_tab_window=getattr(args, "desktop_prefer_single_tab_window", False),
             require_single_tab_window=getattr(args, "desktop_require_single_tab_window", False),
-            require_new_attachment_preview=job.source_label is not None,
-            attach_via_clipboard=getattr(args, "desktop_clipboard_attach", False),
+            require_new_attachment_preview=require_new_attachment_preview,
+            attach_via_clipboard=attach_via_clipboard,
             skip_capture_result=not getattr(args, "desktop_capture_result", False),
             save_result_via_context_menu=getattr(args, "desktop_save_context_menu", False),
             click_composer_before_paste=click_composer_before_paste,
             manual_composer_position=None if click_composer_before_paste else manual_composer_position,
             manual_send_position=manual_send_position,
             manual_send_capture_delay_sec=getattr(args, "desktop_send_cursor_delay", 0.0),
+            mouse_idle_sec=getattr(args, "desktop_wait_mouse_idle_sec", 0.0),
+            mouse_idle_timeout_sec=getattr(args, "desktop_mouse_idle_timeout_sec", 60.0),
             verbose=getattr(args, "desktop_verbose", False),
             submit=not args.no_submit,
         )
         try:
-            agent_cls(config).run()
+            agent = agent_cls(config)
+            agent.run()
+            if reuse_selected_window:
+                selected_window_handle = getattr(agent, "selected_window_handle", None)
+                if manual_composer_position is not None:
+                    selected_manual_composer_position = manual_composer_position
+                selected_manual_send_position = getattr(agent, "selected_manual_send_position", None)
         except Exception as exc:
             if job.output_path.exists() and not args.no_submit:
                 try:

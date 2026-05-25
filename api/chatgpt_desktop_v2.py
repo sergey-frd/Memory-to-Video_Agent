@@ -331,7 +331,9 @@ class DesktopAgentConfig:
     result_stable_sec: float = 8.0
     open_new_chat_before_run: bool = False
     force_new_chat_navigation: bool = False
+    allow_new_chat_navigation: bool = True
     use_active_window: bool = False
+    fixed_window_handle: Optional[int] = None
     prefer_single_tab_window: bool = False
     require_single_tab_window: bool = False
     require_new_attachment_preview: bool = False
@@ -343,6 +345,8 @@ class DesktopAgentConfig:
     manual_send_position: Optional[tuple[int, int]] = None
     manual_send_capture_delay_sec: float = 0.0
     manual_send_min_distance_px: int = 50
+    mouse_idle_sec: float = 0.0
+    mouse_idle_timeout_sec: float = 60.0
     verbose: bool = False
     submit: bool = True
 
@@ -425,6 +429,17 @@ class ChatGPTDesktopAgent:
             return (self.config.image_path,)
         return ()
 
+    @property
+    def selected_window_handle(self) -> Optional[int]:
+        if self._window is None:
+            return None
+        handle = self._window_handle(self._window)
+        return handle or None
+
+    @property
+    def selected_manual_send_position(self) -> Optional[tuple[int, int]]:
+        return self._manual_send_position
+
     def _preserve_manual_composer_focus(self) -> bool:
         return (
             self.config.use_active_window
@@ -484,6 +499,9 @@ class ChatGPTDesktopAgent:
                 )
             Application(backend="uia").start(str(self.config.executable_path))
             time.sleep(2.0)
+
+        if self.config.fixed_window_handle:
+            return self._window_from_handle(self.config.fixed_window_handle)
 
         if self.config.use_active_window:
             try:
@@ -570,6 +588,18 @@ class ChatGPTDesktopAgent:
         raise DesktopAutomationError(
             f"Could not find a ChatGPT window matching '{self.config.window_title_re}'."
         ) from last_error
+
+    def _window_from_handle(self, handle: int) -> BaseWrapper:
+        if Desktop is None:
+            raise DesktopAutomationError("Desktop automation dependencies are missing fixed-window support.")
+        try:
+            window = Desktop(backend="uia").window(handle=int(handle))
+            window.wait("visible ready", timeout=1.0)
+        except Exception as exc:
+            raise DesktopAutomationError(
+                f"Could not reuse the selected ChatGPT window handle: {handle}."
+            ) from exc
+        return window
 
     def _active_window(self) -> BaseWrapper:
         if Desktop is None:
@@ -782,7 +812,7 @@ class ChatGPTDesktopAgent:
         )
 
     def _open_new_chat(self, window: BaseWrapper) -> None:
-        if self.config.force_new_chat_navigation:
+        if self.config.force_new_chat_navigation and self.config.allow_new_chat_navigation:
             target_url = self.config.target_url or "https://chatgpt.com/"
             self._log("forcing current tab to ChatGPT home before this job")
             self._navigate_to_url(target_url, window)
@@ -793,7 +823,7 @@ class ChatGPTDesktopAgent:
                 return
             raise DesktopAutomationError("Could not confirm a clean ChatGPT chat after forced navigation.")
 
-        if self.config.target_url:
+        if self.config.target_url and self.config.allow_new_chat_navigation:
             self._open_new_browser_tab(self.config.target_url, window)
             if self._wait_for_clean_new_chat_surface(
                 window,
@@ -819,6 +849,12 @@ class ChatGPTDesktopAgent:
         else:
             self._log("visible New chat control was not found in the selected ChatGPT window.")
 
+        if not self.config.allow_new_chat_navigation:
+            raise DesktopAutomationError(
+                "Could not open a clean new ChatGPT chat using only the visible New chat control. "
+                "Browser-address navigation is disabled for this work-window run."
+            )
+
         self._log("trying verified browser-address navigation back to ChatGPT home")
         self._navigate_to_url("https://chatgpt.com/", window)
         if self._wait_for_clean_new_chat_surface(
@@ -835,17 +871,25 @@ class ChatGPTDesktopAgent:
     def _wait_for_clean_new_chat_surface(self, window: BaseWrapper, *, timeout_sec: float) -> bool:
         deadline = time.time() + max(0.5, timeout_sec)
         last_result_count: Optional[int] = None
+        last_attachment_count: Optional[int] = None
         while time.time() < deadline:
             prompt_ready = self._find_prompt_input(window) is not None
             result_count = len(self._find_result_images(window))
-            if prompt_ready and result_count == 0:
+            attachment_count = self._attachment_remove_control_count(window)
+            if prompt_ready and result_count == 0 and attachment_count == 0:
                 return True
             if result_count and result_count != last_result_count:
                 self._log(
                     "new-chat surface still shows prior result image candidates: "
                     f"{result_count}"
                 )
+            if attachment_count and attachment_count != last_attachment_count:
+                self._log(
+                    "new-chat surface still shows prior source attachment controls: "
+                    f"{attachment_count}"
+                )
             last_result_count = result_count
+            last_attachment_count = attachment_count
             time.sleep(0.5)
         return False
 
@@ -973,9 +1017,38 @@ class ChatGPTDesktopAgent:
                     )
                     time.sleep(1.5)
             if last_error is not None:
-                raise last_error
+                self._log(
+                    "source image attachment was not confirmed after clipboard paste; "
+                    "trying ChatGPT attach button/file dialog fallback"
+                )
+                try:
+                    self._attach_image_via_file_dialog(
+                        window,
+                        image_path,
+                        baseline_attachment_signatures,
+                        baseline_attachment_text,
+                    )
+                    return
+                except DesktopAutomationError as dialog_error:
+                    raise DesktopAutomationError(
+                        f"{last_error} File-dialog fallback also failed: {dialog_error}"
+                    ) from dialog_error
             return
 
+        self._attach_image_via_file_dialog(
+            window,
+            image_path,
+            baseline_attachment_signatures,
+            baseline_attachment_text,
+        )
+
+    def _attach_image_via_file_dialog(
+        self,
+        window: BaseWrapper,
+        image_path: Path,
+        baseline_attachment_signatures: list[ImageSignature],
+        baseline_attachment_text: str,
+    ) -> None:
         attach_button = self._wait_for_attach_button(window)
         if attach_button is None:
             raise DesktopAutomationError(
@@ -1459,6 +1532,7 @@ class ChatGPTDesktopAgent:
         )
 
     def _ensure_foreground_window(self, window: BaseWrapper, action: str) -> None:
+        self._wait_for_mouse_idle(action)
         expected_handle = self._window_handle(window)
         if not expected_handle:
             raise DesktopAutomationError(f"Unsafe desktop input blocked before {action}: target window handle is unknown.")
@@ -1470,6 +1544,31 @@ class ChatGPTDesktopAgent:
                 return
             time.sleep(0.1)
         self._assert_foreground_window(window, action)
+
+    def _wait_for_mouse_idle(self, action: str) -> None:
+        idle_sec = max(0.0, float(self.config.mouse_idle_sec or 0.0))
+        if idle_sec <= 0:
+            return
+        timeout_sec = max(idle_sec, float(self.config.mouse_idle_timeout_sec or idle_sec))
+        deadline = time.monotonic() + timeout_sec
+        last_position = self._cursor_position()
+        stable_since = time.monotonic()
+        logged = False
+        while time.monotonic() < deadline:
+            time.sleep(0.15)
+            position = self._cursor_position()
+            if position != last_position:
+                last_position = position
+                stable_since = time.monotonic()
+                if not logged:
+                    self._log(f"waiting for mouse idle before {action}")
+                    logged = True
+                continue
+            if time.monotonic() - stable_since >= idle_sec:
+                return
+        raise DesktopAutomationError(
+            f"Mouse did not stay idle for {idle_sec:g} seconds before {action}."
+        )
 
     def _click_composer_area(self, window: BaseWrapper) -> bool:
         try:

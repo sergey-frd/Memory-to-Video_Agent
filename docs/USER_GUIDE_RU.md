@@ -116,6 +116,35 @@ run_full_grok_pipeline.bat --skip-video --generate-source-background --upload-ti
 run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300
 ```
 
+Фикс длительности видео: лаунчер читает `video_duration_seconds` из активного конфига и принудительно нажимает соответствующую кнопку в Grok UI до загрузки изображения и prompt. Раньше при значении `10` в конфиге UI мог оставить предвыделенную кнопку `6 s`; теперь скоринг кнопок ставит запрошенную длительность выше уже выделенной.
+
+### `run_full_grok_pipeline_api.bat`
+
+Прямой xAI API-альтернатива веб-варианту `run_full_grok_pipeline.bat`. Та же схема `input/` → `output/` → `final_videos_dir`, но вместо браузерной автоматизации идёт вызов модели `grok-imagine-video` через официальный Python-клиент `xai-sdk`. Chrome, `login_grok_profile.bat` и debug-профили не требуются.
+
+Подготовка:
+- Заполните `XAI_API_KEY` в файле `.env` (шаблон — `.env.template`).
+- Быстрая проверка ключа: `python .\scripts\xai_ping.py` — делает дешёвый chat-запрос и печатает `pong`, если ключ исправен.
+
+Примеры запуска:
+
+```bat
+run_full_grok_pipeline_api.bat
+run_full_grok_pipeline_api.bat --config-file .\config_SF.json
+run_full_grok_pipeline_api.bat --skip-video --generate-source-background
+```
+
+Когда выбирать API-вариант:
+- Headless / CI-окружения, где нет Chrome;
+- когда нужна детерминированность и нет смысла поддерживать состояние UI;
+- batch-запуски с контролем расходов (xAI берёт оплату по секундам видео).
+
+Когда оставить web-вариант:
+- если нужны фичи только веб-версии Grok (чат-доработки, ручные варианты);
+- если квота xAI Video API исчерпана.
+
+Связанные файлы: `main_full_pipeline_api.py`, `api/grok_video.py`, `api/grok_video_runner.py`, `scripts/xai_ping.py`.
+
 ## Новые флаги генерации
 
 ### `generate_video`
@@ -284,6 +313,7 @@ CLI-параметры:
 ```mermaid
 flowchart LR
   B1["run_full_grok_pipeline*.bat"] --> P1["main_full_pipeline.py"]
+  B1A["run_full_grok_pipeline_api.bat"] --> P1A["main_full_pipeline_api.py"]
   B2["run_grok_automation*.bat"] --> P2["main_grok_web.py / main_grok_batch.py"]
   B3A["run_project_sequence_batch_(project).bat"] --> B3["run_project_sequence_batch.bat"]
   B3 --> P3["main_project_sequence_batch.py"]

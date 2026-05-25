@@ -88,6 +88,7 @@ def test_wait_for_clean_new_chat_surface_requires_old_result_images_to_disappear
 
     monkeypatch.setattr(agent, "_find_prompt_input", lambda _window: object())
     monkeypatch.setattr(agent, "_find_result_images", lambda _window: image_batches.pop(0))
+    monkeypatch.setattr(agent, "_attachment_remove_control_count", lambda _window: 0)
     monkeypatch.setattr("api.chatgpt_desktop_v2.time.sleep", lambda _seconds: None)
 
     assert agent._wait_for_clean_new_chat_surface(window, timeout_sec=1.0) is True
@@ -100,6 +101,21 @@ def test_wait_for_clean_new_chat_surface_rejects_page_with_lingering_result_imag
 
     monkeypatch.setattr(agent, "_find_prompt_input", lambda _window: object())
     monkeypatch.setattr(agent, "_find_result_images", lambda _window: [object()])
+    monkeypatch.setattr(agent, "_attachment_remove_control_count", lambda _window: 0)
+    monkeypatch.setattr("api.chatgpt_desktop_v2.time.time", lambda: next(timestamps))
+    monkeypatch.setattr("api.chatgpt_desktop_v2.time.sleep", lambda _seconds: None)
+
+    assert agent._wait_for_clean_new_chat_surface(window, timeout_sec=1.0) is False
+
+
+def test_wait_for_clean_new_chat_surface_rejects_page_with_lingering_attachment_controls(monkeypatch) -> None:
+    agent = ChatGPTDesktopAgent(_config())
+    window = _FakeWindow("ChatGPT - Google Chrome")
+    timestamps = iter([0.0, 0.1, 0.2, 1.1])
+
+    monkeypatch.setattr(agent, "_find_prompt_input", lambda _window: object())
+    monkeypatch.setattr(agent, "_find_result_images", lambda _window: [])
+    monkeypatch.setattr(agent, "_attachment_remove_control_count", lambda _window: 1)
     monkeypatch.setattr("api.chatgpt_desktop_v2.time.time", lambda: next(timestamps))
     monkeypatch.setattr("api.chatgpt_desktop_v2.time.sleep", lambda _seconds: None)
 
@@ -151,6 +167,34 @@ def test_wait_for_attached_source_image_stops_before_prompt_when_no_preview_appe
             baseline_signatures=[],
             baseline_surface_text="",
         )
+
+
+def test_attach_image_falls_back_to_file_dialog_when_clipboard_preview_is_missing(monkeypatch) -> None:
+    config = _config()
+    config.require_new_attachment_preview = True
+    agent = ChatGPTDesktopAgent(config)
+    window = _FakeWindow("ChatGPT - Google Chrome")
+    fallback_calls: list[Path] = []
+
+    monkeypatch.setattr(agent, "_find_attachment_image_candidates", lambda _window: [])
+    monkeypatch.setattr(agent, "_result_signatures", lambda _wrappers: [])
+    monkeypatch.setattr(agent, "_collect_attachment_surface_text", lambda _window: "")
+    monkeypatch.setattr(agent, "_paste_file_clipboard", lambda _window, _path: None)
+    monkeypatch.setattr("api.chatgpt_desktop_v2.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr(
+        agent,
+        "_wait_for_attached_source_image",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(DesktopAutomationError("no preview")),
+    )
+    monkeypatch.setattr(
+        agent,
+        "_attach_image_via_file_dialog",
+        lambda _window, image_path, *_args: fallback_calls.append(image_path),
+    )
+
+    agent._attach_image(window, Path("family_photo.jpg"))
+
+    assert fallback_calls == [Path("family_photo.jpg")]
 
 
 def test_dialog_visibility_helper_returns_false_when_wrapper_is_gone() -> None:
@@ -206,6 +250,20 @@ def test_open_new_chat_falls_back_to_verified_url_navigation_when_new_chat_contr
     agent._open_new_chat(window)
 
     assert navigations == ["https://chatgpt.com/"]
+
+
+def test_open_new_chat_can_disable_url_navigation(monkeypatch) -> None:
+    config = _config()
+    config.allow_new_chat_navigation = False
+    agent = ChatGPTDesktopAgent(config)
+    window = _FakeWindow("ChatGPT - Google Chrome")
+
+    monkeypatch.setattr(agent, "_find_button", lambda _window, _patterns: None)
+    monkeypatch.setattr(agent, "_wait_for_clean_new_chat_surface", lambda _window, timeout_sec: False)
+    monkeypatch.setattr(agent, "_navigate_to_url", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("unexpected navigation")))
+
+    with pytest.raises(DesktopAutomationError, match="navigation is disabled"):
+        agent._open_new_chat(window)
 
 
 def test_browser_address_selection_verification_accepts_copied_url(monkeypatch) -> None:

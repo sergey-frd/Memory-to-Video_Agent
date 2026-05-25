@@ -49,6 +49,7 @@ CONFIG_BOOL_FIELDS = {
 CONFIG_INT_FIELDS = {
     "video_count",
     "camera_segments",
+    "video_duration_seconds",
     "ai_optimal_then_identity_safe_ai_optimal_percent",
     "grok_multiscene_prompt_size",
 }
@@ -112,6 +113,10 @@ def _validate_config_data(data: Dict[str, Any], path: Path | None) -> None:
             raise ConfigValidationError(
                 f"Config key 'grok_multiscene_prompt_size' in {location} must be >= 200."
             )
+        if field_name == "video_duration_seconds" and value not in (6, 10):
+            raise ConfigValidationError(
+                f"Config key 'video_duration_seconds' in {location} must be either 6 or 10."
+            )
 
     for field_name in CONFIG_STR_FIELDS:
         if field_name not in data:
@@ -157,6 +162,7 @@ class GenerationConfig:
     generate_grok_multiscene_json_prompt: bool = False
     video_count: int = 2
     camera_segments: int = 1
+    video_duration_seconds: int = 6
     motion_source: MotionSource = field(default_factory=lambda: MotionSource.TABLE)
     motion_model: str = "gpt-4.1"
     generate_source_background: bool = False
@@ -181,6 +187,10 @@ class GenerationConfig:
     prefer_loving_kindness_tone: bool = True
 
     def __post_init__(self) -> None:
+        if self.video_duration_seconds not in (6, 10):
+            raise ConfigValidationError(
+                "Config key 'video_duration_seconds' must be either 6 or 10."
+            )
         if not 1 <= self.ai_optimal_then_identity_safe_ai_optimal_percent <= 99:
             raise ConfigValidationError(
                 "Config key 'ai_optimal_then_identity_safe_ai_optimal_percent' "
@@ -222,6 +232,7 @@ class GenerationConfig:
             ),
             video_count=data.get("video_count", default.video_count),
             camera_segments=data.get("camera_segments", default.camera_segments),
+            video_duration_seconds=data.get("video_duration_seconds", default.video_duration_seconds),
             motion_source=motion_source,
             motion_model=str(data.get("motion_model", default.motion_model)),
             generate_source_background=data.get("generate_source_background", default.generate_source_background),
@@ -273,6 +284,7 @@ class GenerationConfig:
             "generate_grok_multiscene_json_prompt": self.generate_grok_multiscene_json_prompt,
             "video_count": self.video_count,
             "camera_segments": self.camera_segments,
+            "video_duration_seconds": self.video_duration_seconds,
             "motion_source": self.motion_source,
             "motion_model": self.motion_model,
             "generate_source_background": self.generate_source_background,

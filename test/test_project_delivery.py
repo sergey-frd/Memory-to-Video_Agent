@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from uuid import uuid4
 
@@ -78,3 +79,31 @@ def test_sync_final_output_file_copies_image_into_final_output_dir() -> None:
     assert synced == resolve_delivery_dir(settings, config.final_output_dir) / "grok_portraits" / image_path.name
     assert synced.exists()
     assert synced.read_bytes() == b"portrait"
+
+
+def test_sync_final_output_file_replaces_same_size_older_target() -> None:
+    root = Path("test_runtime") / f"delivery_{uuid4().hex}"
+    settings = _settings_for(root)
+    config = GenerationConfig(
+        final_output_dir="final/output",
+        final_videos_dir="final/videos",
+        regeneration_assets_dir="final/assets",
+    )
+
+    image_path = settings.output_dir / "chatgpt_watercolor_on_paper" / "portrait.png"
+    image_path.parent.mkdir(parents=True, exist_ok=True)
+    image_path.write_bytes(b"new")
+    target_path = (
+        resolve_delivery_dir(settings, config.final_output_dir)
+        / "chatgpt_watercolor_on_paper"
+        / image_path.name
+    )
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_bytes(b"old")
+    old_time = image_path.stat().st_mtime - 20
+    os.utime(target_path, (old_time, old_time))
+
+    synced = sync_final_output_file(settings, config, image_path)
+
+    assert synced == target_path
+    assert target_path.read_bytes() == b"new"

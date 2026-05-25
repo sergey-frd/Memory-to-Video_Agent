@@ -6,6 +6,7 @@ from typing import Iterable
 from config import VideoFramingMode
 from models.scene_analysis import SceneAnalysis
 from utils.image_analysis import ImageMetadata
+from utils.video_timing import video_segment_duration_pattern, video_segment_markers
 
 BASE_STYLE_GUIDELINES = (
     "Maximum photorealism, cinematic lighting, and 4K output.\n"
@@ -45,6 +46,7 @@ class PromptBuilder:
         hide_phone_in_selfie: bool = True,
         prefer_loving_kindness_tone: bool = True,
         hybrid_ai_optimal_percent: int = 70,
+        video_duration_seconds: int = 6,
     ):
         self.metadata = metadata
         self.metadata_description = metadata.format_description
@@ -55,6 +57,9 @@ class PromptBuilder:
         self.hide_phone_in_selfie = hide_phone_in_selfie
         self.prefer_loving_kindness_tone = prefer_loving_kindness_tone
         self.hybrid_ai_optimal_percent = max(1, min(99, int(hybrid_ai_optimal_percent)))
+        self.video_duration_seconds = int(video_duration_seconds)
+        self.video_segment_markers = video_segment_markers(self.video_duration_seconds)
+        self.video_segment_pattern = video_segment_duration_pattern(self.video_duration_seconds)
 
     def build_video_prompt(
         self,
@@ -249,6 +254,10 @@ class PromptBuilder:
             f"????: {initial_frame_description}",
             f"??????: {self._format_description_ru()}. ????????? ???????? ????????? ? ??????????.",
             "",
+            "ТАЙМИНГ:",
+            f"- Общая длительность видео: {self.video_duration_seconds} секунд.",
+            f"- Ритм трех частей: {self.video_segment_pattern} ({', '.join(self.video_segment_markers)}).",
+            "",
             "?????:",
             *self._scene_section_lines_ru(),
             "",
@@ -291,6 +300,10 @@ class PromptBuilder:
             f"Stage: {self.stage_id}",
             f"FRAME: {self._translate_initial_frame_description(initial_frame_description)}",
             f"Format: {self._format_description_en()}. Preserve the source aspect ratio and orientation.",
+            "",
+            "TIMING:",
+            f"- Total video duration: {self.video_duration_seconds} seconds.",
+            f"- Three-part rhythm: {self.video_segment_pattern} ({', '.join(self.video_segment_markers)}).",
             "",
             "SCENE:",
             *self._scene_section_lines_en(),
@@ -451,7 +464,7 @@ class PromptBuilder:
     def _identity_safe_camera_lines_ru(self) -> list[str]:
         if self._has_visible_people():
             return [
-                "- При видимых людях предпочитать наблюдение с дистанции: общий или средне-общий план, ракурс сверху, снизу, сбоку, мягкий полуоблет, кран или дрон-подобное раскрытие пространства.",
+                "- При видимых людях предпочитать наблюдение с дистанции: средне-общий или умеренно широкий план, ракурс сверху, снизу, сбоку, мягкий полуоблет или спокойное раскрытие пространства.",
                 "- Не делать агрессивный наезд в лицо и не строить кадр как экстремальный крупный фронтальный портрет. Эмоцию раскрывать через жест, позу, силуэт, движение тела и связь человека со средой.",
             ]
         return [
@@ -461,7 +474,7 @@ class PromptBuilder:
     def _identity_safe_camera_lines_en(self) -> list[str]:
         if self._has_visible_people():
             return [
-                "- When people are visible, prefer identity-safe framing from a respectful distance: wide or medium-wide observation, side angle, top view, low angle, soft half-orbit, crane, or drone-like spatial reveal.",
+                "- When people are visible, prefer identity-safe framing from a respectful distance: medium-wide or moderately wide observation, side angle, top view, low angle, soft half-orbit, or calm spatial reveal.",
                 "- Avoid aggressive face push-ins and extreme frontal close-ups. Carry emotion through gesture, posture, silhouette, body language, and the subject's relation to the environment.",
             ]
         return [
@@ -517,7 +530,7 @@ class PromptBuilder:
             if self._has_visible_people():
                 return [
                     f"- В первых {optimal_percent}% длительности видео выбирай самый сильный кинематографичный способ раскрыть сцену, но не увеличивай лицо значительно и не допускай искажения пропорций.",
-                    f"- В финальных {identity_safe_percent}% длительности плавно переводи камеру в identity-safe режим: более дальний или средне-общий план, боковой, верхний, нижний, воздушный или мягко пространственный ракурс вместо агрессивного лицевого укрупнения.",
+                    f"- В финальных {identity_safe_percent}% длительности плавно переводи камеру в identity-safe режим: средне-общий или умеренно широкий план, боковой, верхний, нижний или мягко пространственный ракурс вместо агрессивного лицевого укрупнения.",
                 ]
             return [
                 f"- В первых {optimal_percent}% длительности камера ищет самый сильный кинематографичный ракурс, а в финальных {identity_safe_percent}% мягче и дальше раскрывает пространство."
@@ -548,7 +561,7 @@ class PromptBuilder:
             if self._has_visible_people():
                 return [
                     f"- In the first {optimal_percent}% of the shot, choose the strongest cinematic way to reveal the scene, but do not let the face become significantly enlarged or distorted.",
-                    f"- In the final {identity_safe_percent}% of the shot, transition into identity-safe framing: medium-wide or more distant scale, side, top, low, aerial, or gently spatial angles instead of aggressive facial enlargement.",
+                    f"- In the final {identity_safe_percent}% of the shot, transition into identity-safe framing: medium-wide or moderately wide scale, side, top, low, or gently spatial angles instead of aggressive facial enlargement.",
                 ]
             return [
                 f"- Let the first {optimal_percent}% find the most cinematic framing, then let the final {identity_safe_percent}% open the space more gently from a safer distance."
@@ -571,13 +584,19 @@ class PromptBuilder:
         if self.framing_mode == VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE:
             return self._hybrid_camera_section_lines_ru(motions, context_anchor, action_anchor, emotion_anchor)
         if len(motions) == 1:
-            return [f"- {motions[0]}. {self._single_motion_line_ru(context_anchor, action_anchor)}"]
+            return [f"- Вся длительность ({self.video_duration_seconds}s): {motions[0]}. {self._single_motion_line_ru(context_anchor, action_anchor)}"]
 
         lines = [
-            f"- \u041f\u0435\u0440\u0432\u044b\u0439 \u0441\u0435\u0433\u043c\u0435\u043d\u0442: {motions[0]}. {self._first_segment_line_ru(context_anchor)}",
-            f"- \u0412\u0442\u043e\u0440\u043e\u0439 \u0441\u0435\u0433\u043c\u0435\u043d\u0442: {motions[1]}. {self._second_segment_line_ru(action_anchor, emotion_anchor)}",
+            f"- \u041f\u0435\u0440\u0432\u044b\u0439 \u0441\u0435\u0433\u043c\u0435\u043d\u0442 ({self.video_segment_markers[0]}): {motions[0]}. {self._first_segment_line_ru(context_anchor)}",
+            f"- \u0412\u0442\u043e\u0440\u043e\u0439 \u0441\u0435\u0433\u043c\u0435\u043d\u0442 ({self.video_segment_markers[1]}): {motions[1]}. {self._second_segment_line_ru(action_anchor, emotion_anchor)}",
         ]
         for extra_index, extra_motion in enumerate(motions[2:], start=3):
+            if extra_index == 3:
+                lines.append(
+                    f"- Финальный сегмент ({self.video_segment_markers[2]}): {extra_motion}. "
+                    f"{self._third_segment_line_ru(action_anchor, emotion_anchor)}"
+                )
+                continue
             lines.append(
                 f"- \u0414\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0439 \u0441\u0435\u0433\u043c\u0435\u043d\u0442 {extra_index}: {extra_motion}. "
                 "\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u0439 \u043f\u0435\u0440\u0435\u0445\u043e\u0434 \u043f\u043b\u0430\u0432\u043d\u043e \u0438 \u0431\u0435\u0437 \u043f\u043e\u0442\u0435\u0440\u0438 \u0432\u0438\u0437\u0443\u0430\u043b\u044c\u043d\u043e\u0439 \u043d\u0435\u043f\u0440\u0435\u0440\u044b\u0432\u043d\u043e\u0441\u0442\u0438."
@@ -591,13 +610,19 @@ class PromptBuilder:
         if self.framing_mode == VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE:
             return self._hybrid_camera_section_lines_en(motions, context_anchor, action_anchor, emotion_anchor)
         if len(motions) == 1:
-            return [f"- {motions[0]}. {self._single_motion_line_en(context_anchor, action_anchor)}"]
+            return [f"- Full duration ({self.video_duration_seconds}s): {motions[0]}. {self._single_motion_line_en(context_anchor, action_anchor)}"]
 
         lines = [
-            f"- First segment: {motions[0]}. {self._first_segment_line_en(context_anchor)}",
-            f"- Second segment: {motions[1]}. {self._second_segment_line_en(action_anchor, emotion_anchor)}",
+            f"- First segment ({self.video_segment_markers[0]}): {motions[0]}. {self._first_segment_line_en(context_anchor)}",
+            f"- Second segment ({self.video_segment_markers[1]}): {motions[1]}. {self._second_segment_line_en(action_anchor, emotion_anchor)}",
         ]
         for extra_index, extra_motion in enumerate(motions[2:], start=3):
+            if extra_index == 3:
+                lines.append(
+                    f"- Final segment ({self.video_segment_markers[2]}): {extra_motion}. "
+                    f"{self._third_segment_line_en(action_anchor, emotion_anchor)}"
+                )
+                continue
             lines.append(f"- Extra segment {extra_index}: {extra_motion}. Continue the transition without breaking visual continuity.")
         return lines
 
@@ -631,6 +656,13 @@ class PromptBuilder:
             return f"\u0417\u0430\u0442\u0435\u043c \u043a\u0430\u043c\u0435\u0440\u0430 \u0443\u0441\u0438\u043b\u0438\u0432\u0430\u0435\u0442 \u0444\u043e\u043a\u0443\u0441 \u043d\u0430 {action_anchor} \u0438 \u0447\u0443\u0432\u0441\u0442\u0432\u043e {emotion_anchor}, \u043d\u043e \u043d\u0435 \u043f\u0435\u0440\u0435\u0432\u043e\u0434\u0438\u0442 \u043a\u0430\u0434\u0440 \u0432 \u0440\u0438\u0441\u043a\u043e\u0432\u0430\u043d\u043d\u043e \u043a\u0440\u0443\u043f\u043d\u044b\u0439 \u043b\u0438\u0446\u0435\u0432\u043e\u0439 \u043f\u043b\u0430\u043d."
         return f"\u0417\u0430\u0442\u0435\u043c \u043a\u0430\u043c\u0435\u0440\u0430 \u0441\u043c\u0435\u0449\u0430\u0435\u0442 \u0444\u043e\u043a\u0443\u0441 \u043a {action_anchor} \u0438 \u0443\u0441\u0438\u043b\u0438\u0432\u0430\u0435\u0442 \u0447\u0443\u0432\u0441\u0442\u0432\u043e {emotion_anchor}, \u043d\u0435 \u0437\u0430\u0441\u0442\u0430\u0432\u043b\u044f\u044f \u043a\u0430\u0434\u0440 \u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c\u0441\u044f \u043a\u0440\u0443\u043f\u043d\u044b\u043c \u043b\u0438\u0446\u0435\u0432\u044b\u043c \u043f\u043e\u0440\u0442\u0440\u0435\u0442\u043e\u043c."
 
+    def _third_segment_line_ru(self, action_anchor: str, emotion_anchor: str) -> str:
+        return (
+            f"Заверши умеренным средне-общим или слегка широким ракурсом: {action_anchor} "
+            f"и чувство {emotion_anchor} остаются читаемыми, герои не становятся маленькими, "
+            "а среда не расширяется за счет выдуманных деталей."
+        )
+
     def _single_motion_line_en(self, context_anchor: str, action_anchor: str) -> str:
         if self.framing_mode == VideoFramingMode.FACE_CLOSEUP:
             return f"The camera may move more boldly toward {action_anchor}, using a closer emotional scale and allowing the face to carry the shot."
@@ -651,6 +683,13 @@ class PromptBuilder:
         if self.framing_mode == VideoFramingMode.AI_OPTIMAL:
             return f"The camera then intensifies focus on {action_anchor} and the feeling of {emotion_anchor} without forcing risky facial enlargement."
         return f"The camera then shifts focus to {action_anchor} and intensifies the feeling of {emotion_anchor} without forcing a large facial close-up."
+
+    def _third_segment_line_en(self, action_anchor: str, emotion_anchor: str) -> str:
+        return (
+            f"Finish in a moderate medium-wide or slightly wide view: {action_anchor} "
+            f"and the feeling of {emotion_anchor} stay readable, the heroes do not become tiny, "
+            "and the environment is not expanded with invented details."
+        )
 
     def _hybrid_phase_percentages(self) -> tuple[int, int]:
         optimal_percent = self.hybrid_ai_optimal_percent
@@ -698,15 +737,16 @@ class PromptBuilder:
                 if segment_index == split_index + 1:
                     description = (
                         f"В финальные {identity_safe_percent}% времени переводи камеру в identity-safe режим: "
-                        "\u0441\u0440\u0435\u0434\u043d\u0435-\u043e\u0431\u0449\u0438\u0439 \u0438\u043b\u0438 \u0431\u043e\u043b\u0435\u0435 \u0434\u0430\u043b\u044c\u043d\u0438\u0439 \u043f\u043b\u0430\u043d, \u0431\u043e\u043a\u043e\u0432\u043e\u0439, \u0432\u0435\u0440\u0445\u043d\u0438\u0439, \u043d\u0438\u0436\u043d\u0438\u0439, \u0432\u043e\u0437\u0434\u0443\u0448\u043d\u044b\u0439 "
-                        "\u0438\u043b\u0438 \u043c\u044f\u0433\u043a\u0438\u0439 \u043f\u0440\u043e\u0441\u0442\u0440\u0430\u043d\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 \u0440\u0430\u043a\u0443\u0440\u0441."
+                        "средне-общий или умеренно широкий план, боковой, верхний, нижний "
+                        "или мягкий пространственный ракурс; герои не должны становиться маленькими."
                     )
                 else:
                     description = (
                         f"\u0417\u0430\u0432\u0435\u0440\u0448\u0430\u0439 \u0432\u0438\u0434\u0435\u043e \u0441 \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0439 \u0434\u043b\u044f \u0438\u0434\u0435\u043d\u0442\u0438\u0447\u043d\u043e\u0441\u0442\u0438 \u0434\u0438\u0441\u0442\u0430\u043d\u0446\u0438\u0438, \u0440\u0430\u0441\u043a\u0440\u044b\u0432\u0430\u044f {action_anchor} "
                         f"\u0438 \u0447\u0443\u0432\u0441\u0442\u0432\u043e {emotion_anchor} \u0447\u0435\u0440\u0435\u0437 \u0441\u0438\u043b\u0443\u044d\u0442, \u043f\u043e\u0437\u0443 \u0438 \u0441\u0432\u044f\u0437\u044c \u0441\u043e \u0441\u0440\u0435\u0434\u043e\u0439."
                     )
-            lines.append(f"- \u0421\u0435\u0433\u043c\u0435\u043d\u0442 {segment_index}: {motion}. {description}")
+            marker = f" ({self.video_segment_markers[segment_index - 1]})" if segment_index <= len(self.video_segment_markers) else ""
+            lines.append(f"- \u0421\u0435\u0433\u043c\u0435\u043d\u0442 {segment_index}{marker}: {motion}. {description}")
         return lines
 
     def _hybrid_camera_section_lines_en(
@@ -744,14 +784,15 @@ class PromptBuilder:
                 if segment_index == split_index + 1:
                     description = (
                         f"In the final {identity_safe_percent}% of the shot, transition into identity-safe framing: "
-                        "medium-wide or more distant scale, side, top, low, aerial, or gently spatial angles."
+                        "medium-wide or moderately wide scale, side, top, low, or gently spatial angles; do not make the heroes tiny."
                     )
                 else:
                     description = (
                         f"Finish from an identity-safe distance, carrying {action_anchor} "
                         f"and the feeling of {emotion_anchor} through silhouette, posture, and relation to the environment."
                     )
-            lines.append(f"- Segment {segment_index}: {motion}. {description}")
+            marker = f" ({self.video_segment_markers[segment_index - 1]})" if segment_index <= len(self.video_segment_markers) else ""
+            lines.append(f"- Segment {segment_index}{marker}: {motion}. {description}")
         return lines
 
     def _build_style_edit_final_frame_prompt(

@@ -8,9 +8,9 @@ from typing import Iterable
 
 from models.scene_analysis import SceneAnalysis
 from utils.image_analysis import ImageMetadata
+from utils.video_timing import video_segment_markers
 
-GROK_MULTISCENE_TOTAL_SECONDS = 6
-GROK_MULTISCENE_SHOT_SECONDS = 2
+DEFAULT_GROK_MULTISCENE_TOTAL_SECONDS = 6
 DEFAULT_GROK_MULTISCENE_MAX_CHARS = 1000
 DEFAULT_GROK_MULTISCENE_MAX_WORDS = 200
 GROK_MULTISCENE_ASPECT_RATIO = "16:9"
@@ -34,13 +34,17 @@ def build_grok_multiscene_json_bundle(
     prefer_loving_kindness_tone: bool = True,
     max_chars: int = DEFAULT_GROK_MULTISCENE_MAX_CHARS,
     max_words: int | None = None,
+    duration_seconds: int = DEFAULT_GROK_MULTISCENE_TOTAL_SECONDS,
 ) -> GrokPromptJsonBundle:
     resolved_max_words = max_words if max_words is not None else _max_words_for_chars(max_chars)
+    markers = video_segment_markers(duration_seconds)
     motions = _normalize_motion_sequence(motion_sequence)
     prompt_en = _build_prompt_en(
         metadata=metadata,
         scene_analysis=scene_analysis_en,
         motions=motions,
+        markers=markers,
+        duration_seconds=duration_seconds,
         hide_phone_in_selfie=hide_phone_in_selfie,
         prefer_loving_kindness_tone=prefer_loving_kindness_tone,
         max_chars=max_chars,
@@ -50,6 +54,8 @@ def build_grok_multiscene_json_bundle(
         metadata=metadata,
         scene_analysis=scene_analysis_ru,
         motions=motions,
+        markers=markers,
+        duration_seconds=duration_seconds,
         hide_phone_in_selfie=hide_phone_in_selfie,
         prefer_loving_kindness_tone=prefer_loving_kindness_tone,
         max_chars=max_chars,
@@ -57,26 +63,28 @@ def build_grok_multiscene_json_bundle(
     )
 
     errors_en = validate_grok_prompt_json_text(
-        _wrap_prompt_json(prompt_en, lang="en"),
+        _wrap_prompt_json(prompt_en, lang="en", duration_seconds=duration_seconds),
         expected_lang="en",
         max_chars=max_chars,
         max_words=resolved_max_words,
+        duration_seconds=duration_seconds,
     )
     if errors_en:
         raise ValueError("Invalid Grok multiscene EN prompt JSON: " + "; ".join(errors_en))
 
     errors_ru = validate_grok_prompt_json_text(
-        _wrap_prompt_json(prompt_ru, lang="ru"),
+        _wrap_prompt_json(prompt_ru, lang="ru", duration_seconds=duration_seconds),
         expected_lang="ru",
         max_chars=max_chars,
         max_words=resolved_max_words,
+        duration_seconds=duration_seconds,
     )
     if errors_ru:
         raise ValueError("Invalid Grok multiscene RU prompt JSON: " + "; ".join(errors_ru))
 
     return GrokPromptJsonBundle(
-        video_prompt_json_en=_wrap_prompt_json(prompt_en, lang="en"),
-        video_prompt_json_ru=_wrap_prompt_json(prompt_ru, lang="ru"),
+        video_prompt_json_en=_wrap_prompt_json(prompt_en, lang="en", duration_seconds=duration_seconds),
+        video_prompt_json_ru=_wrap_prompt_json(prompt_ru, lang="ru", duration_seconds=duration_seconds),
         video_prompt_en=prompt_en,
         video_prompt_ru=prompt_ru,
     )
@@ -108,6 +116,7 @@ def validate_grok_prompt_json_text(
     expected_lang: str,
     max_chars: int = DEFAULT_GROK_MULTISCENE_MAX_CHARS,
     max_words: int | None = None,
+    duration_seconds: int = DEFAULT_GROK_MULTISCENE_TOTAL_SECONDS,
 ) -> list[str]:
     errors: list[str] = []
     resolved_max_words = max_words if max_words is not None else _max_words_for_chars(max_chars)
@@ -120,6 +129,12 @@ def validate_grok_prompt_json_text(
     item = payload[0]
     if str(item.get("lang", "")).strip() != expected_lang:
         errors.append(f"Prompt JSON object must set lang to '{expected_lang}'.")
+    try:
+        item_duration_seconds = int(item.get("duration_seconds", 0) or 0)
+    except (TypeError, ValueError):
+        item_duration_seconds = 0
+    if item_duration_seconds != duration_seconds:
+        errors.append(f"Prompt JSON object must set duration_seconds to {duration_seconds}.")
 
     prompt_text = str(item.get("prompt", "")).strip()
     if not prompt_text:
@@ -132,14 +147,14 @@ def validate_grok_prompt_json_text(
     word_count = len(prompt_text.split())
     if word_count > resolved_max_words:
         errors.append(f"Prompt exceeds {resolved_max_words} words ({word_count}).")
-    for shot_index, marker in enumerate(("0-2s", "2-4s", "4-6s"), start=1):
+    for shot_index, marker in enumerate(video_segment_markers(duration_seconds), start=1):
         if f"Shot {shot_index}:" not in prompt_text:
             errors.append(f"Prompt is missing 'Shot {shot_index}:'.")
         if marker not in prompt_text:
             errors.append(f"Prompt is missing timing marker '{marker}'.")
     if "@image1" not in prompt_text:
         errors.append("Prompt is missing required image tag @image1.")
-    total_marker = f"Total: {GROK_MULTISCENE_TOTAL_SECONDS}s / 3 shots / {GROK_MULTISCENE_ASPECT_RATIO}"
+    total_marker = f"Total: {duration_seconds}s / 3 shots / {GROK_MULTISCENE_ASPECT_RATIO}"
     if total_marker not in prompt_text:
         errors.append(f"Prompt is missing total footer '{total_marker}'.")
     return errors
@@ -150,6 +165,8 @@ def _build_prompt_en(
     metadata: ImageMetadata,
     scene_analysis: SceneAnalysis | None,
     motions: list[str],
+    markers: tuple[str, str, str],
+    duration_seconds: int,
     hide_phone_in_selfie: bool,
     prefer_loving_kindness_tone: bool,
     max_chars: int,
@@ -186,10 +203,10 @@ def _build_prompt_en(
         )
 
     required_sentences = [
-        f"Shot 1: 0-2s. Start with the strongest current cinematic read of @image1. Keep {subject}, {background}, and {action}. Use {motions[0]}. Photorealistic, stable identity.",
-        f"Shot 2: 2-4s. Shift into a clearly different optimal angle on @image1. Use {motions[1]}. Keep the same subject, clothing, and mood of {mood}.",
-        f"Shot 3: 4-6s. End with a safer distant or oblique view of @image1. Use {motions[2]}. Wider frame, smaller facial scale, no new people or objects.",
-        "Total: 6s / 3 shots / 16:9. No dialogue, no subtitles, no on-screen text.",
+        f"Shot 1: {markers[0]}. Start with the strongest current cinematic read of @image1. Keep {subject}, {background}, and {action}. Use {motions[0]}. Photorealistic, stable identity.",
+        f"Shot 2: {markers[1]}. Shift into a clearly different optimal angle on @image1. Use {motions[1]}. Keep the same subject, clothing, and mood of {mood}.",
+        f"Shot 3: {markers[2]}. End with a moderate medium-wide or wide-oblique view of @image1. Use {motions[2]}. Keep heroes clearly readable at human scale; do not pull back so far that people become tiny; avoid invented environment details.",
+        f"Total: {duration_seconds}s / 3 shots / 16:9. No dialogue, no subtitles, no on-screen text.",
     ]
     return _fit_prompt_budget(required_sentences, optional_notes, max_chars=max_chars, max_words=max_words)
 
@@ -199,6 +216,8 @@ def _build_prompt_ru(
     metadata: ImageMetadata,
     scene_analysis: SceneAnalysis | None,
     motions: list[str],
+    markers: tuple[str, str, str],
+    duration_seconds: int,
     hide_phone_in_selfie: bool,
     prefer_loving_kindness_tone: bool,
     max_chars: int,
@@ -230,10 +249,10 @@ def _build_prompt_ru(
         optional_notes.append("Теплоту оставлять только мягкой.")
 
     required_sentences = [
-        f"Shot 1: 0-2s. Начать с самого сильного на сегодня кинематографичного варианта @image1. Сохранить {subject}, {background} и {action}. Использовать {motions[0]}. Фотореализм и стабильная идентичность.",
-        f"Shot 2: 2-4s. Перейти к явно другому оптимальному ракурсу для @image1. Использовать {motions[1]}. Сохранить того же героя, одежду и настроение {mood}.",
-        f"Shot 3: 4-6s. Завершить более безопасным дальним или косым ракурсом для @image1. Использовать {motions[2]}. Более широкий кадр, меньший масштаб лица, без новых людей и объектов.",
-        "Total: 6s / 3 shots / 16:9. Без диалогов, без субтитров, без текста в кадре.",
+        f"Shot 1: {markers[0]}. Начать с самого сильного на сегодня кинематографичного варианта @image1. Сохранить {subject}, {background} и {action}. Использовать {motions[0]}. Фотореализм и стабильная идентичность.",
+        f"Shot 2: {markers[1]}. Перейти к явно другому оптимальному ракурсу для @image1. Использовать {motions[1]}. Сохранить того же героя, одежду и настроение {mood}.",
+        f"Shot 3: {markers[2]}. Завершить умеренным средне-общим или широким косым ракурсом для @image1. Использовать {motions[2]}. Герои остаются хорошо читаемыми, не отъезжать так далеко, чтобы люди стали крошечными, не добавлять лишние детали среды.",
+        f"Total: {duration_seconds}s / 3 shots / 16:9. Без диалогов, без субтитров, без текста в кадре.",
     ]
     return _fit_prompt_budget(required_sentences, optional_notes, max_chars=max_chars, max_words=max_words)
 
@@ -282,20 +301,20 @@ def _normalize_motion_sequence(motion_sequence: Iterable[str]) -> list[str]:
         cleaned = [
             "a cinematic reveal",
             "an alternate camera drift",
-            "a slow pullback to a wider view",
+            "a gentle pullback to a moderate wider view",
         ]
     while len(cleaned) < 3:
         cleaned.append(cleaned[-1])
-    cleaned[2] = "a slow pullback to a wider view"
+    cleaned[2] = "a gentle pullback to a moderate wider view"
     return cleaned[:3]
 
 
-def _wrap_prompt_json(prompt_text: str, *, lang: str) -> str:
+def _wrap_prompt_json(prompt_text: str, *, lang: str, duration_seconds: int = DEFAULT_GROK_MULTISCENE_TOTAL_SECONDS) -> str:
     payload = [
         {
             "lang": lang,
             "prompt_mode": "grok_multiscene_three_shot",
-            "duration_seconds": GROK_MULTISCENE_TOTAL_SECONDS,
+            "duration_seconds": duration_seconds,
             "aspect_ratio": GROK_MULTISCENE_ASPECT_RATIO,
             "prompt": prompt_text,
         }

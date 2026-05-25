@@ -1,3 +1,10 @@
+"""Full pipeline driven entirely through the xAI Imagine API.
+
+Mirrors main_full_pipeline.py one-for-one, but routes Grok video/background
+generation through the xAI API (api/grok_video_runner.py) instead of the
+Playwright-based Grok web UI agent (api/grok_web.py).
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -6,7 +13,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from config import ConfigValidationError, GenerationConfig, Settings, load_generation_config
-from api.grok_web import GrokWebSessionRunner
+from api.grok_video_runner import GrokVideoAPISessionRunner
 from main import _configure_stdio, _run_generation, _write_music_prompt
 from main_grok_web import run_generation
 from main_desktop_pipeline import (
@@ -28,7 +35,10 @@ from utils.project_delivery import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Full pipeline: generate prompts for one input image, run Grok for that image, then continue with the next image."
+        description=(
+            "Full pipeline: generate prompts for one input image, then call the xAI "
+            "Imagine API for that image, then continue with the next image."
+        )
     )
     parser.add_argument("--image", "-i", type=Path, required=False, help="Optional single source image path.")
     parser.add_argument("--stage-id", "-s", type=str, default=None, help="Optional fixed stage identifier.")
@@ -42,7 +52,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         dest="generate_video",
         default=None,
-        help="Enable video generation for each input image.",
+        help="Enable video generation for each input image via the xAI Imagine API.",
     )
     parser.add_argument(
         "--skip-video",
@@ -53,7 +63,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--generate-styled-images", action="store_true", help="Generate styled images during the prompt stage.")
     parser.add_argument("--generate-final-frames", action="store_true", dest="generate_final_frames", default=None, help="Generate final frames through the image API.")
     parser.add_argument("--skip-final-frames", action="store_false", dest="generate_final_frames", help="Skip final frame generation.")
-    parser.add_argument("--generate-source-background", action="store_true", dest="generate_source_background", default=None, help="Create Grok background prompts/images.")
+    parser.add_argument("--generate-source-background", action="store_true", dest="generate_source_background", default=None, help="Create Grok background prompts/images via API.")
     parser.add_argument("--skip-source-background", action="store_false", dest="generate_source_background", help="Disable background prompt/image generation.")
     parser.add_argument("--save-grok-debug-artifacts", action="store_true", dest="save_grok_debug_artifacts", default=None, help="Keep Grok candidate/debug artifacts in output/ for diagnostics.")
     parser.add_argument("--skip-grok-debug-artifacts", action="store_false", dest="save_grok_debug_artifacts", help="Do not keep Grok candidate/debug artifacts unless enabled in config.")
@@ -76,16 +86,17 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--continue-after-failure", action="store_true", dest="continue_after_failure", default=None, help="Continue with the next input image after a failed stage.")
     parser.add_argument("--stop-after-failure", action="store_false", dest="continue_after_failure", help="Stop the pipeline after a failed stage.")
-    parser.add_argument("--profile-dir", type=Path, default=Path(".browser-profile/grok-web"), help="Persistent Chrome profile for Grok Web.")
-    parser.add_argument("--target-url", type=str, default="https://grok.com/imagine", help="Grok Web URL.")
-    parser.add_argument("--chrome-exe", type=Path, default=None, help="Optional explicit Chrome executable path.")
-    parser.add_argument("--chrome-debug-port", type=int, default=None, help="Optional Chrome remote debugging port.")
-    parser.add_argument("--require-grok-debug-port", action="store_true", help="Fail instead of opening a fallback Grok Chrome window when --chrome-debug-port cannot be used.")
-    parser.add_argument("--reuse-existing-grok-page", action="store_true", help="With --chrome-debug-port, reuse the current Grok page instead of navigating before each Grok request.")
-    parser.add_argument("--result-timeout", type=float, default=600.0, help="How long to wait for each generated video, in seconds.")
-    parser.add_argument("--launch-timeout", type=float, default=60.0, help="How long to wait for Grok Web to open, in seconds.")
-    parser.add_argument("--upload-timeout", type=float, default=180.0, help="How long to wait for image upload readiness before submit, in seconds.")
-    parser.add_argument("--no-submit", action="store_true", help="Prepare Grok forms without submitting them.")
+    parser.add_argument("--result-timeout", type=float, default=900.0, help="How long to wait for each generated video, in seconds.")
+    parser.add_argument("--launch-timeout", type=float, default=60.0, help="Unused for API runner, kept for argparse parity.")
+    parser.add_argument("--upload-timeout", type=float, default=180.0, help="Unused for API runner, kept for argparse parity.")
+    parser.add_argument("--no-submit", action="store_true", help="Plan everything but skip the actual xAI API call.")
+    # Browser-only arguments accepted but ignored — keep CLI compatible with the legacy .bat.
+    parser.add_argument("--profile-dir", type=Path, default=Path(".browser-profile/grok-web"), help="(Ignored for API pipeline.)")
+    parser.add_argument("--target-url", type=str, default="https://grok.com/imagine", help="(Ignored for API pipeline.)")
+    parser.add_argument("--chrome-exe", type=Path, default=None, help="(Ignored for API pipeline.)")
+    parser.add_argument("--chrome-debug-port", type=int, default=None, help="(Ignored for API pipeline.)")
+    parser.add_argument("--require-grok-debug-port", action="store_true", help="(Ignored for API pipeline.)")
+    parser.add_argument("--reuse-existing-grok-page", action="store_true", help="(Ignored for API pipeline.)")
     return parser.parse_args()
 
 
@@ -169,7 +180,7 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
     results: list[Path] = []
     pending_input_cleanup: list[Path] = []
     total = len(input_images)
-    grok_session_runner = GrokWebSessionRunner()
+    grok_session_runner = GrokVideoAPISessionRunner()
 
     try:
         for index, image_path in enumerate(input_images, start=1):
@@ -230,24 +241,23 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
                     skip_existing=False,
                     keep_workdirs=True,
                 )
+
                 def stage_runner(run_args: argparse.Namespace) -> Path:
                     return run_generation(run_args, settings=settings, runner=grok_session_runner.run)
 
-                print("Starting Grok for current image...", flush=True)
+                print("Calling xAI Imagine API for current image...", flush=True)
                 stage_outputs = run_batch(grok_args, settings=settings, runner=stage_runner)
                 results.extend(stage_outputs)
-                print("Closing Grok for current image...", flush=True)
                 grok_session_runner.close_stage_session()
                 if index < total:
-                    print("Grok closed. Starting next image...", flush=True)
+                    print("Stage finished. Starting next image...", flush=True)
                 else:
-                    print("Grok closed.", flush=True)
+                    print("Stage finished.", flush=True)
 
                 if not _remove_processed_input(image_path, settings):
                     pending_input_cleanup.append(image_path)
                 clear_directory_contents(settings.output_dir)
             except Exception as exc:
-                print("Closing Grok for current image...", flush=True)
                 grok_session_runner.close_stage_session()
                 _handle_failure(
                     settings=settings,

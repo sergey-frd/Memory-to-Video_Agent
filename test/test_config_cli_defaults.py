@@ -17,6 +17,7 @@ def test_generation_config_defaults_match_requested_values() -> None:
     assert config.read_input_list is True
     assert config.generate_music is False
     assert config.generate_grok_multiscene_json_prompt is False
+    assert config.video_duration_seconds == 6
     assert config.grok_multiscene_prompt_size == 1000
     assert config.grok_multiscene_prompt_max_words == 200
     assert config.motion_model == "gpt-4.1"
@@ -203,6 +204,30 @@ def test_load_generation_config_rejects_too_small_grok_multiscene_prompt_size() 
     with pytest.raises(
         ConfigValidationError,
         match="grok_multiscene_prompt_size",
+    ):
+        load_generation_config(config_path)
+
+
+def test_generation_config_accepts_ten_second_video_duration() -> None:
+    config = GenerationConfig.from_dict({"video_duration_seconds": 10})
+
+    assert config.video_duration_seconds == 10
+
+
+def test_load_generation_config_rejects_invalid_video_duration() -> None:
+    root = Path("test_runtime") / f"video_duration_invalid_{uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    config_path = root / "config.json"
+    config_path.write_text(
+        '{\n'
+        '  "video_duration_seconds": 8\n'
+        '}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ConfigValidationError,
+        match="video_duration_seconds",
     ):
         load_generation_config(config_path)
 

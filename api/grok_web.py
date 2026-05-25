@@ -74,6 +74,9 @@ class GrokWebConfig:
     orientation: Optional[str] = None
     allow_profile_clone_fallback: bool = False
     save_debug_artifacts: bool = False
+    reuse_existing_page: bool = False
+    require_debug_port: bool = False
+    duration_seconds: Optional[int] = None
 
 
 class GrokWebAgent:
@@ -87,6 +90,10 @@ class GrokWebAgent:
 
     def _log(self, message: str) -> None:
         print(message, flush=True)
+
+    def _debug_port_required(self) -> bool:
+        env_value = os.environ.get("GROK_REQUIRE_DEBUG_PORT", "")
+        return self.config.require_debug_port or env_value.strip().casefold() in {"1", "true", "yes", "on"}
 
     def _launch_kwargs(self) -> dict[str, object]:
         launch_kwargs: dict[str, object] = {
@@ -109,6 +116,8 @@ class GrokWebAgent:
             try:
                 return self._connect_context(playwright)
             except GrokWebError:
+                if self._debug_port_required():
+                    raise
                 self._log("chrome debug-port connect failed; falling back to profile launch")
                 return self._launch_managed_context(playwright)
         return self._launch_managed_context(playwright)
@@ -257,6 +266,11 @@ class GrokWebAgent:
             return int(sock.getsockname()[1])
 
     def _launch_managed_context(self, playwright) -> BrowserContext:
+        if self._debug_port_required():
+            raise GrokWebError(
+                "Managed Chrome launch is disabled for this work-window run. "
+                "Open the reusable Chrome window with open_ai_work_window.bat and keep it listening on the configured debug port."
+            )
         chrome_executable = self._resolve_chrome_executable()
         try:
             profile_dir = str(self.config.profile_dir.resolve())
@@ -368,11 +382,18 @@ class GrokWebAgent:
         self._connected_browser = browser
         self._connected_over_cdp = True
         if browser.contexts:
-            return browser.contexts[0]
+            return self._select_connected_context(browser.contexts)
         raise GrokWebError(
             "Connected to Chrome debugging port, but no browser context is available. "
             "Open Grok in the login automation window and try again."
         )
+
+    def _select_connected_context(self, contexts: list[BrowserContext]) -> BrowserContext:
+        if self._debug_port_required():
+            for context in contexts:
+                if self._find_existing_grok_page(context) is not None:
+                    return context
+        return contexts[0]
 
     def run_in_context(self, context: BrowserContext) -> Path:
         page = self._get_page(context)
@@ -412,6 +433,11 @@ class GrokWebAgent:
         return self.config.output_path
 
     def _launch_context(self, playwright, launch_kwargs: dict[str, object]) -> BrowserContext:
+        if self._debug_port_required():
+            raise GrokWebError(
+                "Persistent Chrome launch is disabled for this work-window run. "
+                "The run must attach to the already-open Chrome debug window."
+            )
         if self.config.profile_dir.exists():
             self._remove_profile_lock_files(self.config.profile_dir)
         last_error: Exception | None = None
@@ -442,6 +468,11 @@ class GrokWebAgent:
         raise GrokWebError("Chrome automation launch failed.") from last_error
 
     def _launch_with_cloned_profile(self, playwright, launch_kwargs: dict[str, object], original_error: Exception | None) -> BrowserContext | None:
+        if self._debug_port_required():
+            raise GrokWebError(
+                "Chrome profile clone launch is disabled for this work-window run. "
+                "The run must attach to the already-open Chrome debug window."
+            )
         source_profile = self.config.profile_dir
         if not source_profile.exists():
             return None
@@ -536,12 +567,45 @@ class GrokWebAgent:
 
 
     def _get_page(self, context: BrowserContext) -> Page:
-        page = context.pages[0] if context.pages else context.new_page()
-        page.goto(self.config.target_url, wait_until="domcontentloaded", timeout=self.config.launch_timeout_ms)
+        if self._debug_port_required():
+            page = self._find_existing_grok_page(context)
+            if page is None:
+                raise GrokWebError(
+                    "No existing Grok page is visible on the reusable Chrome debug port. "
+                    "The work-window runner will not open a new Chrome tab or window. "
+                    "Open https://grok.com/imagine in the Chrome window that was started with remote debugging on this port, "
+                    "then run the batch again."
+                )
+        else:
+            page = context.pages[0] if context.pages else context.new_page()
+        try:
+            page.bring_to_front()
+        except Exception:
+            pass
+        if not self.config.reuse_existing_page or not self._page_matches_target(page):
+            page.goto(self.config.target_url, wait_until="domcontentloaded", timeout=self.config.launch_timeout_ms)
         self._ensure_imagine_mode(page)
         self._wait_for_ready(page)
         self._dismiss_interfering_overlay(page)
         return page
+
+    def _find_existing_grok_page(self, context: BrowserContext) -> Page | None:
+        for page in context.pages:
+            if self._page_matches_target(page):
+                return page
+        return None
+
+    def _page_matches_target(self, page: Page) -> bool:
+        try:
+            current_url = page.url or ""
+        except Exception:
+            return False
+        normalized_url = current_url.casefold()
+        return (
+            normalized_url.startswith("https://grok.com")
+            or normalized_url.startswith("https://www.grok.com")
+            or "://x.com/i/grok" in normalized_url
+        )
 
     def _ensure_imagine_mode(self, page: Page) -> None:
         if "/imagine" in page.url:
@@ -631,6 +695,65 @@ class GrokWebAgent:
                 re.compile(r"(video|videos|movie|clip|animation)", re.I),
             ],
         )
+        if self.config.duration_seconds:
+            for attempt in range(6):
+                if self._set_video_duration(page, self.config.duration_seconds):
+                    break
+                time.sleep(0.5)
+
+    def _set_video_duration(self, page: Page, duration_seconds: int) -> bool:
+        try:
+            result = page.evaluate(
+                """(target) => {
+                    const visible = (element) => {
+                        if (!element) return false;
+                        const style = window.getComputedStyle(element);
+                        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+                            return false;
+                        }
+                        const rect = element.getBoundingClientRect();
+                        return rect.width > 0 && rect.height > 0;
+                    };
+                    const normalize = (raw) => (raw || '').replace(/\\s+/g, '').toLowerCase();
+                    const wanted = new Set([
+                        `${target}s`,
+                        `${target}sec`,
+                        `${target}seconds`,
+                    ]);
+                    const buttons = Array.from(
+                        document.querySelectorAll('button[role="radio"], [role="radio"], button')
+                    ).filter(visible);
+                    let match = null;
+                    let already = false;
+                    for (const button of buttons) {
+                        const label = normalize(button.innerText || button.getAttribute('aria-label') || '');
+                        if (!wanted.has(label)) continue;
+                        match = button;
+                        if (button.getAttribute('aria-checked') === 'true') {
+                            already = true;
+                        }
+                        break;
+                    }
+                    if (!match) return { found: false, already: false, clicked: false };
+                    if (already) return { found: true, already: true, clicked: false };
+                    match.click();
+                    return { found: true, already: false, clicked: true };
+                }""",
+                duration_seconds,
+            )
+        except Exception as exc:
+            self._log(f"duration selector skipped ({exc})")
+            return False
+        if not isinstance(result, dict):
+            return False
+        if result.get("found"):
+            if result.get("already"):
+                self._log(f"video duration already set to {duration_seconds}s")
+            elif result.get("clicked"):
+                self._log(f"video duration set to {duration_seconds}s")
+            return True
+        self._log(f"video duration button '{duration_seconds}s' not found yet")
+        return False
 
     def _click_named_control(self, page: Page, patterns: list[re.Pattern[str]]) -> bool:
         for pattern in patterns:
@@ -995,9 +1118,10 @@ class GrokWebAgent:
             return False
 
     def _nudge_prompt_submit_controls(self, page: Page) -> bool:
+        desired_duration = self.config.duration_seconds
         try:
             nudged = page.evaluate(
-                """() => {
+                """(desiredDuration) => {
                     const visible = (element) => {
                         if (!element) return false;
                         const style = window.getComputedStyle(element);
@@ -1017,22 +1141,37 @@ class GrokWebAgent:
                     }
                     const promptRect = prompt.getBoundingClientRect();
 
+                    const normalizeLabel = (raw) => (raw || '').replace(/\\s+/g, '').toLowerCase();
+                    const desiredLabels = desiredDuration ? [
+                        `${desiredDuration}s`,
+                        `${desiredDuration}sec`,
+                        `${desiredDuration}seconds`,
+                    ] : [];
+                    const fallbackDurationLabels = ['6s', '5s', '10s'];
+
                     const candidates = Array.from(document.querySelectorAll('button[role="radio"], button'))
                         .filter(visible)
                         .map((button, index) => {
                             const rect = button.getBoundingClientRect();
-                            const label = (button.innerText || '').trim();
+                            const labelRaw = (button.innerText || '').trim();
+                            const label = normalizeLabel(labelRaw);
                             const selected = button.getAttribute('aria-checked') === 'true';
                             let score = 0;
+                            const isDesiredDuration = desiredLabels.length > 0 && desiredLabels.includes(label);
+                            const isFallbackDuration = !desiredLabels.length && fallbackDurationLabels.includes(label);
+                            if (isDesiredDuration) {
+                                // Desired duration must outrank everything, even an already-selected wrong duration.
+                                score += 25000;
+                            }
                             if (selected) score += 10000;
-                            if (label === '6s' || label === '5s') score += 1000;
-                            if (label === 'Video') score += 800;
+                            if (isFallbackDuration) score += 1000;
+                            if (label === 'video') score += 800;
                             if (label === '480p' || label === '720p') score += 600;
                             const belowPrompt = rect.top >= promptRect.bottom - 8 && rect.top <= promptRect.bottom + 56;
                             if (belowPrompt) score += 500;
                             if (rect.left >= promptRect.left - 12 && rect.right <= promptRect.right + 12) score += 300;
                             if (score <= 0) return null;
-                            return { button, score, index };
+                            return { button, score, index, isDesiredDuration, selected };
                         })
                         .filter(Boolean)
                         .sort((left, right) => right.score - left.score || right.index - left.index);
@@ -1041,9 +1180,15 @@ class GrokWebAgent:
                         return false;
                     }
 
-                    candidates[0].button.click();
+                    const top = candidates[0];
+                    // If the desired duration button is already selected, don't re-click it (would deselect).
+                    if (top.isDesiredDuration && top.selected) {
+                        return true;
+                    }
+                    top.button.click();
                     return true;
-                }"""
+                }""",
+                desired_duration,
             )
         except Exception:
             return False
@@ -2133,6 +2278,8 @@ class GrokWebSessionRunner:
                     self._context = agent._connect_context(self._playwright)
                     self._connected_over_cdp = True
                 except GrokWebError:
+                    if agent._debug_port_required():
+                        raise
                     agent._log("chrome debug-port connect failed; falling back to managed Chrome launch")
                     self._context = agent._launch_managed_context(self._playwright)
                     self._connected_over_cdp = True

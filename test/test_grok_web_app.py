@@ -599,6 +599,110 @@ def test_prompt_matches_rejects_empty_prompt_field() -> None:
     assert not agent._prompt_matches(FakeLocator(), "Create a realistic associative garden courtyard background with soft light")
 
 
+def test_debug_port_required_mode_does_not_fallback_to_managed_chrome(monkeypatch) -> None:
+    config = GrokWebConfig(
+        prompt_text="prompt",
+        image_path=Path("frame.png"),
+        output_path=Path("out.mp4"),
+        debug_port=9222,
+        require_debug_port=True,
+    )
+    agent = GrokWebAgent(config)
+
+    monkeypatch.setattr(agent, "_connect_context", lambda _playwright: (_ for _ in ()).throw(GrokWebError("no debug")))
+    monkeypatch.setattr(agent, "_launch_managed_context", lambda _playwright: (_ for _ in ()).throw(AssertionError("unexpected fallback")))
+
+    with pytest.raises(GrokWebError, match="no debug"):
+        agent._open_browser_context(object())
+
+
+def test_debug_port_environment_lock_blocks_managed_chrome(monkeypatch) -> None:
+    agent = GrokWebAgent(
+        GrokWebConfig(
+            prompt_text="prompt",
+            image_path=Path("frame.png"),
+            output_path=Path("out.mp4"),
+        )
+    )
+
+    monkeypatch.setenv("GROK_REQUIRE_DEBUG_PORT", "1")
+
+    with pytest.raises(GrokWebError, match="Managed Chrome launch is disabled"):
+        agent._launch_managed_context(object())
+
+
+def test_debug_port_environment_lock_blocks_persistent_context_launch(monkeypatch) -> None:
+    agent = GrokWebAgent(
+        GrokWebConfig(
+            prompt_text="prompt",
+            image_path=Path("frame.png"),
+            output_path=Path("out.mp4"),
+        )
+    )
+
+    monkeypatch.setenv("GROK_REQUIRE_DEBUG_PORT", "1")
+
+    with pytest.raises(GrokWebError, match="Persistent Chrome launch is disabled"):
+        agent._launch_context(object(), {})
+
+
+def test_attach_only_get_page_requires_existing_grok_tab_without_opening_new_page(monkeypatch) -> None:
+    agent = GrokWebAgent(
+        GrokWebConfig(
+            prompt_text="prompt",
+            image_path=Path("frame.png"),
+            output_path=Path("out.mp4"),
+            debug_port=9222,
+            require_debug_port=True,
+            reuse_existing_page=True,
+        )
+    )
+
+    class FakeContext:
+        pages: list[object] = []
+
+        def new_page(self):
+            raise AssertionError("unexpected new page")
+
+    with pytest.raises(GrokWebError, match="will not open a new Chrome tab or window"):
+        agent._get_page(FakeContext())
+
+
+def test_attach_only_get_page_reuses_existing_grok_tab_without_new_page(monkeypatch) -> None:
+    agent = GrokWebAgent(
+        GrokWebConfig(
+            prompt_text="prompt",
+            image_path=Path("frame.png"),
+            output_path=Path("out.mp4"),
+            debug_port=9222,
+            require_debug_port=True,
+            reuse_existing_page=True,
+        )
+    )
+    calls: list[str] = []
+
+    class FakePage:
+        url = "https://grok.com/imagine"
+
+        def goto(self, *_args, **_kwargs):
+            raise AssertionError("unexpected navigation")
+
+    class FakeContext:
+        pages = [FakePage()]
+
+        def new_page(self):
+            raise AssertionError("unexpected new page")
+
+    monkeypatch.setattr(agent, "_ensure_imagine_mode", lambda _page: calls.append("imagine"))
+    monkeypatch.setattr(agent, "_wait_for_ready", lambda _page: calls.append("ready"))
+    monkeypatch.setattr(agent, "_dismiss_interfering_overlay", lambda _page: calls.append("overlay"))
+
+    page = agent._get_page(FakeContext())
+
+    assert page is FakeContext.pages[0]
+    assert calls == ["imagine", "ready", "overlay"]
+
+
 def test_dismiss_interfering_overlay_clicks_disable_ad_button(monkeypatch) -> None:
     agent = GrokWebAgent(
         GrokWebConfig(
@@ -1587,6 +1691,47 @@ def test_connect_context_reuses_open_debug_browser() -> None:
     result = agent._connect_context(FakePlaywright())
 
     assert result == "existing-context"
+
+
+def test_connect_context_prefers_context_with_grok_tab_when_attach_only() -> None:
+    agent = GrokWebAgent(
+        GrokWebConfig(
+            prompt_text="prompt",
+            image_path=Path("frame.png"),
+            output_path=Path("out.mp4"),
+            debug_port=9222,
+            require_debug_port=True,
+        )
+    )
+
+    class FakePage:
+        def __init__(self, url: str) -> None:
+            self.url = url
+
+    class FakeContext:
+        def __init__(self, pages: list[FakePage]) -> None:
+            self.pages = pages
+
+    plain_context = FakeContext([FakePage("https://chatgpt.com/")])
+    grok_context = FakeContext([FakePage("https://grok.com/imagine")])
+
+    class FakeBrowser:
+        def __init__(self) -> None:
+            self.contexts = [plain_context, grok_context]
+
+    class FakeChromium:
+        def connect_over_cdp(self, endpoint: str, timeout: int):
+            assert endpoint == "http://127.0.0.1:9222"
+            assert timeout == 60_000
+            return FakeBrowser()
+
+    class FakePlaywright:
+        def __init__(self) -> None:
+            self.chromium = FakeChromium()
+
+    result = agent._connect_context(FakePlaywright())
+
+    assert result is grok_context
 
 
 def test_close_lingering_login_browser_closes_debug_port_session(monkeypatch) -> None:

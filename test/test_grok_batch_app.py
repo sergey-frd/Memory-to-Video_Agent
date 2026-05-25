@@ -356,3 +356,52 @@ def test_run_batch_reuses_single_grok_session_when_runner_not_provided(monkeypat
     assert calls == ["session:frame_a_20260311_081437_video_1.mp4", "close"]
     captured = capsys.readouterr()
     assert "Closing Grok for current image..." in captured.out
+
+
+def test_run_batch_forwards_work_window_flags_to_generation_runner() -> None:
+    root = Path("test_runtime") / f"grok_batch_{uuid4().hex}"
+    settings = _settings_for(root)
+
+    image_path = settings.input_dir / "frame_a.png"
+    image_path.write_bytes(b"a")
+    prompt_path = settings.output_dir / "frame_a_20260311_081437_v_prompt_1.txt"
+    prompt_path.write_text("prompt a", encoding="utf-8")
+
+    observed: list[tuple[int | None, bool, bool]] = []
+
+    def fake_runner(run_args: Namespace) -> Path:
+        observed.append(
+            (
+                run_args.chrome_debug_port,
+                run_args.require_debug_port,
+                run_args.reuse_existing_page,
+            )
+        )
+        output = run_args.output_video
+        output.write_bytes(b"video")
+        return output
+
+    args = Namespace(
+        prompt_dir=settings.output_dir,
+        input_dir=settings.input_dir,
+        config_file=None,
+        profile_dir=root / ".browser-profile" / "grok-web",
+        target_url="https://grok.com/imagine",
+        chrome_exe=None,
+        chrome_debug_port=9222,
+        require_debug_port=True,
+        reuse_existing_page=True,
+        result_timeout=600.0,
+        launch_timeout=60.0,
+        upload_timeout=180.0,
+        generate_video=None,
+        generate_source_background=None,
+        save_grok_debug_artifacts=None,
+        no_submit=False,
+        skip_existing=False,
+        keep_workdirs=True,
+    )
+
+    run_batch(args, settings=settings, runner=fake_runner)
+
+    assert observed == [(9222, True, True)]

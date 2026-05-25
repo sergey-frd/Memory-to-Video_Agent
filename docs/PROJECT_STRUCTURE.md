@@ -32,9 +32,10 @@
 | Синтез prompts | `utils/prompt_builder.py`, `api/openai_prompt_synthesizer.py`, `api/openai_motion_selector.py`, `utils/camera_movements.py` | Формирование video/background/final-frame/music prompts и motion selection | `*_v_prompt_*.txt`, `*_bg_prompt.txt`, `*_assoc_bg_prompt.txt`, `*_final_frame_prompt_*.txt`, `*_m_prompt.txt` |
 | Основной generation pipeline | `main.py` | Склеивает image analysis, scene analysis, motion, prompt generation, optional final frames | полный набор stage-артефактов в `output/` |
 | API final-frame pipeline | `main_desktop_pipeline.py` | Многокадровый pipeline с manifest и синхронизацией не-видео артефактов | `*_api_pipeline_manifest.json`, final-frame outputs |
-| Grok single-stage runtime | `api/grok_web.py`, `main_grok_web.py` | Генерация background image и/или video для одной prompt-пары | `*_bg_image_16x9.png`, `*_video_*.mp4` |
+| Grok single-stage runtime | `api/grok_web.py`, `main_grok_web.py` | Генерация background image и/или video для одной prompt-пары через web-UI (Playwright); `GrokWebConfig.duration_seconds` управляет выбором длительности в UI | `*_bg_image_16x9.png`, `*_video_*.mp4` |
+| Grok API runtime | `api/grok_video.py`, `api/grok_video_runner.py` | Прямой вызов xAI Video API (`grok-imagine-video`) через `xai-sdk`; используется тем же `AgentRunner`-протоколом, что и web-вариант | `*_video_*.mp4` |
 | Grok batch runtime | `main_grok_batch.py` | Пакетный запуск Grok по всем `*_v_prompt_*.txt` | набор видео и bg-изображений по всем stage |
-| Полный sequential pipeline | `main_full_pipeline.py` | Генерация prompts и немедленный Grok-run по каждому входному изображению | доставленные stage outputs, возможное очищение `input/` и `output/` |
+| Полный sequential pipeline | `main_full_pipeline.py`, `main_full_pipeline_api.py` | Генерация prompts и немедленный Grok-run по каждому входному изображению; API-вариант использует `GrokVideoAPISessionRunner` вместо браузера | доставленные stage outputs, возможное очищение `input/` и `output/` |
 | Delivery и lifecycle | `utils/project_delivery.py`, `utils/artifact_cleanup.py`, `main_cleanup_artifacts.py` | Доставка итогов, очистка, перенос ошибок, архивирование | `final_videos_dir`, `regeneration_assets_dir`, `error/`, cleanup reports |
 | Sequence optimization | `main_sequence_optimizer.py`, `utils/sequence_optimizer.py`, `utils/sequence_optimizer_runtime.py`, `utils/premiere_xml.py`, `utils/premiere_project.py`, `utils/premiere_xml_export.py`, `utils/premiere_project_export.py`, `models/video_sequence.py` | Анализ монтажной последовательности и выдача рекомендованного порядка | optimized JSON/TXT/XML/PRPROJ |
 | Sequence reports и batch orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/fcp_translation_results.py` | Построение отчетов, batch-доставка, human-profile overlays, transition recommendations | reports, batch summaries, transition reports |
@@ -86,6 +87,7 @@
 ```mermaid
 flowchart LR
   B1["run_full_grok_pipeline*.bat"] --> P1["main_full_pipeline.py"]
+  B1A["run_full_grok_pipeline_api.bat"] --> P1A["main_full_pipeline_api.py"]
   B2["run_grok_automation*.bat"] --> P2["main_grok_web.py / main_grok_batch.py"]
   B3A["run_project_sequence_batch_(project).bat"] --> B3["run_project_sequence_batch.bat"]
   B3 --> P3["main_project_sequence_batch.py"]

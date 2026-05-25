@@ -116,6 +116,26 @@ run_full_grok_pipeline.bat --skip-video --generate-source-background --upload-ti
 run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300
 ```
 
+Duration selection fix: the launcher now reads `video_duration_seconds` from the active config and forces the matching duration button in the Grok UI before uploading the image and prompt. A config requesting `10` seconds is no longer overridden by the `6 s` default the UI may pre-select.
+
+### `run_full_grok_pipeline_api.bat`
+
+Direct xAI API alternative to `run_full_grok_pipeline.bat`. Same input/output layout, but the pipeline calls the xAI `grok-imagine-video` model through the official `xai-sdk` Python client instead of driving a Chrome session.
+
+Prerequisites:
+- Fill `XAI_API_KEY` inside `.env` (use `.env.template` as a starting point).
+- Optional sanity check: `python .\scripts\xai_ping.py` — sends a cheap chat request and prints `pong` when the key works.
+
+Examples:
+
+```bat
+run_full_grok_pipeline_api.bat
+run_full_grok_pipeline_api.bat --config-file .\config_SF.json
+run_full_grok_pipeline_api.bat --skip-video --generate-source-background
+```
+
+Related files: `main_full_pipeline_api.py`, `api/grok_video.py`, `api/grok_video_runner.py`, `scripts/xai_ping.py`.
+
 ## New Generation Flags
 
 ### `generate_video`
@@ -284,6 +304,7 @@ Use this compact map when you need to quickly see which `.bat` launches which Py
 ```mermaid
 flowchart LR
   B1["run_full_grok_pipeline*.bat"] --> P1["main_full_pipeline.py"]
+  B1A["run_full_grok_pipeline_api.bat"] --> P1A["main_full_pipeline_api.py"]
   B2["run_grok_automation*.bat"] --> P2["main_grok_web.py / main_grok_batch.py"]
   B3A["run_project_sequence_batch_(project).bat"] --> B3["run_project_sequence_batch.bat"]
   B3 --> P3["main_project_sequence_batch.py"]

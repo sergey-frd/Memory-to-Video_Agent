@@ -7,11 +7,15 @@ from PIL import Image
 
 from config import Settings
 from main_chatgpt_portrait_batch import (
+    PortraitBatchConfig,
     PortraitConfigError,
+    PortraitJob,
+    PortraitStyle,
     build_portrait_jobs,
     list_input_images,
     load_portrait_config,
     run_batch,
+    _run_desktop_jobs,
     _output_dir_for_backend,
 )
 
@@ -351,6 +355,120 @@ def test_run_batch_copies_saved_portrait_into_user_final_output_dir() -> None:
     delivered = root / "delivered" / "output" / "chatgpt_portraits" / "first_watercolor.png"
     assert delivered.exists()
     assert delivered.read_bytes() == b"portrait"
+
+
+def test_run_batch_rejects_missing_delivery_config() -> None:
+    root = Path("test_runtime") / f"portrait_missing_delivery_{uuid4().hex}"
+    settings = _settings_for(root)
+    image_path = settings.input_dir / "first.png"
+    image_path.write_bytes(b"a")
+    portrait_config_path = root / "portrait.json"
+    portrait_config_path.write_text(
+        '{\n'
+        '  "portrait_styles": [{"name": "watercolor portrait", "slug": "watercolor"}],\n'
+        '  "output_dir": "output/chatgpt_portraits"\n'
+        '}',
+        encoding="utf-8",
+    )
+
+    args = Namespace(
+        input_dir=None,
+        output_dir=None,
+        config_file=portrait_config_path,
+        delivery_config_file=Path("missing_delivery.json"),
+        profile_dir=root / ".browser-profile" / "chatgpt-web",
+        target_url="https://chatgpt.com/",
+        chrome_exe=None,
+        result_timeout=123.0,
+        launch_timeout=45.0,
+        no_submit=False,
+        skip_existing=False,
+        save_response_text=None,
+    )
+
+    with pytest.raises(FileNotFoundError, match="Delivery config was not found"):
+        run_batch(args, settings=settings, runner=lambda _config: None)
+
+
+def test_desktop_portrait_jobs_force_clean_chat_and_strict_clipboard_attachment(monkeypatch) -> None:
+    import sys
+    import types
+
+    root = Path("test_runtime") / f"portrait_desktop_config_{uuid4().hex}"
+    settings = _settings_for(root)
+    image_path = settings.input_dir / "first.png"
+    image_path.write_bytes(b"a")
+    output_path = settings.output_dir / "chatgpt_watercolor_on_paper" / "first_watercolor.png"
+    captured_configs = []
+
+    class FakeDesktopAgentConfig:
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+    class FakeChatGPTDesktopAgent:
+        def __init__(self, config):
+            self.config = config
+            captured_configs.append(config)
+
+        def run(self):
+            self.config.output_path.parent.mkdir(parents=True, exist_ok=True)
+            self.config.output_path.write_bytes(b"portrait")
+
+    fake_desktop_module = types.SimpleNamespace(
+        ChatGPTDesktopAgent=FakeChatGPTDesktopAgent,
+        DesktopAgentConfig=FakeDesktopAgentConfig,
+    )
+    monkeypatch.setitem(sys.modules, "api.chatgpt_desktop_v2", fake_desktop_module)
+
+    job = PortraitJob(
+        image_path=image_path,
+        style=PortraitStyle(name="watercolor", slug="watercolor"),
+        prompt_text="prompt",
+        output_path=output_path,
+        response_text_path=None,
+    )
+    args = Namespace(
+        backend="desktop",
+        skip_existing=False,
+        desktop_reactivate_delay=0.0,
+        desktop_browser_tab_title_re=".*ChatGPT.*",
+        desktop_active_window=True,
+        desktop_new_chat=False,
+        desktop_click_composer=False,
+        desktop_clipboard_attach=True,
+        desktop_post_attach_delay=8.0,
+        desktop_min_result_wait=100.0,
+        desktop_result_stable_wait=12.0,
+        desktop_require_single_tab_window=True,
+        desktop_prefer_single_tab_window=False,
+        desktop_save_context_menu=True,
+        desktop_capture_result=False,
+        desktop_send_cursor_delay=0.0,
+        desktop_verbose=False,
+        chrome_exe=None,
+        launch_timeout=60.0,
+        desktop_dialog_timeout=20.0,
+        result_timeout=300.0,
+        desktop_new_chat_timeout=15.0,
+        no_submit=False,
+        continue_on_error=False,
+        pause_between_jobs=False,
+    )
+
+    outputs = _run_desktop_jobs(
+        args,
+        [job],
+        PortraitBatchConfig(styles=[job.style], new_chat_per_job=True),
+        settings,
+        delivery_config=None,
+    )
+
+    assert outputs == [output_path]
+    assert captured_configs[0].force_new_chat_navigation is False
+    assert captured_configs[0].require_new_attachment_preview is True
+    assert captured_configs[0].post_attach_delay_sec == 8.0
+    assert captured_configs[0].min_result_wait_sec == 100.0
+    assert captured_configs[0].result_stable_sec == 12.0
 
 
 def test_chatgpt_clean_chat_failure_is_desktop_safety_stop() -> None:

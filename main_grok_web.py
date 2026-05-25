@@ -33,6 +33,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target-url", type=str, default="https://grok.com/imagine", help="Grok Web URL.")
     parser.add_argument("--chrome-exe", type=Path, default=None, help="Optional explicit Chrome executable path.")
     parser.add_argument("--chrome-debug-port", type=int, default=None, help="Optional Chrome remote debugging port for reusing an already opened Grok login window.")
+    parser.add_argument("--require-debug-port", action="store_true", help="Fail instead of opening a fallback Chrome window when --chrome-debug-port cannot be used.")
+    parser.add_argument("--reuse-existing-page", action="store_true", help="When connected to a work-window Chrome session, reuse the current Grok page instead of navigating before the request.")
     parser.add_argument("--result-timeout", type=float, default=600.0, help="How long to wait for the generated video, in seconds.")
     parser.add_argument("--launch-timeout", type=float, default=60.0, help="How long to wait for Grok Web to open, in seconds.")
     parser.add_argument("--upload-timeout", type=float, default=180.0, help="How long to wait for image upload readiness before submit, in seconds.")
@@ -523,6 +525,9 @@ def run_generation(args: argparse.Namespace, settings: Settings | None = None, r
         result_timeout_ms=int(args.result_timeout * 1000),
         submit=not args.no_submit,
         save_debug_artifacts=generation_config.save_grok_debug_artifacts,
+        reuse_existing_page=getattr(args, "reuse_existing_page", False),
+        require_debug_port=getattr(args, "require_debug_port", False),
+        duration_seconds=getattr(generation_config, "video_duration_seconds", None),
     )
     agent_runner = runner or (lambda cfg: GrokWebAgent(cfg).run())
     background_result: Path | None = None
@@ -552,6 +557,8 @@ def run_generation(args: argparse.Namespace, settings: Settings | None = None, r
                 aspect_ratio="16:9",
                 orientation="horizontal",
                 save_debug_artifacts=generation_config.save_grok_debug_artifacts,
+                reuse_existing_page=getattr(args, "reuse_existing_page", False),
+                require_debug_port=getattr(args, "require_debug_port", False),
             )
             try:
                 background_result = agent_runner(background_config)

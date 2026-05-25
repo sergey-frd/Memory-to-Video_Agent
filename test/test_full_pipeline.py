@@ -54,6 +54,8 @@ def test_full_pipeline_processes_each_input_image_sequentially(monkeypatch, caps
     processed: list[str] = []
     batch_calls: list[str] = []
     batch_debug_ports: list[object] = []
+    batch_reuse_pages: list[object] = []
+    batch_require_debug_ports: list[object] = []
     removed_inputs: list[str] = []
 
     monkeypatch.setattr(main_full_pipeline, "stage_identifier", lambda provided, image_path: f"{image_path.stem}_stage")
@@ -76,6 +78,8 @@ def test_full_pipeline_processes_each_input_image_sequentially(monkeypatch, caps
         stage_id = processed[-1].replace(".png", "_stage")
         batch_calls.append(f"{stage_id}_v_prompt_1.txt")
         batch_debug_ports.append(run_args.chrome_debug_port)
+        batch_reuse_pages.append(run_args.reuse_existing_page)
+        batch_require_debug_ports.append(run_args.require_debug_port)
         output = settings.output_dir / f"{stage_id}_video_1.mp4"
         output.write_bytes(b"video")
         return [output]
@@ -95,7 +99,9 @@ def test_full_pipeline_processes_each_input_image_sequentially(monkeypatch, caps
 
     assert processed == ["frame_a.png", "frame_b.png"]
     assert batch_calls == ["frame_a_stage_v_prompt_1.txt", "frame_b_stage_v_prompt_1.txt"]
-    assert batch_debug_ports == [None, None]
+    assert batch_debug_ports == [9222, 9222]
+    assert batch_reuse_pages == [False, False]
+    assert batch_require_debug_ports == [False, False]
     assert removed_inputs == ["frame_a.png", "frame_b.png"]
     assert len(outputs) == 2
     captured = capsys.readouterr()
@@ -182,13 +188,15 @@ def test_remove_processed_input_uses_retry_capable_remove_path(monkeypatch) -> N
 
     removed: list[Path] = []
     original_exists = Path.exists
+    image_exists_checks = {"count": 0}
 
     def fake_remove_path(path: Path) -> None:
         removed.append(path)
 
     def fake_exists(path: Path) -> bool:
         if path == image_path:
-            return False
+            image_exists_checks["count"] += 1
+            return image_exists_checks["count"] == 1
         return original_exists(path)
 
     monkeypatch.setattr(main_full_pipeline, "remove_path", fake_remove_path)

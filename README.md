@@ -4,13 +4,17 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.05.17.01`
-- Git tag: `v2026.05.17.01`
-- Last synchronized: `2026-05-17T03:57:05+03:00`
-- Source project: `img-style-ag_1`
-- Python files: `82`
-- Test files: `25`
-- Entry points: `19`
+- Publication version: `2026.05.25.01`
+- Git tag: `v2026.05.25.01`
+- Last synchronized: `2026-05-25T11:30:00+03:00`
+- Source project: `img-style-ag_2`
+- Python files: `83+`
+- Test files: `25+`
+- Entry points: `20`
+- Highlights of this revision:
+  - Direct xAI Video API pipeline: `main_full_pipeline_api.py`, `api/grok_video.py`, `api/grok_video_runner.py`, `run_full_grok_pipeline_api.bat`, `scripts/xai_ping.py`.
+  - Grok web automation: `GrokWebConfig.duration_seconds` and `_set_video_duration` now force the configured duration button before upload, so requests for 10 s no longer fall back to a pre-selected 6 s.
+  - `.env.template` documents the new `XAI_API_KEY` environment variable next to `OPENAI_API_KEY`.
 
 ## Published Source Mirror
 
@@ -41,6 +45,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/main_desktop.py`
 - `source/main_desktop_pipeline.py`
 - `source/main_full_pipeline.py`
+- `source/main_full_pipeline_api.py`
 - `source/main_grok_batch.py`
 - `source/main_grok_pipeline.py`
 - `source/main_grok_profile_check.py`
@@ -67,6 +72,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/pytest.ini`
 - `source/requirements.txt`
 - `source/run_full_grok_pipeline.bat`
+- `source/run_full_grok_pipeline_api.bat`
 - `source/run_full_grok_pipeline_local.bat`
 - `source/run_grok_automation.bat`
 - `source/run_grok_automation_all.bat`
