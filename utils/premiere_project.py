@@ -283,6 +283,16 @@ def resolve_project_track_item_timeline(track_item_node: ET.Element) -> tuple[in
     return start, end
 
 
+def get_project_track_group_indexes(sequence_node: ET.Element) -> list[int]:
+    indexes: set[int] = set()
+    for track_group_node in sequence_node.findall("./TrackGroups/TrackGroup"):
+        raw_index = track_group_node.attrib.get("Index")
+        if raw_index is None:
+            continue
+        indexes.add(_safe_int(raw_index))
+    return sorted(indexes)
+
+
 def get_project_track_nodes(
     sequence_node: ET.Element,
     *,

@@ -1,0 +1,16 @@
+{
+  "project_path": "e:\\Git\\video_projects\\Sveta_I\\Svt_Igr_26_2.prproj",
+  "prin_path": "e:\\Git\\video_projects\\Sveta_I\\Svt_Igr_26_2.prin",
+  "image_dest": "e:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026_Sv\\input",
+  "video_dest": "e:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026_Sv\\input_video",
+  "copy_images": true,
+  "copy_videos": false,
+  "on_conflict": "rename",
+  "dry_run": false,
+  "manifest_path": "e:\\Git\\AI_PIC_DEF\\def_AI\\img-style-ag_1\\output\\Svt_Igr_26_2_media_copy_manifest.json",
+  "sequence_jobs": [
+    {
+      "sequence_name": "Svt_Igr_262_e01"
+    }
+  ]
+}

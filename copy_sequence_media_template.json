@@ -1,0 +1,16 @@
+{
+  "project_path": "E:\\Git\\video_projects\\<ProjectOwner>\\Proj\\<ProjectName>.prproj",
+  "prin_path": "E:\\Git\\video_projects\\<ProjectOwner>\\Proj\\<ProjectName>.prin",
+  "image_dest": "E:\\Git\\P_h_o_t_o\\<AssetsOwner>\\2026\\input",
+  "video_dest": "E:\\Git\\P_h_o_t_o\\<AssetsOwner>\\2026\\input_video",
+  "copy_images": true,
+  "copy_videos": false,
+  "on_conflict": "rename",
+  "dry_run": false,
+  "manifest_path": "E:\\Git\\AI_PIC_DEF\\def_AI\\img-style-ag_1\\output\\<ProjectName>_media_copy_manifest.json",
+  "sequence_jobs": [
+    {
+      "sequence_name": "<SequenceName>_e01"
+    }
+  ]
+}

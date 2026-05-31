@@ -84,7 +84,7 @@ Naming pattern: `<image_stem>_<style_slug>.png`, e.g. `IMG-001_rembrandt.png`. `
 | "Multiple ChatGPT windows found" | Close extras or open the dedicated single-tab generation window. |
 | Gemini save dialog opens instead of full-size download | Older fallback. The Gemini path prefers `Download full size` / `Скачать в полном размере` button. Update if the UI label changes. |
 | Grok stuck on the upload step | Re-run `login_grok_profile.bat`, verify `https://grok.com/imagine`, retry with `--continue-on-error`. |
-| Pair portrait produces only one variant | Ensure both photos exist in `input_pair/<id>/`; the temp reference is built in `output/pair/_pair_references`. |
+| Pair batch finds 0 folders | Put **two** images per `input_pair/<id>/`. Supported: `.png`, `.jpg`, `.jpeg`, `.jfif`, `.webp`, `.bmp`, `.tif`, `.tiff`. Names are free (not only `photoA.jpg`); first two sorted files are used. |
 
 ## Reference
 

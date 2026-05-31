@@ -4,17 +4,19 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.05.25.01`
-- Git tag: `v2026.05.25.01`
-- Last synchronized: `2026-05-25T11:30:00+03:00`
+- Publication version: `2026.05.31.01`
+- Git tag: `v2026.05.31.01`
+- Last synchronized: `2026-05-31T04:00:00+03:00`
 - Source project: `img-style-ag_2`
-- Python files: `83+`
+- Python files: `85+`
 - Test files: `25+`
-- Entry points: `20`
+- Entry points: `22`
 - Highlights of this revision:
-  - Direct xAI Video API pipeline: `main_full_pipeline_api.py`, `api/grok_video.py`, `api/grok_video_runner.py`, `run_full_grok_pipeline_api.bat`, `scripts/xai_ping.py`.
-  - Grok web automation: `GrokWebConfig.duration_seconds` and `_set_video_duration` now force the configured duration button before upload, so requests for 10 s no longer fall back to a pre-selected 6 s.
-  - `.env.template` documents the new `XAI_API_KEY` environment variable next to `OPENAI_API_KEY`.
+  - Sequence media copy: extract every source image (and, optionally, video) used by a Premiere sequence and copy it into dedicated folders — `main_copy_sequence_media_batch.py`, `utils/sequence_image_export.py`, `run_copy_sequence_media_batch.bat`, `copy_sequence_media_*.json` (config-driven, mirrors `project_sequence_batch_*`).
+  - Images-only quick mode via CLI args: `main_copy_sequence_images.py` / `run_copy_sequence_images.bat` with `--project/--sequence/--dest`.
+  - Video copying is opt-in (`copy_videos: true`, separate `video_dest`); images are the default and route to `image_dest`.
+  - `utils/premiere_project.py` gained `get_project_track_group_indexes()` so collection walks all track groups of a sequence, not just the primary visual track.
+  - New project skill `.cursor/skills/sequence-media-copy/SKILL.md` documents the workflow for the agent.
 
 ## Published Source Mirror
 

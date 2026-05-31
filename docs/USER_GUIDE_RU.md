@@ -317,6 +317,8 @@ flowchart LR
   B2["run_grok_automation*.bat"] --> P2["main_grok_web.py / main_grok_batch.py"]
   B3A["run_project_sequence_batch_(project).bat"] --> B3["run_project_sequence_batch.bat"]
   B3 --> P3["main_project_sequence_batch.py"]
+  B6A["copy_sequence_media_(project).bat"] --> B6["run_copy_sequence_media_batch.bat"]
+  B6 --> P6["main_copy_sequence_media_batch.py"]
   B4["run_project_publication*.bat"] --> P4["main_project_publication_push.py"]
 
   A1["CLI flags"] --> P1
@@ -327,6 +329,9 @@ flowchart LR
 
   C3["project_sequence_batch_*.json"] --> P3
   P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
+
+  C6["copy_sequence_media_*.json"] --> P6
+  P6 --> O6["copies:\nimage_dest/ (изображения)\nvideo_dest/ (видео, если copy_videos)\nmanifest JSON"]
 
   A4["CLI flags"] --> P4
   R1["project_structure_registry.json\n(optional --source-root)"] --> P4
@@ -634,6 +639,77 @@ python .\main_human_sequence_report.py `
 - основная тема, сюжет и фактическая структура должны оставаться video-only;
 - human-text должен корректировать образ героя, тон итогового описания и музыкальные предпочтения;
 - профессию, биографию, образование, питание и другие невидимые в кадре детали не нужно превращать в прямой факт видеоряда, если их нет в самой sequence.
+
+## Копирование изображений (и видео) из sequence
+
+Этот режим достает из Premiere-проекта все исходные медиафайлы, которые реально используются в конкретной sequence, и копирует их в отдельные папки. По умолчанию копируются только изображения (не видео); копирование видео — отдельный режим, включаемый флагом.
+
+Зачем это нужно: чтобы быстро собрать набор всех фотографий, задействованных в смонтированной sequence (например, для повторной AI-обработки в `input`), не перебирая таймлайн вручную.
+
+Как это работает:
+
+- читается `.prproj` (это gzip-XML), вспомогательный `.prin` не разбирается;
+- обходятся все группы дорожек и все клипы указанной sequence;
+- по расширению исходного файла каждый клип классифицируется как изображение (`.jpg/.jpeg/.png/.webp/.bmp/.tif/.tiff/.heic`) или видео (`.mp4/.mov/.m4v/.avi/.mkv/.webm/.mts/.m2ts`);
+- пути дедуплицируются, изображения копируются в `image_dest`, видео — в `video_dest`;
+- при конфликте имен по умолчанию файл переименовывается (`name_1.jpg`), режимы `overwrite` и `skip` тоже доступны;
+- пишется JSON-манифест со списком скопированного и отсутствующих исходников.
+
+Запуск из конкретного batch-файла:
+
+```powershell
+.\copy_sequence_media_sveta_igr_26_2.bat
+```
+
+Универсальный запуск с произвольным конфигом:
+
+```powershell
+.\run_copy_sequence_media_batch.bat .\copy_sequence_media_sveta_igr_26_2.json
+```
+
+Прямой вызов Python:
+
+```powershell
+python .\main_copy_sequence_media_batch.py --config .\copy_sequence_media_sveta_igr_26_2.json
+```
+
+Конфиг (`copy_sequence_media_*.json`, по аналогии с `project_sequence_batch_*.json`):
+
+```json
+{
+  "project_path": "e:\\Git\\video_projects\\Sveta_I\\Svt_Igr_26_2.prproj",
+  "prin_path": "e:\\Git\\video_projects\\Sveta_I\\Svt_Igr_26_2.prin",
+  "image_dest": "e:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026_Sv\\input",
+  "video_dest": "e:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026_Sv\\input_video",
+  "copy_images": true,
+  "copy_videos": false,
+  "on_conflict": "rename",
+  "dry_run": false,
+  "manifest_path": "e:\\Git\\AI_PIC_DEF\\def_AI\\img-style-ag_1\\output\\Svt_Igr_26_2_media_copy_manifest.json",
+  "sequence_jobs": [
+    { "sequence_name": "Svt_Igr_262_e01" }
+  ]
+}
+```
+
+Ключи конфига:
+
+- `project_path` — путь к `.prproj`; `prin_path` — служебный файл Premiere, хранится для справки и не разбирается.
+- `image_dest` / `video_dest` — папки назначения для изображений и видео (создаются автоматически).
+- `copy_images` — копировать изображения (по умолчанию `true`); `copy_videos` — копировать видео (по умолчанию `false`, это и есть «режим на будущее»).
+- `on_conflict` — `rename` | `overwrite` | `skip`.
+- `dry_run` — только посчитать и показать, ничего не копируя.
+- `manifest_path` — путь к JSON-отчету об операции (необязательно).
+- `sequence_jobs` — список sequence (`sequence_name`); поддерживается несколько последовательностей за один прогон.
+
+Есть также упрощенный режим только для изображений через аргументы командной строки (без конфига):
+
+```powershell
+python .\main_copy_sequence_images.py `
+  --project "<PRPROJ>" --sequence "<SEQUENCE>" --dest "<IMAGE_DIR>"
+```
+
+Важно: в `.bat` не ставьте завершающий `\` в значении пути назначения — обратный слэш экранирует закрывающую кавычку и ломает разбор аргументов.
 
 ## Очистка старых и временных файлов
 

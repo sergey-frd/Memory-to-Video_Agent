@@ -307,6 +307,8 @@ flowchart LR
   B1A["run_full_grok_pipeline_api.bat"] --> P1A["main_full_pipeline_api.py"]
   B2["run_grok_automation*.bat"] --> P2["main_grok_web.py / main_grok_batch.py"]
   B3A["run_project_sequence_batch_(project).bat"] --> B3["run_project_sequence_batch.bat"]
+  B6A["copy_sequence_media_(project).bat"] --> B6["run_copy_sequence_media_batch.bat"]
+  B6 --> P6["main_copy_sequence_media_batch.py"]
   B3 --> P3["main_project_sequence_batch.py"]
   B4["run_project_publication*.bat"] --> P4["main_project_publication_push.py"]
 
@@ -318,6 +320,9 @@ flowchart LR
 
   C3["project_sequence_batch_*.json"] --> P3
   P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
+
+  C6["copy_sequence_media_*.json"] --> P6
+  P6 --> O6["copies:\nimage_dest/ (images)\nvideo_dest/ (videos, if copy_videos)\nmanifest JSON"]
 
   A4["CLI flags"] --> P4
   R1["project_structure_registry.json\n(optional --source-root)"] --> P4
@@ -625,6 +630,77 @@ Important rule:
 - the main theme, story, and factual structure must stay video-based;
 - the human text should adjust hero portrait, wording tone, and music preferences;
 - professions, biography facts, diet, education, and other non-visible details should not be turned into direct video facts unless they are visible in the sequence.
+
+## Copy Images (And Video) From A Sequence
+
+This mode extracts every source media file actually used by a specific Premiere sequence and copies it into dedicated folders. By default only images are copied (not video); copying video is a separate, opt-in mode controlled by a flag.
+
+Purpose: quickly gather the full set of photos used in an edited sequence (for example, to re-run AI processing from `input`) without walking the timeline by hand.
+
+How it works:
+
+- reads the `.prproj` (gzip-XML); the auxiliary `.prin` file is not parsed;
+- walks all track groups and all clips of the requested sequence;
+- classifies each clip by its source extension as image (`.jpg/.jpeg/.png/.webp/.bmp/.tif/.tiff/.heic`) or video (`.mp4/.mov/.m4v/.avi/.mkv/.webm/.mts/.m2ts`);
+- de-duplicates paths, copies images into `image_dest` and videos into `video_dest`;
+- on a name conflict the file is renamed by default (`name_1.jpg`); `overwrite` and `skip` modes are also available;
+- writes a JSON manifest listing what was copied and any missing sources.
+
+Run from the project-specific batch file:
+
+```powershell
+.\copy_sequence_media_sveta_igr_26_2.bat
+```
+
+Generic run with any config:
+
+```powershell
+.\run_copy_sequence_media_batch.bat .\copy_sequence_media_sveta_igr_26_2.json
+```
+
+Direct Python call:
+
+```powershell
+python .\main_copy_sequence_media_batch.py --config .\copy_sequence_media_sveta_igr_26_2.json
+```
+
+Config (`copy_sequence_media_*.json`, mirroring `project_sequence_batch_*.json`):
+
+```json
+{
+  "project_path": "e:\\Git\\video_projects\\Sveta_I\\Svt_Igr_26_2.prproj",
+  "prin_path": "e:\\Git\\video_projects\\Sveta_I\\Svt_Igr_26_2.prin",
+  "image_dest": "e:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026_Sv\\input",
+  "video_dest": "e:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026_Sv\\input_video",
+  "copy_images": true,
+  "copy_videos": false,
+  "on_conflict": "rename",
+  "dry_run": false,
+  "manifest_path": "e:\\Git\\AI_PIC_DEF\\def_AI\\img-style-ag_1\\output\\Svt_Igr_26_2_media_copy_manifest.json",
+  "sequence_jobs": [
+    { "sequence_name": "Svt_Igr_262_e01" }
+  ]
+}
+```
+
+Config keys:
+
+- `project_path` — path to the `.prproj`; `prin_path` is a Premiere helper file kept for reference and not parsed.
+- `image_dest` / `video_dest` — destination folders for images and videos (created automatically).
+- `copy_images` — copy images (default `true`); `copy_videos` — copy videos (default `false`, this is the "future" mode).
+- `on_conflict` — `rename` | `overwrite` | `skip`.
+- `dry_run` — only count and report, copying nothing.
+- `manifest_path` — optional path for the JSON operation report.
+- `sequence_jobs` — list of sequences (`sequence_name`); multiple sequences per run are supported.
+
+A simpler images-only mode is also available via command-line arguments (no config):
+
+```powershell
+python .\main_copy_sequence_images.py `
+  --project "<PRPROJ>" --sequence "<SEQUENCE>" --dest "<IMAGE_DIR>"
+```
+
+Note: in a `.bat`, do not put a trailing `\` in the destination path value — the backslash escapes the closing quote and breaks argument parsing.
 
 ## Cleanup Of Old And Temporary Files
 

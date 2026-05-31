@@ -19,7 +19,7 @@ from config import GenerationConfig, Settings, load_generation_config
 from utils.project_delivery import sync_final_output_file
 from utils.image_analysis import analyze_image
 
-SUPPORTED_INPUT_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+SUPPORTED_INPUT_SUFFIXES = {".png", ".jpg", ".jpeg", ".jfif", ".webp", ".bmp", ".tif", ".tiff"}
 DEFAULT_CONFIG_NAME = "chatgpt_portrait_config.json"
 DEFAULT_OUTPUT_SUBDIR = "chatgpt_portraits"
 DEFAULT_PAIR_INPUT_SUBDIR = "input_pair"
