@@ -41,6 +41,13 @@
 | B023 | `run_full_grok_pipeline_api.bat` | Полный Grok video pipeline через прямой xAI API (`grok-imagine-video`), без Chrome и Playwright; требует `XAI_API_KEY` в `.env` | `.\run_full_grok_pipeline_api.bat --config-file .\config_SF.json` |
 | B024 | `run_video_prompt_story_generate.bat` | Сгенерировать reviewable HTML/JSON историю для multi-scene video prompt | `.\run_video_prompt_story_generate.bat` |
 | B025 | `run_video_prompt_story_export.bat` | Экспортировать composer JSON после правок HTML-истории | `.\run_video_prompt_story_export.bat <LOCAL_PATH>` |
+| B026 | `run_project_publication_push.bat` | Опубликовать полный bundle на GitHub (`Memory-to-Video_Agent`, tag `v2026.06.10.02`) | `.\run_project_publication_push.bat --source-root .` |
+
+## GitHub publication note (2026-06-10)
+
+Dev history lives in the private repo https://github.com/sergey-frd/img-style-ag_1 (`git push origin main`).
+
+The public Internet bundle is https://github.com/sergey-frd/Memory-to-Video_Agent at version **`2026.06.10.02`**. Everything through the video story workflow, portrait batch fixes, project configs, and Cursor rules reached GitHub in this wave. Older tags such as `v2026.05.25.01` are historical snapshots only.
 
 ## Рабочая команда для текущей задачи
 

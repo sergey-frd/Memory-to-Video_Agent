@@ -27,3 +27,22 @@ python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Vi
 - The publication sync blocks secret-like content and sanitizes local absolute paths.
 - `VERSION`, `README.md`, and `data/project_snapshot.json` should agree on the current publication version.
 - `.gitignore` in this repository is generated to keep the repo limited to the managed publication files.
+
+## Dev workspace vs publication remote
+
+| Remote | URL | Use |
+| --- | --- | --- |
+| `origin` | https://github.com/sergey-frd/img-style-ag_1 | Push dev commits (`git push origin main`) |
+| `publication` | https://github.com/sergey-frd/Memory-to-Video_Agent | Read-only reference; bundle is pushed by `main_project_publication_push.py` into the local clone at `<LOCAL_PATH>` |
+
+Never `git push origin main` from the publication clone, and never push the dev workspace root to `publication`.
+
+## GitHub sync status (2026-06-10)
+
+Publication **`2026.06.10.02`** is on the Internet:
+
+- Repository: https://github.com/sergey-frd/Memory-to-Video_Agent
+- Version file: https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/VERSION
+- Tag: `v2026.06.10.02`
+
+This wave includes the video story preview workflow, portrait batch fixes, Alex/Igor project configs, and the always-Russian Cursor rule. Earlier public snapshots such as `2026.05.25.01` remain available as older tags only; `main` and the latest tag reflect the current bundle.
