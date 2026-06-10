@@ -130,6 +130,53 @@ def test_write_publication_bundle_creates_full_safe_source_mirror() -> None:
     assert "source/utils/__pycache__/skip.pyc" not in manifest["managed_files"]
 
 
+def test_write_publication_bundle_skips_stale_workspace_data_snapshots() -> None:
+    root = Path("test_runtime") / f"publication_stale_data_{uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "data").mkdir()
+    (root / "main.py").write_text("print('hi')\n", encoding="utf-8")
+    (root / "config.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (root / "config.json").write_text('{"key": "value"}\n', encoding="utf-8")
+    _write_required_docs(root)
+    (root / "data" / "project_snapshot.json").write_text(
+        json.dumps({"publication_version": "2026.05.17.01"}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (root / "data" / "publication_manifest.json").write_text(
+        json.dumps({"publication_version": "2026.05.17.01"}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (root / "project_structure_registry.json").write_text(
+        json.dumps(
+            {
+                "project": "sample",
+                "canonical_docs": ["PROJECT_STRUCTURE.md"],
+                "core_invariants": [],
+                "subsystems": [],
+                "change_types": [],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    target = root / "out_repo"
+    result = write_publication_bundle(root, target)
+    manifest = json.loads((target / "data" / "publication_manifest.json").read_text(encoding="utf-8"))
+    snapshot = json.loads((target / "data" / "project_snapshot.json").read_text(encoding="utf-8"))
+    version_text = (target / "VERSION").read_text(encoding="utf-8").strip()
+
+    assert not (target / "source" / "data" / "project_snapshot.json").exists()
+    assert not (target / "source" / "data" / "publication_manifest.json").exists()
+    assert (target / "source" / "VERSION").read_text(encoding="utf-8").strip() == version_text
+    assert snapshot["publication_version"] == version_text
+    assert manifest["publication_version"] == version_text
+    assert "source/data/project_snapshot.json" not in manifest["managed_files"]
+    assert "source/VERSION" in manifest["managed_files"]
+    assert result.publication_version == version_text
+
+
 def test_write_publication_bundle_rejects_secret_like_content() -> None:
     root = Path("test_runtime") / f"publication_secret_{uuid4().hex}"
     root.mkdir(parents=True, exist_ok=True)

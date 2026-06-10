@@ -14,14 +14,15 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 ## Current version
 
 - Workspace `VERSION`: see [`VERSION`](VERSION)
-- Latest publication on GitHub: **`2026.06.10.02`** (`v2026.06.10.02`)
+- Latest publication on GitHub: **`2026.06.10.03`** (`v2026.06.10.03`)
+- **Canonical version on GitHub:** repository root [`VERSION`](https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/VERSION) and [`data/project_snapshot.json`](https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/data/project_snapshot.json). The source mirror also carries [`source/VERSION`](https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/source/VERSION).
 
 ## Published on GitHub (Internet)
 
 Everything through **2026-06-10** is synchronized to the public repository:
 
 - https://github.com/sergey-frd/Memory-to-Video_Agent
-- Tag: https://github.com/sergey-frd/Memory-to-Video_Agent/releases/tag/v2026.06.10.02
+- Tag: https://github.com/sergey-frd/Memory-to-Video_Agent/releases/tag/v2026.06.10.03
 
 Included in this publication wave:
 

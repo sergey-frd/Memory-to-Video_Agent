@@ -39,10 +39,12 @@ Never `git push origin main` from the publication clone, and never push the dev 
 
 ## GitHub sync status (2026-06-10)
 
-Publication **`2026.06.10.02`** is on the Internet:
+Publication **`2026.06.10.03`** is on the Internet:
 
 - Repository: https://github.com/sergey-frd/Memory-to-Video_Agent
-- Version file: https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/VERSION
-- Tag: `v2026.06.10.02`
+- Canonical version file: https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/VERSION
+- Machine-readable snapshot: https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/data/project_snapshot.json
+- Source mirror copy: https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/source/VERSION
+- Tag: `v2026.06.10.03`
 
-This wave includes the video story preview workflow, portrait batch fixes, Alex/Igor project configs, and the always-Russian Cursor rule. Earlier public snapshots such as `2026.05.25.01` remain available as older tags only; `main` and the latest tag reflect the current bundle.
+Do **not** read version from nested `source/data/project_snapshot.json`; that stale copy is no longer published. Older tags such as `v2026.05.25.01` are historical snapshots only; `main` and the latest tag reflect the current bundle.

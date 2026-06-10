@@ -28,6 +28,10 @@ EXCLUDED_DIR_NAMES = {
 EXCLUDED_DIR_PREFIXES = ("pytest-cache-files-",)
 EXCLUDED_FILE_NAMES = {".env"}
 EXCLUDED_FILE_PREFIXES = (".env.",)
+EXCLUDED_SOURCE_RELATIVE_FILES = {
+    "data/project_snapshot.json",
+    "data/publication_manifest.json",
+}
 PUBLISHED_SOURCE_SUFFIXES = {
     ".bat",
     ".css",
@@ -118,6 +122,8 @@ def _is_excluded_file_name(filename: str) -> bool:
 
 def _is_publishable_source_file(source_path: Path, source_root: Path) -> bool:
     relpath = source_path.relative_to(source_root)
+    if relpath.as_posix() in EXCLUDED_SOURCE_RELATIVE_FILES:
+        return False
     if any(_is_excluded_dir_name(part) for part in relpath.parts[:-1]):
         return False
     if _is_excluded_file_name(relpath.name):
@@ -390,6 +396,7 @@ def _readme_markdown(snapshot: dict[str, object], manifest_relpaths: list[str]) 
         "",
         f"- Publication version: `{snapshot['publication_version']}`",
         f"- Git tag: `{snapshot['publication_git_tag']}`",
+        f"- Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`",
         f"- Last synchronized: `{snapshot['generated_at']}`",
         f"- Source project: `{snapshot['source_project']}`",
         f"- Python files: `{counts['python_files']}`",
@@ -578,6 +585,15 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
         texts_to_validate[relpath] = public_text
         target_path.write_text(public_text, encoding="utf-8")
         written_files.append(relpath)
+
+    source_version_relpath = "source/VERSION"
+    source_version_path = target_dir / source_version_relpath
+    source_version_path.parent.mkdir(parents=True, exist_ok=True)
+    source_version_text = version_info.version + "\n"
+    texts_to_validate[source_version_relpath] = source_version_text
+    signature_inputs[source_version_relpath] = source_version_text
+    source_version_path.write_text(source_version_text, encoding="utf-8")
+    written_files.append(source_version_relpath)
 
     snapshot_path = target_dir / "data" / "project_snapshot.json"
     snapshot_text = json.dumps(snapshot, ensure_ascii=False, indent=2)

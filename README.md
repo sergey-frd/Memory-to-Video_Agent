@@ -4,9 +4,10 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.06.10.02`
-- Git tag: `v2026.06.10.02`
-- Last synchronized: `2026-06-10T09:49:43+02:00`
+- Publication version: `2026.06.10.03`
+- Git tag: `v2026.06.10.03`
+- Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
+- Last synchronized: `2026-06-10T09:55:29+02:00`
 - Source project: `img-style-ag_1`
 - Python files: `198`
 - Test files: `33`
@@ -14,7 +15,7 @@ This repository is intended to store the current architecture, guides, change-im
 
 ## Published Source Mirror
 
-- Mirrored source files: `404`
+- Mirrored source files: `403`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/BATCH_RUN_HISTORY.md`
@@ -24,6 +25,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/README.md`
 - `source/USER_GUIDE.html`
 - `source/USER_GUIDE.md`
+- `source/VERSION`
 - `source/api`
 - `source/chatgpt_artistic_photo_portret_config.json`
 - `source/chatgpt_artistic_portrait_config.json`
