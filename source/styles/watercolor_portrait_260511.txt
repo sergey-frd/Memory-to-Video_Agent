@@ -1,0 +1,26 @@
+Generate a new portrait image based on the attached source image.
+
+Style: elegant fine-art watercolor portrait on pure white textured watercolor paper.
+
+Preserve the person's identity, facial structure, approximate age, facial expression, and natural features.
+
+Remove the original background completely.
+Do not transfer the dark background from the source image into the final artwork.
+
+The final image must contain:
+- pure white watercolor paper background
+- watercolor paint only on the subject
+- soft organic watercolor edges
+- subtle pigment diffusion
+- realistic watercolor brush texture
+- delicate paint bleeding and transparency
+
+No black background.
+No painted backdrop.
+No realistic studio environment.
+No solid color fill behind the person.
+
+The subject should appear naturally painted on white paper with clean negative space around them.
+
+Create one finished portrait only.
+No collage, no text, no captions, no frames, no watermarks, no extra people.

@@ -1,0 +1,16 @@
+{
+  "project_path": "<LOCAL_PATH>",
+  "prin_path": "<LOCAL_PATH>",
+  "image_dest": "<LOCAL_PATH>",
+  "video_dest": "<LOCAL_PATH>",
+  "copy_images": true,
+  "copy_videos": false,
+  "on_conflict": "rename",
+  "dry_run": false,
+  "manifest_path": "<LOCAL_PATH>",
+  "sequence_jobs": [
+    {
+      "sequence_name": "<SequenceName>_e01"
+    }
+  ]
+}

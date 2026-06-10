@@ -127,12 +127,15 @@
         "models/video_sequence.py",
         "utils/sequence_optimizer.py",
         "utils/sequence_optimizer_runtime.py",
+        "utils/sequence_edit_plan.py",
         "utils/premiere_xml.py",
         "utils/premiere_project.py",
         "utils/premiere_xml_export.py",
         "utils/premiere_project_export.py",
         "utils/sequence_structure_report.py",
         "utils/transition_recommendations.py",
+        "utils/premiere_transition_script.py",
+        "utils/premiere_transform_script.py",
         "utils/current_sequence_reports.py",
         "utils/human_profile_sequence_report.py",
         "utils/fcp_translation_results.py",
@@ -298,6 +301,7 @@
         "main_sequence_optimizer.py",
         "utils/sequence_optimizer.py",
         "utils/sequence_optimizer_runtime.py",
+        "utils/sequence_edit_plan.py",
         "models/video_sequence.py"
       ],
       "must_review": [
@@ -307,6 +311,8 @@
         "utils/premiere_project_export.py",
         "utils/sequence_structure_report.py",
         "utils/transition_recommendations.py",
+        "utils/premiere_transition_script.py",
+        "utils/premiere_transform_script.py",
         "utils/project_sequence_batch.py"
       ],
       "minimum_checks": [

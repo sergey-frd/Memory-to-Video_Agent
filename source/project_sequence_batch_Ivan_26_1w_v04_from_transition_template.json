@@ -1,0 +1,22 @@
+{
+  "project_path": "<LOCAL_PATH>",
+  "prin_path": "<LOCAL_PATH>",
+  "regeneration_assets_dir": "<LOCAL_PATH>",
+  "output_project_path": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "engine": "heuristic",
+  "transition_mode": "apply",
+  "enable_auto_transitions": true,
+  "enable_visual_transitions": true,
+  "enable_auto_durations": true,
+  "include_visual_media": true,
+  "allow_transition_handle_trimming": false,
+  "transition_template_project_path": "<LOCAL_PATH>",
+  "enable_subject_series_grouping": false,
+  "sequence_jobs": [
+    {
+      "source_sequence_name": "Ivan26_e03",
+      "new_sequence_name": "Ivan26_o03_from_transition_template"
+    }
+  ]
+}

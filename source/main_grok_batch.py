@@ -18,14 +18,16 @@ BatchRunner = Callable[[argparse.Namespace], Path]
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run Grok video generation for all v_prompt files in output/.")
-    parser.add_argument("--prompt-dir", type=Path, default=None, help="Directory with v_prompt files. Defaults to output/.")
+    parser = argparse.ArgumentParser(description="Run Grok video generation for all v_prompt TXT or JSON prompt artifacts in output/.")
+    parser.add_argument("--prompt-dir", type=Path, default=None, help="Directory with v_prompt TXT or JSON prompt artifacts. Defaults to output/.")
     parser.add_argument("--input-dir", type=Path, default=None, help="Directory with source images. Defaults to input/.")
     parser.add_argument("--config-file", type=Path, default=None, help="Optional generation config JSON.")
     parser.add_argument("--profile-dir", type=Path, default=Path(".browser-profile/grok-web"), help="Persistent Chrome profile for Grok Web.")
     parser.add_argument("--target-url", type=str, default="https://grok.com/imagine", help="Grok Web URL.")
     parser.add_argument("--chrome-exe", type=Path, default=None, help="Optional explicit Chrome executable path.")
     parser.add_argument("--chrome-debug-port", type=int, default=None, help="Optional Chrome remote debugging port for reusing an already opened Grok login window.")
+    parser.add_argument("--require-debug-port", action="store_true", help="Fail instead of opening a fallback Chrome window when --chrome-debug-port cannot be used.")
+    parser.add_argument("--reuse-existing-page", action="store_true", help="Reuse the current Grok page instead of navigating before each prompt.")
     parser.add_argument("--result-timeout", type=float, default=600.0, help="How long to wait for each generated video, in seconds.")
     parser.add_argument("--launch-timeout", type=float, default=60.0, help="How long to wait for Grok Web to open, in seconds.")
     parser.add_argument("--upload-timeout", type=float, default=180.0, help="How long to wait for image upload readiness before submit, in seconds.")
@@ -75,7 +77,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def list_prompts(prompt_dir: Path) -> list[Path]:
-    return sorted(path for path in prompt_dir.glob("*_v_prompt_*.txt") if path.is_file())
+    candidates = list(prompt_dir.glob("*_v_prompt_*.txt")) + list(prompt_dir.glob("*_v_prompt_*.json"))
+    return sorted(path for path in candidates if path.is_file())
 
 
 def derive_image_stem(prompt_path: Path) -> str:
@@ -115,7 +118,7 @@ def run_batch(args: argparse.Namespace, settings: Settings | None = None, runner
     input_dir = args.input_dir or settings.input_dir
     prompts = list_prompts(prompt_dir)
     if not prompts:
-        raise FileNotFoundError(f"No v_prompt files found in: {prompt_dir}")
+        raise FileNotFoundError(f"No v_prompt prompt artifacts found in: {prompt_dir}")
 
     session_runner: GrokWebSessionRunner | None = None
     if runner is None:
@@ -151,6 +154,8 @@ def run_batch(args: argparse.Namespace, settings: Settings | None = None, runner
                     target_url=args.target_url,
                     chrome_exe=args.chrome_exe,
                     chrome_debug_port=getattr(args, "chrome_debug_port", None),
+                    require_debug_port=getattr(args, "require_debug_port", False),
+                    reuse_existing_page=getattr(args, "reuse_existing_page", False),
                     result_timeout=args.result_timeout,
                 launch_timeout=args.launch_timeout,
                 upload_timeout=args.upload_timeout,

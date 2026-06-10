@@ -7,6 +7,7 @@ from PIL import Image
 from config import GenerationConfig, MotionSource, Settings
 from main import _run_generation
 from models.scene_analysis import PersonInFrame, SceneAnalysis
+from utils.grok_prompt_json import extract_prompt_text_from_json_text, validate_grok_prompt_json_text
 from utils.prompt_builder import BackgroundPromptBundle, PromptBundle
 
 
@@ -109,6 +110,82 @@ def test_run_generation_uses_scene_analysis_in_description_and_video_prompts() -
     assert not (output_dir / "scene_stage_bg_prompt.txt").exists()
 
 
+def test_run_generation_writes_english_and_russian_scene_analysis_json_files() -> None:
+    root = Path("test_runtime") / f"scene_pipeline_bilingual_{uuid4().hex}"
+    input_dir = root / "input"
+    output_dir = root / "output"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    image_path = input_dir / "frame.png"
+    Image.new("RGB", (160, 240), (90, 120, 180)).save(image_path)
+
+    settings = Settings()
+    settings.output_dir = output_dir
+
+    args = Namespace(
+        image=image_path,
+        stage_id="scene_stage",
+        scene_model="gpt-4.1",
+        generate_video=False,
+        generate_styled_images=False,
+        prompt_model="gpt-4.1",
+        motion_model="gpt-4.1",
+    )
+
+    def fake_scene_analyzer_ru(_image_path: Path, _model: str | None) -> SceneAnalysis:
+        return SceneAnalysis(
+            summary="Русское описание сцены.",
+            people_count=1,
+            people=[PersonInFrame(label="девушка")],
+            background="Тёплый интерьер.",
+            shot_type="Средний план.",
+            main_action="Стоит у окна.",
+            mood=["спокойное"],
+            relationships=["Одна в кадре."],
+        )
+
+    def fake_scene_analyzer_en(_image_path: Path, _model: str | None) -> SceneAnalysis:
+        return SceneAnalysis(
+            summary="English scene description.",
+            people_count=1,
+            people=[PersonInFrame(label="young woman")],
+            background="Warm interior.",
+            shot_type="Medium shot.",
+            main_action="Standing near the window.",
+            mood=["calm"],
+            relationships=["Single subject in frame."],
+        )
+
+    def fake_prompt_synthesizer(**kwargs: object) -> PromptBundle:
+        scene = kwargs["scene_analysis"]
+        assert isinstance(scene, SceneAnalysis)
+        assert scene.summary == "Русское описание сцены."
+        return PromptBundle(
+            video_prompt="video prompt",
+            video_prompt_ru="video prompt ru",
+            final_frame_prompt="final frame prompt",
+        )
+
+    _run_generation(
+        args,
+        GenerationConfig(video_count=1, camera_segments=1, motion_source=MotionSource.TABLE, generate_final_frames=False),
+        settings=settings,
+        scene_analyzer=fake_scene_analyzer_ru,
+        scene_analyzer_en=fake_scene_analyzer_en,
+        prompt_synthesizer=fake_prompt_synthesizer,
+        generate_final_frames=False,
+    )
+
+    scene_json_en = (output_dir / "scene_stage_scene_analysis.json").read_text(encoding="utf-8")
+    scene_json_ru = (output_dir / "scene_stage_scene_analysis_ru.json").read_text(encoding="utf-8")
+
+    assert '"summary": "English scene description."' in scene_json_en
+    assert '"background": "Warm interior."' in scene_json_en
+    assert '"summary": "Русское описание сцены."' in scene_json_ru
+    assert '"background": "Тёплый интерьер."' in scene_json_ru
+
+
 def test_run_generation_writes_background_prompt_when_enabled() -> None:
     root = Path("test_runtime") / f"scene_pipeline_bg_{uuid4().hex}"
     input_dir = root / "input"
@@ -184,3 +261,75 @@ def test_run_generation_writes_background_prompt_when_enabled() -> None:
     assert "горизонтальное изображение 16:9" in bg_prompt_ru_text
     assert "realistic associative architectural wedding interior" in assoc_bg_prompt_text
     assert "ассоциативное архитектурное изображение" in assoc_bg_prompt_ru_text
+
+def test_run_generation_writes_grok_multiscene_json_prompts_without_final_frames() -> None:
+    root = Path("test_runtime") / f"scene_pipeline_grok_json_{uuid4().hex}"
+    input_dir = root / "input"
+    output_dir = root / "output"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    image_path = input_dir / "frame.png"
+    Image.new("RGB", (160, 240), (110, 140, 170)).save(image_path)
+
+    settings = Settings()
+    settings.output_dir = output_dir
+
+    args = Namespace(
+        image=image_path,
+        stage_id="scene_stage",
+        scene_model="gpt-4.1",
+        generate_video=False,
+        generate_styled_images=False,
+        prompt_model="gpt-4.1",
+        motion_model="gpt-4.1",
+    )
+
+    def fake_scene_analyzer_ru(_image_path: Path, _model: str | None) -> SceneAnalysis:
+        return SceneAnalysis(
+            summary="Calm woman by the river at dusk.",
+            people_count=1,
+            people=[PersonInFrame(label="woman")],
+            background="Riverbank with soft evening light.",
+            shot_type="Medium shot.",
+            main_action="She stands still and watches the water.",
+            mood=["calm", "reflective"],
+            relationships=["Single subject in frame."],
+        )
+
+    def fake_scene_analyzer_en(_image_path: Path, _model: str | None) -> SceneAnalysis:
+        return SceneAnalysis(
+            summary="Calm woman by the river at dusk.",
+            people_count=1,
+            people=[PersonInFrame(label="woman")],
+            background="Riverbank with soft evening light.",
+            shot_type="Medium shot.",
+            main_action="She stands still and watches the water.",
+            mood=["calm", "reflective"],
+            relationships=["Single subject in frame."],
+        )
+
+    _run_generation(
+        args,
+        GenerationConfig(
+            video_count=1,
+            camera_segments=1,
+            motion_source=MotionSource.TABLE,
+            generate_final_frames=False,
+            generate_grok_multiscene_json_prompt=True,
+            grok_multiscene_prompt_size=2000,
+        ),
+        settings=settings,
+        scene_analyzer=fake_scene_analyzer_ru,
+        scene_analyzer_en=fake_scene_analyzer_en,
+        generate_final_frames=False,
+    )
+
+    prompt_json_en = (output_dir / "scene_stage_v_prompt_1.json").read_text(encoding="utf-8")
+    prompt_json_ru = (output_dir / "scene_stage_v_prm_ru_1.json").read_text(encoding="utf-8")
+
+    assert validate_grok_prompt_json_text(prompt_json_en, expected_lang="en", max_chars=2000, max_words=400) == []
+    assert validate_grok_prompt_json_text(prompt_json_ru, expected_lang="ru", max_chars=2000, max_words=400) == []
+    assert "Shot 1:" in extract_prompt_text_from_json_text(prompt_json_en)
+    assert "Shot 3:" in extract_prompt_text_from_json_text(prompt_json_ru)
+    assert not (output_dir / "scene_stage_image_edit_prompt_1.txt").exists()

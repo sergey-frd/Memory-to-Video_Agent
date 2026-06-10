@@ -21,6 +21,7 @@ from utils.project_delivery import (
     move_files_to_directory,
     move_input_files_to_error,
     move_output_stage_to_error,
+    remove_path,
     sync_stage_non_video_assets,
 )
 
@@ -79,6 +80,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target-url", type=str, default="https://grok.com/imagine", help="Grok Web URL.")
     parser.add_argument("--chrome-exe", type=Path, default=None, help="Optional explicit Chrome executable path.")
     parser.add_argument("--chrome-debug-port", type=int, default=None, help="Optional Chrome remote debugging port.")
+    parser.add_argument("--require-grok-debug-port", action="store_true", help="Fail instead of opening a fallback Grok Chrome window when --chrome-debug-port cannot be used.")
+    parser.add_argument("--reuse-existing-grok-page", action="store_true", help="With --chrome-debug-port, reuse the current Grok page instead of navigating before each Grok request.")
     parser.add_argument("--result-timeout", type=float, default=600.0, help="How long to wait for each generated video, in seconds.")
     parser.add_argument("--launch-timeout", type=float, default=60.0, help="How long to wait for Grok Web to open, in seconds.")
     parser.add_argument("--upload-timeout", type=float, default=180.0, help="How long to wait for image upload readiness before submit, in seconds.")
@@ -101,12 +104,26 @@ def build_generation_config(args: argparse.Namespace) -> GenerationConfig:
     )
 
 
-def _remove_processed_input(image_path: Path, settings: Settings) -> None:
+def _remove_processed_input(image_path: Path, settings: Settings) -> bool:
     try:
-        if image_path.parent.resolve() == settings.input_dir.resolve() and image_path.exists():
-            image_path.unlink()
+        same_input_queue = image_path.parent.resolve() == settings.input_dir.resolve()
     except OSError:
-        pass
+        same_input_queue = False
+    if not same_input_queue or not image_path.exists():
+        return True
+    try:
+        remove_path(image_path)
+    except OSError:
+        return False
+    return not image_path.exists()
+
+
+def _flush_processed_input_queue(image_paths: list[Path], settings: Settings) -> list[Path]:
+    remaining: list[Path] = []
+    for image_path in image_paths:
+        if not _remove_processed_input(image_path, settings) and image_path.exists():
+            remaining.append(image_path)
+    return remaining
 
 
 def _handle_failure(
@@ -150,6 +167,7 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
     generation_config = build_generation_config(args)
     input_images = resolve_input_images(args, settings, generation_config)
     results: list[Path] = []
+    pending_input_cleanup: list[Path] = []
     total = len(input_images)
     grok_session_runner = GrokWebSessionRunner()
 
@@ -199,7 +217,9 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
                     profile_dir=args.profile_dir,
                     target_url=args.target_url,
                     chrome_exe=args.chrome_exe,
-                    chrome_debug_port=None,
+                    chrome_debug_port=args.chrome_debug_port,
+                    require_debug_port=getattr(args, "require_grok_debug_port", False),
+                    reuse_existing_page=getattr(args, "reuse_existing_grok_page", False),
                     result_timeout=args.result_timeout,
                     launch_timeout=args.launch_timeout,
                     upload_timeout=args.upload_timeout,
@@ -223,7 +243,8 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
                 else:
                     print("Grok closed.", flush=True)
 
-                _remove_processed_input(image_path, settings)
+                if not _remove_processed_input(image_path, settings):
+                    pending_input_cleanup.append(image_path)
                 clear_directory_contents(settings.output_dir)
             except Exception as exc:
                 print("Closing Grok for current image...", flush=True)
@@ -239,6 +260,10 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
                     raise
     finally:
         grok_session_runner.close()
+        remaining_inputs = _flush_processed_input_queue(pending_input_cleanup, settings)
+        if remaining_inputs:
+            remaining_label = ", ".join(path.name for path in remaining_inputs)
+            print(f"Warning: processed input files could not be removed from queue: {remaining_label}", flush=True)
 
     return results
 

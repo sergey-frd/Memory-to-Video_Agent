@@ -55,6 +55,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--generate-styled-images", action="store_true", help="Generate extra style variations from the original image.")
     parser.add_argument("--generate-final-frames", action="store_true", dest="generate_final_frames", default=None, help="Generate final frames through the API.")
     parser.add_argument("--skip-final-frames", action="store_false", dest="generate_final_frames", help="Do not call the API for final frame generation.")
+    parser.add_argument(
+        "--video-duration-seconds",
+        type=int,
+        choices=(6, 10),
+        help="Video prompt duration: 6 seconds uses 2-2-2, 10 seconds uses 4-3-3.",
+    )
     parser.add_argument("--read-input-list", action="store_true", dest="read_input_list", default=None, help="Read source frames as a list from input/.")
     parser.add_argument("--single-image", action="store_false", dest="read_input_list", help="Process only --image and ignore input/ list mode.")
     parser.add_argument(
@@ -87,6 +93,7 @@ def build_generation_config(args: argparse.Namespace) -> GenerationConfig:
         read_input_list=getattr(args, "read_input_list", None),
         generate_music=getattr(args, "generate_music", None),
         motion_model=getattr(args, "motion_model", None),
+        video_duration_seconds=getattr(args, "video_duration_seconds", None),
         generate_source_background=getattr(args, "generate_source_background", None),
         generate_video=getattr(args, "generate_video", None),
         prefer_loving_kindness_tone=getattr(args, "prefer_loving_kindness_tone", None),
@@ -144,12 +151,19 @@ def write_pipeline_manifest(
         for _branch_video_index in range(1, generation_config.video_count + 1):
             final_frame_path = settings.output_dir / f"{stage_id}_final_frame_{prompt_index}.png"
             final_frame_prompt_path = settings.output_dir / f"{stage_id}_final_frame_prompt_{prompt_index}.txt"
+            prompt_suffix = ".json" if generation_config.generate_grok_multiscene_json_prompt else ".txt"
+            prompt_format = "json" if generation_config.generate_grok_multiscene_json_prompt else "text"
+            video_prompt_path = settings.output_dir / f"{stage_id}_v_prompt_{prompt_index}{prompt_suffix}"
+            video_prompt_ru_path = settings.output_dir / f"{stage_id}_v_prm_ru_{prompt_index}{prompt_suffix}"
             step_entry = {
                 "index": prompt_index,
                 "framing_mode": framing_mode.value,
                 "input_image": str(current_input),
-                "v_prompt_file": str(settings.output_dir / f"{stage_id}_v_prompt_{prompt_index}.txt"),
-                "v_prm_ru_file": str(settings.output_dir / f"{stage_id}_v_prm_ru_{prompt_index}.txt"),
+                "v_prompt_file": str(video_prompt_path),
+                "video_prompt_file": str(video_prompt_path),
+                "v_prm_ru_file": str(video_prompt_ru_path),
+                "video_prompt_ru_file": str(video_prompt_ru_path),
+                "video_prompt_format": prompt_format,
                 "final_frame_prompt_file": str(final_frame_prompt_path),
                 "final_frame_prompt_created": final_frame_prompt_path.exists(),
                 "final_frame_image": str(final_frame_path),
@@ -168,13 +182,21 @@ def write_pipeline_manifest(
             "video_count": generation_config.video_count,
             "total_video_outputs": generation_config.total_video_outputs(),
             "camera_segments": generation_config.camera_segments,
+            "video_duration_seconds": generation_config.video_duration_seconds,
             "motion_source": generation_config.motion_source.value,
             "write_description": generation_config.write_description,
             "generate_music": generation_config.generate_music,
             "generate_source_background": generation_config.generate_source_background,
+            "generate_grok_multiscene_json_prompt": generation_config.generate_grok_multiscene_json_prompt,
+            "grok_multiscene_prompt_size": generation_config.grok_multiscene_prompt_size,
+            "grok_multiscene_prompt_max_words": generation_config.grok_multiscene_prompt_max_words,
             "prefer_face_closeups": generation_config.prefer_face_closeups,
             "use_ai_optimal_framing": generation_config.use_ai_optimal_framing,
+            "use_ai_optimal_then_identity_safe_framing": generation_config.use_ai_optimal_then_identity_safe_framing,
+            "ai_optimal_then_identity_safe_ai_optimal_percent": generation_config.ai_optimal_then_identity_safe_ai_optimal_percent,
             "generate_dual_framing_videos": generation_config.generate_dual_framing_videos,
+            "generate_identity_safe_closeup_videos": generation_config.generate_identity_safe_closeup_videos,
+            "generate_triple_framing_videos": generation_config.generate_triple_framing_videos,
             "hide_phone_in_selfie": generation_config.hide_phone_in_selfie,
             "prefer_loving_kindness_tone": generation_config.prefer_loving_kindness_tone,
             "framing_modes": [mode.value for mode in generation_config.framing_modes()],
@@ -186,6 +208,7 @@ def write_pipeline_manifest(
         "artifacts": {
             "description": str(settings.output_dir / f"{stage_id}_description.txt"),
             "scene_analysis": str(settings.output_dir / f"{stage_id}_scene_analysis.json"),
+            "scene_analysis_ru": str(settings.output_dir / f"{stage_id}_scene_analysis_ru.json"),
             "bg_prompt": str(settings.output_dir / f"{stage_id}_bg_prompt.txt") if generation_config.generate_source_background else None,
             "bg_prm_ru": str(settings.output_dir / f"{stage_id}_bg_prm_ru.txt") if generation_config.generate_source_background else None,
             "assoc_bg_prompt": str(settings.output_dir / f"{stage_id}_assoc_bg_prompt.txt") if generation_config.generate_source_background else None,

@@ -164,6 +164,7 @@ Must update:
 - `main_sequence_optimizer.py`
 - `utils/sequence_optimizer.py`
 - `utils/sequence_optimizer_runtime.py`
+- `utils/sequence_edit_plan.py`
 - `models/video_sequence.py`
 
 Must review:
@@ -173,6 +174,8 @@ Must review:
 - `utils/premiere_project_export.py`
 - `utils/sequence_structure_report.py`
 - `utils/transition_recommendations.py`
+- `utils/premiere_transition_script.py`
+- `utils/premiere_transform_script.py`
 - `utils/project_sequence_batch.py`
 
 Recommended tests:

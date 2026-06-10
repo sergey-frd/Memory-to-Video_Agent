@@ -1,0 +1,35 @@
+{
+  "generation_config_file": "config_‭AlxKrvz.json",
+  "story_title": "Birthday tribute — video hero",
+  "story_brief": "Это НЕ семейная история. Это 10-секундный поздравительный ролик ко дню рождения друга. Герой видео — мужчина; на нескольких кадрах он танцует в бальном зале. Крупные групповые снимки у ёлки — встреча одноклассников, не семья. Нельзя использовать кадры 260609_05@0.33x_modern_color.png, 260609_11_modern_color.png и 20190819_171926 (2)_modern_color.png. Хронология: школьные/студенческие воспоминания одноклассников → дружеские встречи → танцы героя видео. В technical_preamble и во всех сценах НЕ использовать имя Саша и другие личные имена. Называть героя только нейтрально: герой видео, герой ролика, мужчина, танцующий герой. Используй все 7 выбранных изображений через inline-теги @image1..@image7 в тексте сцен.",
+  "image_count": 7,
+  "scene_count": 5,
+  "scene_duration_seconds": 2,
+  "total_duration_seconds": 10,
+  "aspect_ratio": "16:9",
+  "source_files": [
+    "260609_01_modern_color.png",
+    "260609_02_modern_color.png",
+    "260609_03_modern_color.png",
+    "260609_04_modern_color.png",
+    "20190819_171940 (2)_2_modern_color.png",
+    "260609_10_modern_color.png",
+    "6af08978-23ba-48da-a5d7-7767000903ca.png"
+  ],
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1",
+      "instruction": "Create the most likely, most suitable, and most coherent cinematic interpretation."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2",
+      "instruction": "Create a fully distinct alternative interpretation while preserving the same scene order, durations, and story facts."
+    }
+  ],
+  "output_dir": "<LOCAL_PATH>",
+  "seedance_json": true,
+  "seedance_json_only": true,
+  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+}

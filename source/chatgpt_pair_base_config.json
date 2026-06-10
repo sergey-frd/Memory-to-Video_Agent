@@ -1,0 +1,13 @@
+{
+  "pair_styles": [
+    {
+      "name": "Cinematic artistic couple portrait",
+      "slug": "cinematic_artistic_couple",
+      "prompt": "The uploaded reference image contains two separate source photographs placed side by side: the person on the left and the person on the right.\nConstruct a single, positive, cinematic, artistic photograph depicting these two people together as a couple.\nGenerate the image itself; do not respond with text. Do not write prompts, descriptions, explanations, checklists, or instructions.\nReturn only one generated image file.\nCreate a high-quality artistic portrait based on the uploaded reference image.\nThe main goal: carefully isolate both people from the left and right source photographs and transform them into a beautiful, cinematic, artistic photograph that positively complements the original emotional atmosphere.\nCRITICAL REQUIREMENTS:\n- Strictly preserve the authentic identity of both people from the two source photographs in the reference image.\n- Preserve the original facial structure, eyes, nose, lips, age, expression, hairstyle, and natural features of each person.\n- DO NOT replace people with idealized AI-generated faces.\n- Maintain 100% recognizability for both people.\n- Preserve the emotional authenticity and spirit of the original photographs.\nStyle:\n- Elegant, artistic photography with cinematic composition.\n- Warm, positive atmosphere.\n- Emotionally inspiring mood.\n- Premium, realistic photography look.\n- Natural beauty and realism.\n- Visually rich yet believable.\n- Soft, cinematic lighting.\n- Subtle depth of field.\n- Realistic skin texture.\n- Expressive, natural eyes.\n- Detailed hair and clothing.\n- Delicate, professional retouching without the plastic skin effect.\n- Natural colors with excellent tonal balance.\n- Harmonious background separation with soft bokeh.\n- Museum-quality artistic portraiture.\n- Photography aesthetics.\n- Ultra-realistic.\n- High detail.\n- 8K quality.\nIMPORTANT:\nEnhance beauty, emotion, depth of field, and the artistic impact of the original photographs without altering the real people, their personalities, or the authentic feel of the scene.\nThe end result: a single, finished, premium artistic portrait image of the two people together as a couple.\nNo text, no watermarks, no frames, no collage. Do not output the side-by-side reference layout."
+    }
+  ],
+  "prompt_template": "{style}",
+  "output_dir": "output/pair",
+  "save_response_text": false,
+  "new_chat_per_job": true
+}

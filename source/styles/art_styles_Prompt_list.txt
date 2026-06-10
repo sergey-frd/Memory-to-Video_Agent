@@ -1,0 +1,148 @@
+
+
+## 1. Рембрандтовский портрет (самый надёжный)
+
+**Prompt**
+
+```
+Transform the photo into a classical oil portrait in the style of Rembrandt.
+
+Keep the exact facial identity of the person from the original photograph:
+same face structure, same eyes, same expression, same proportions.
+
+Warm baroque lighting, deep chiaroscuro shadows, dark background,
+golden-brown color palette, highly detailed oil painting texture,
+museum-quality portrait, dramatic soft light illuminating the face.
+```
+
+---
+
+# 2. Ренессансный портрет
+
+```
+Transform the photo into a renaissance portrait painting.
+
+Preserve the exact facial identity from the original photo,
+do not change the person's face structure or expression.
+
+Balanced classical composition, soft sfumato lighting,
+calm noble expression, realistic skin tones,
+Italian renaissance oil painting, museum quality.
+```
+
+---
+
+# 3. Импрессионистический портрет
+
+```
+Transform the photo into an impressionist portrait painting.
+
+Preserve the exact face and identity from the original photograph.
+
+Soft natural light, loose impressionist brush strokes,
+luminous color palette, outdoor daylight atmosphere,
+style inspired by Renoir and Monet,
+painterly texture, warm and lively portrait.
+```
+
+---
+
+# 4. Постимпрессионизм (Ван Гог)
+
+```
+Transform the photo into an expressive post-impressionist portrait.
+
+Preserve the exact facial identity from the original photo.
+
+Dynamic brush strokes, textured oil paint,
+vivid but natural colors, emotional artistic atmosphere,
+style inspired by Vincent van Gogh,
+swirling painterly texture, expressive portrait.
+```
+
+---
+
+# 5. Ар-нуво (Климт)
+
+```
+Transform the photo into an art nouveau portrait in the style of Gustav Klimt.
+
+Preserve the exact face identity and proportions from the original photo.
+
+Elegant decorative background, golden ornamental patterns,
+symbolic shapes, refined portrait composition,
+rich gold tones, decorative art nouveau painting.
+```
+
+---
+
+# 6. Арт-деко
+
+```
+Transform the photo into an Art Deco portrait illustration.
+
+Preserve the exact facial identity from the original photograph.
+
+Elegant geometric composition, smooth stylized lines,
+luxurious colors, polished surfaces,
+1920s art deco portrait style, cinematic lighting.
+```
+
+---
+
+# 7. Чёрно-белый портрет (Карш)
+
+```
+Transform the photo into a powerful black and white studio portrait.
+
+Preserve the exact face identity from the original photo.
+
+High contrast lighting, dramatic shadows,
+classic photographic portrait style inspired by Yousuf Karsh,
+strong character expression, timeless photography.
+```
+
+---
+
+# 8. Поп-арт
+
+```
+Transform the photo into a pop-art portrait illustration.
+
+Preserve the exact face and identity from the original photograph.
+
+Bold flat colors, graphic shapes,
+high contrast pop-art palette,
+inspired by Andy Warhol,
+modern vibrant artistic portrait.
+```
+
+---
+
+# 9. Кубистический портрет
+
+```
+Transform the photo into a cubist portrait artwork.
+
+Preserve the recognizable identity of the person from the original photo.
+
+Geometric forms, fragmented planes,
+multiple perspectives combined into one portrait,
+inspired by Pablo Picasso cubism,
+artistic modern painting.
+```
+
+---
+
+# 10. Поэтический модернизм (Шагал)
+
+```
+Transform the photo into a dreamlike modernist portrait.
+
+Preserve the exact face identity from the original photograph.
+
+Soft poetic atmosphere, expressive colors,
+slightly surreal composition,
+inspired by Marc Chagall,
+romantic artistic portrait with symbolic elements.
+```

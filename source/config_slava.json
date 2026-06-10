@@ -1,5 +1,5 @@
 {
-  "generate_video": true,
+  "generate_video": false,
   "video_count": 1,
   "camera_segments": 4,
   "motion_source": "ai",
@@ -12,5 +12,6 @@
   "write_description": true,
   "generate_final_frames": false,
   "read_input_list": true,
-  "generate_music": false
+  "generate_music": false,
+  "use_ai_optimal_framing": true
 }

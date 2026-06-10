@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 from argparse import Namespace
@@ -96,6 +97,53 @@ def test_run_generation_builds_grok_config_and_calls_runner() -> None:
     assert output_path.exists()
 
 
+def test_run_generation_reads_prompt_text_from_json_artifact() -> None:
+    root = Path("test_runtime") / f"grok_web_json_{uuid4().hex}"
+    settings = _settings_for(root)
+
+    image_path = settings.input_dir / "frame_a.png"
+    image_path.write_bytes(b"img")
+    prompt_path = settings.output_dir / "frame_a_stage_v_prompt_1.json"
+    prompt_path.write_text(
+        json.dumps(
+            [
+                {
+                    "lang": "en",
+                    "prompt": "Shot 1: 0-2s. Start from @image1. Shot 2: 2-4s. Shift. Shot 3: 4-6s. Widen. Total: 6s / 3 shots / 16:9.",
+                }
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    captured = {}
+
+    def fake_runner(config) -> Path:
+        captured["config"] = config
+        config.output_path.write_bytes(b"video")
+        return config.output_path
+
+    args = Namespace(
+        image=image_path,
+        prompt=prompt_path,
+        output_video=None,
+        config_file=None,
+        profile_dir=root / ".browser-profile" / "grok-web",
+        target_url="https://grok.com/",
+        chrome_exe=None,
+        result_timeout=123.0,
+        launch_timeout=45.0,
+        upload_timeout=67.0,
+        no_submit=False,
+    )
+
+    output_path = run_generation(args, settings=settings, runner=fake_runner)
+
+    assert captured["config"].prompt_text.startswith("Shot 1: 0-2s.")
+    assert output_path == settings.output_dir / "frame_a_stage_video_1.mp4"
+
+
 def test_resolve_single_image_from_input_directory() -> None:
     root = Path("test_runtime") / f"grok_web_{uuid4().hex}"
     settings = _settings_for(root)
@@ -168,6 +216,21 @@ def test_run_generation_without_arguments_uses_latest_v_prompt_pair() -> None:
     assert config.prompt_text == "new"
     assert config.output_path == settings.output_dir / "frame_b_20260311_130000_video_1.mp4"
     assert output_path.exists()
+
+
+def test_resolve_prompt_path_can_find_json_prompt_artifacts() -> None:
+    root = Path("test_runtime") / f"grok_web_json_prompt_{uuid4().hex}"
+    settings = _settings_for(root)
+
+    image_path = settings.input_dir / "frame_a.png"
+    image_path.write_bytes(b"img")
+    prompt_path = settings.output_dir / "frame_a_20260311_120000_v_prompt_1.json"
+    prompt_path.write_text(
+        json.dumps([{"lang": "en", "prompt": "Shot 1: 0-2s. @image1. Shot 2: 2-4s. Shot 3: 4-6s. Total: 6s / 3 shots / 16:9."}]),
+        encoding="utf-8",
+    )
+
+    assert resolve_prompt_path(None, image_path, settings) == prompt_path
 
 
 def test_run_generation_creates_background_image_before_video_when_enabled(monkeypatch) -> None:
@@ -534,6 +597,110 @@ def test_prompt_matches_rejects_empty_prompt_field() -> None:
             return ""
 
     assert not agent._prompt_matches(FakeLocator(), "Create a realistic associative garden courtyard background with soft light")
+
+
+def test_debug_port_required_mode_does_not_fallback_to_managed_chrome(monkeypatch) -> None:
+    config = GrokWebConfig(
+        prompt_text="prompt",
+        image_path=Path("frame.png"),
+        output_path=Path("out.mp4"),
+        debug_port=9222,
+        require_debug_port=True,
+    )
+    agent = GrokWebAgent(config)
+
+    monkeypatch.setattr(agent, "_connect_context", lambda _playwright: (_ for _ in ()).throw(GrokWebError("no debug")))
+    monkeypatch.setattr(agent, "_launch_managed_context", lambda _playwright: (_ for _ in ()).throw(AssertionError("unexpected fallback")))
+
+    with pytest.raises(GrokWebError, match="no debug"):
+        agent._open_browser_context(object())
+
+
+def test_debug_port_environment_lock_blocks_managed_chrome(monkeypatch) -> None:
+    agent = GrokWebAgent(
+        GrokWebConfig(
+            prompt_text="prompt",
+            image_path=Path("frame.png"),
+            output_path=Path("out.mp4"),
+        )
+    )
+
+    monkeypatch.setenv("GROK_REQUIRE_DEBUG_PORT", "1")
+
+    with pytest.raises(GrokWebError, match="Managed Chrome launch is disabled"):
+        agent._launch_managed_context(object())
+
+
+def test_debug_port_environment_lock_blocks_persistent_context_launch(monkeypatch) -> None:
+    agent = GrokWebAgent(
+        GrokWebConfig(
+            prompt_text="prompt",
+            image_path=Path("frame.png"),
+            output_path=Path("out.mp4"),
+        )
+    )
+
+    monkeypatch.setenv("GROK_REQUIRE_DEBUG_PORT", "1")
+
+    with pytest.raises(GrokWebError, match="Persistent Chrome launch is disabled"):
+        agent._launch_context(object(), {})
+
+
+def test_attach_only_get_page_requires_existing_grok_tab_without_opening_new_page(monkeypatch) -> None:
+    agent = GrokWebAgent(
+        GrokWebConfig(
+            prompt_text="prompt",
+            image_path=Path("frame.png"),
+            output_path=Path("out.mp4"),
+            debug_port=9222,
+            require_debug_port=True,
+            reuse_existing_page=True,
+        )
+    )
+
+    class FakeContext:
+        pages: list[object] = []
+
+        def new_page(self):
+            raise AssertionError("unexpected new page")
+
+    with pytest.raises(GrokWebError, match="will not open a new Chrome tab or window"):
+        agent._get_page(FakeContext())
+
+
+def test_attach_only_get_page_reuses_existing_grok_tab_without_new_page(monkeypatch) -> None:
+    agent = GrokWebAgent(
+        GrokWebConfig(
+            prompt_text="prompt",
+            image_path=Path("frame.png"),
+            output_path=Path("out.mp4"),
+            debug_port=9222,
+            require_debug_port=True,
+            reuse_existing_page=True,
+        )
+    )
+    calls: list[str] = []
+
+    class FakePage:
+        url = "https://grok.com/imagine"
+
+        def goto(self, *_args, **_kwargs):
+            raise AssertionError("unexpected navigation")
+
+    class FakeContext:
+        pages = [FakePage()]
+
+        def new_page(self):
+            raise AssertionError("unexpected new page")
+
+    monkeypatch.setattr(agent, "_ensure_imagine_mode", lambda _page: calls.append("imagine"))
+    monkeypatch.setattr(agent, "_wait_for_ready", lambda _page: calls.append("ready"))
+    monkeypatch.setattr(agent, "_dismiss_interfering_overlay", lambda _page: calls.append("overlay"))
+
+    page = agent._get_page(FakeContext())
+
+    assert page is FakeContext.pages[0]
+    assert calls == ["imagine", "ready", "overlay"]
 
 
 def test_dismiss_interfering_overlay_clicks_disable_ad_button(monkeypatch) -> None:
@@ -1524,6 +1691,47 @@ def test_connect_context_reuses_open_debug_browser() -> None:
     result = agent._connect_context(FakePlaywright())
 
     assert result == "existing-context"
+
+
+def test_connect_context_prefers_context_with_grok_tab_when_attach_only() -> None:
+    agent = GrokWebAgent(
+        GrokWebConfig(
+            prompt_text="prompt",
+            image_path=Path("frame.png"),
+            output_path=Path("out.mp4"),
+            debug_port=9222,
+            require_debug_port=True,
+        )
+    )
+
+    class FakePage:
+        def __init__(self, url: str) -> None:
+            self.url = url
+
+    class FakeContext:
+        def __init__(self, pages: list[FakePage]) -> None:
+            self.pages = pages
+
+    plain_context = FakeContext([FakePage("https://chatgpt.com/")])
+    grok_context = FakeContext([FakePage("https://grok.com/imagine")])
+
+    class FakeBrowser:
+        def __init__(self) -> None:
+            self.contexts = [plain_context, grok_context]
+
+    class FakeChromium:
+        def connect_over_cdp(self, endpoint: str, timeout: int):
+            assert endpoint == "http://127.0.0.1:9222"
+            assert timeout == 60_000
+            return FakeBrowser()
+
+    class FakePlaywright:
+        def __init__(self) -> None:
+            self.chromium = FakeChromium()
+
+    result = agent._connect_context(FakePlaywright())
+
+    assert result is grok_context
 
 
 def test_close_lingering_login_browser_closes_debug_port_session(monkeypatch) -> None:

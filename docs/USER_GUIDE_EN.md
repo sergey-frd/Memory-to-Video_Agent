@@ -3,11 +3,19 @@
 ## One-Minute Quick Start
 
 1. Put source images into `input`.
-2. If you need to sign in to Grok or refresh the session, run `login_grok_profile.bat`, sign in, open `https://grok.com/imagine` once to verify access, and then fully close that Chrome window.
+2. Pick one of two Grok backends:
+   - Web automation (default): if you need to sign in to Grok or refresh the session, run `login_grok_profile.bat`, sign in, open `https://grok.com/imagine` once to verify access, and then fully close that Chrome window.
+   - Direct API: copy `.env.template` to `.env`, fill `XAI_API_KEY=...`, and skip the Chrome login step entirely. Use `python .\scripts\xai_ping.py` to confirm the key works.
 3. Run the main pipeline:
 
 ```bat
 run_full_grok_pipeline.bat --upload-timeout 300
+```
+
+Or the API equivalent (no Chrome required):
+
+```bat
+run_full_grok_pipeline_api.bat
 ```
 
 4. After a successful run:
@@ -27,6 +35,7 @@ This project is used to prepare prompt files, generate background images and vid
 - `input` - source images for the current run.
 - `output` - temporary prompt files, manifest files, and intermediate results for the current stage.
 - `final_videos_dir` - final destination for generated `mp4` files and background images.
+- `final_output_dir` - persistent destination for generated portrait/image-edit PNG files copied out of the project runtime `output` while preserving the same subfolder layout.
 - `regeneration_assets_dir` - destination for prompt files, manifests, and other non-video artifacts needed for manual editing and regeneration.
 - `reports` - final destination for sequence optimization reports, batch summaries, and temporary batch work files.
 - `reports\temp_projects` - temporary `.prproj` files produced inside one sequence optimization batch and removable by cleanup.
@@ -34,12 +43,16 @@ This project is used to prepare prompt files, generate background images and vid
 - `error\input` - source images for stages that failed.
 - `error\output` - prompt files, manifests, and error reports for failed stages.
 - `.browser-profile\grok-web` - Chrome automation profile used for Grok.
+- `styles` - reusable style lists for portrait/style workflows.
+- `output\chatgpt_portraits` - generated portrait PNG files from the ChatGPT portrait batch workflow.
+- `output\gemini_*` and `output\grok_*` - service-specific mirrors of ChatGPT portrait/image-edit output folders.
 
 Example Windows paths in `config.json`:
 
 ```json
 {
   "final_videos_dir": "<LOCAL_PATH>",
+  "final_output_dir": "<LOCAL_PATH>",
   "regeneration_assets_dir": "<LOCAL_PATH>",
   "reports_dir": "<LOCAL_PATH>"
 }
@@ -116,15 +129,18 @@ run_full_grok_pipeline.bat --skip-video --generate-source-background --upload-ti
 run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300
 ```
 
-Duration selection fix: the launcher now reads `video_duration_seconds` from the active config and forces the matching duration button in the Grok UI before uploading the image and prompt. A config requesting `10` seconds is no longer overridden by the `6 s` default the UI may pre-select.
+Duration selection fix:
+- The launcher now reads `video_duration_seconds` from the active config and forces the matching duration button in the Grok UI before uploading the image and prompt.
+- The selection logic prefers the requested duration over an already highlighted button with a different value, so a config requesting 10 seconds no longer falls back to whatever default Grok had pre-selected (for example 6 seconds).
+- Override the value with `--video-duration-seconds N`. Acceptable Grok values are `6`, `10`, and `15` seconds.
 
 ### `run_full_grok_pipeline_api.bat`
 
-Direct xAI API alternative to `run_full_grok_pipeline.bat`. Same input/output layout, but the pipeline calls the xAI `grok-imagine-video` model through the official `xai-sdk` Python client instead of driving a Chrome session.
+Direct xAI API alternative to `run_full_grok_pipeline.bat`. Same input/output layout, but instead of driving Chrome through Playwright the pipeline calls the xAI `grok-imagine-video` model through the official `xai-sdk` Python client. There is no Chrome session, no `login_grok_profile.bat` step, and no debug profile to manage.
 
 Prerequisites:
-- Fill `XAI_API_KEY` inside `.env` (use `.env.template` as a starting point).
-- Optional sanity check: `python .\scripts\xai_ping.py` — sends a cheap chat request and prints `pong` when the key works.
+- A valid `XAI_API_KEY` in `.env`. Use `.env.template` as a reference.
+- Optional sanity check: `python .\scripts\xai_ping.py` performs a cheap chat call and prints `pong` when the key is healthy.
 
 Examples:
 
@@ -134,7 +150,142 @@ run_full_grok_pipeline_api.bat --config-file .\config_SF.json
 run_full_grok_pipeline_api.bat --skip-video --generate-source-background
 ```
 
-Related files: `main_full_pipeline_api.py`, `api/grok_video.py`, `api/grok_video_runner.py`, `scripts/xai_ping.py`.
+What it does:
+1. Reads images from `input` exactly like the web launcher.
+2. Builds video/background prompts the same way as `run_full_grok_pipeline.bat`.
+3. Submits each prompt + input image to the xAI Video API through `api/grok_video.py`.
+4. Downloads the resulting `mp4` to the project `output/` folder, then delivers it to `final_videos_dir` / `regeneration_assets_dir` through the existing delivery code.
+5. Honors `video_duration_seconds`, `video_aspect_ratio`, and `video_resolution` from the config.
+
+When to choose the API launcher:
+- Headless / CI environments where Chrome cannot run.
+- When you want determinism and no UI state to maintain.
+- Cost-controlled batches where per-second pricing is acceptable.
+
+When to keep the web launcher:
+- When you need the Grok web-only UI features (chat-style refinements, manual variants).
+- When the xAI Video API quota is exhausted or temporarily unavailable.
+
+Related files:
+- `main_full_pipeline_api.py` - entry point that wires the API runner into the existing pipeline.
+- `api/grok_video.py` - low-level xAI Video API client (image_url + prompt + duration).
+- `api/grok_video_runner.py` - adapter that implements the same `AgentRunner` interface as `GrokWebSessionRunner` so the rest of the pipeline does not change.
+- `scripts/xai_ping.py` - cheap chat-mode test for `XAI_API_KEY`.
+
+## ChatGPT, Gemini, And Grok Artistic Portrait Batch
+
+This workflow generates finished artistic portraits from every supported image in `input`.
+It uses the already-open ChatGPT web UI in Chrome, not the OpenAI API.
+The same job builder and JSON config format can also drive a dedicated Gemini
+generation window through `--backend gemini-desktop`, or Grok image generation
+through `--backend grok`.
+
+Main files:
+- `main_chatgpt_portrait_batch.py` - builds portrait jobs from images and styles.
+- `api/chatgpt_desktop_v2.py` - desktop automation for the existing ChatGPT window.
+- `api/gemini_desktop.py` - desktop automation adapter for an existing Gemini window.
+- `api/grok_web.py` - Grok web automation reused from the video pipeline, with image mode enabled.
+- `run_chatgpt_portrait_batch_existing.bat` - recommended launcher for an already-open ChatGPT session.
+- `run_chatgpt_pair_batch_existing.bat` - ChatGPT launcher for two-photo pair portraits from `input_pair\01`, `input_pair\02`, and so on.
+- `login_gemini_profile.bat` - opens a dedicated Gemini Chrome profile at `https://gemini.google.com/app`.
+- `run_gemini_portrait_batch_existing.bat` - Gemini launcher that reuses the same portrait JSON configs.
+- `login_grok_profile.bat` - signs in the dedicated Grok Chrome profile at `https://grok.com/imagine`.
+- `run_grok_portrait_batch_existing.bat` - Grok launcher that reuses the same portrait JSON configs.
+- `chatgpt_portrait_config.json` - short working style set, currently watercolor and pastel.
+- `chatgpt_portrait_base_config.json` - full base style bank for artistic portraits and image-edit service styles.
+- `chatgpt_pair_base_config.json` - pair portrait prompt bank for constructing one cinematic artistic couple image from two source photos.
+- `chatgpt_watercolor_scene_expansion_config.json` - special two-style config for `watercolor` and `scene_expansion`.
+- `BATCH_RUN_HISTORY.md` - non-repeating examples for all batch launchers and their parameters.
+- `styles\art_styles_Prompt_list.txt` - source human-readable style prompt list.
+
+The base config contains the full portrait/style bank, including Rembrandt, Renaissance, Impressionist, Watercolor, Van Gogh post-impressionism, Klimt art nouveau, Art Deco, Karsh black-and-white studio portrait, Pop Art, Cubist, Chagall poetic modernism, plus service styles such as MODERN_COLOR, COLORIZE, FACE_ENLARGEMENT, and SCENE_EXPANSION.
+
+Output:
+- generated PNG files are written to `output\chatgpt_portraits`;
+- Gemini writes the same jobs into mirrored `output\gemini_*` folders;
+- Grok writes the same jobs into mirrored `output\grok_*` folders;
+- when `--delivery-config-file .\config_Yakov.json` or another user config is supplied, every newly saved PNG is also copied to that config's `final_output_dir` with the same relative structure as the project `output\...` tree, while the project copy stays in place for `--skip-existing`;
+- for example, project output `output\grok_portraits\portrait.png` is copied to `<LOCAL_PATH>`;
+- file names use `<image_stem>_<style_slug>.png`, for example `IMG-001_rembrandt.png`;
+- `--skip-existing` lets the batch restart safely and skip already saved portraits.
+
+Pair portrait output:
+- put two source photos into each numbered folder under `input_pair`, for example `input_pair\01\person_a.jpg` and `input_pair\01\person_b.jpg`;
+- before sending to ChatGPT, the batch creates one temporary side-by-side reference image in `output\pair\_pair_references`, so the desktop composer only has to accept one attachment;
+- the pair batch writes one generated image per numbered folder into `output\pair`;
+- file names use `<pair_id>_art_pair_<YYYYMMDD_HHMMSS>.png`, for example `01_art_pair_20260522_153000.png`, so the same numbered folder can be reused later with different photos;
+- with `--delivery-config-file .\config_SF.json`, the result is also copied to that config's `final_output_dir\pair`.
+
+Recommended automatic command:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Watercolor + scene expansion command:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_watercolor_scene_expansion_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Short working set command:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --skip-existing
+```
+
+Pair portrait command:
+
+```bat
+.\run_chatgpt_pair_batch_existing.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error
+```
+
+Gemini desktop-flow with the same config files:
+
+```bat
+.\login_gemini_profile.bat
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Gemini uses the same JSON config files as ChatGPT, but automatically mirrors ChatGPT output folders to Gemini folders when `--output-dir` is not explicitly passed. For example, `output\chatgpt_portraits` becomes `output\gemini_portraits`, and `output\chatgpt_watercolor_scene_expansion` becomes `output\gemini_watercolor_scene_expansion`. Pass your own `--output-dir` after the bat command only when a task needs a custom folder.
+Gemini saving first tries the generated image button `Download full size` / `Скачать в полном размере`, waits for the browser download to complete, and moves the downloaded image into the configured output path. If that button is unavailable, the older browser context-menu save path is still used as a fallback. The Gemini bat is intentionally quiet by default; add `--desktop-verbose` only when diagnosing UI problems.
+
+Grok web-flow with the same config files:
+
+```bat
+.\login_grok_profile.bat
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error
+```
+
+Grok uses `.browser-profile\grok-web`, `https://grok.com/imagine`, and Playwright image-mode automation. When `--output-dir` is not explicitly passed, ChatGPT output folders from the config are mirrored to Grok folders, for example `output\chatgpt_portraits` becomes `output\grok_portraits` and `output\chatgpt_watercolor_on_paper` becomes `output\grok_watercolor_on_paper`. Grok saves through browser download/source capture, so it does not use the Windows `Save As` dialog.
+
+Persistent portrait delivery to a user project:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --continue-on-error
+```
+
+The portrait style config still controls styles and the project-side output folder. The delivery config is separate and controls the persistent mirror root through `final_output_dir`; the service/style subfolders from project `output` are preserved below it.
+
+Manual focus fallback:
+- keep an already verified ChatGPT window open in Chrome;
+- run the bat file without `--desktop-reactivate-delay 0`;
+- during each countdown, click inside the ChatGPT message box;
+- the script then attaches the source image, pastes the prompt, submits it, waits for a generated result, and saves the image.
+
+Important:
+- the automation does not bypass ChatGPT human checks or CAPTCHA prompts; pass them manually in the browser first;
+- do not run two portrait batches at the same time;
+- keep the generation ChatGPT in a dedicated Chrome window with exactly one visible tab; `run_chatgpt_portrait_batch_existing.bat` now requires this with `--desktop-require-single-tab-window`;
+- if Chrome has several ChatGPT windows, the single-tab generation window is the only safe target for the desktop batch;
+- desktop input is guarded: before clicks, paste, Enter, and save shortcuts, the script verifies that the foreground window is the selected ChatGPT window or a real `Save As`/`Open` dialog; if another app is foreground, the batch stops instead of sending input there;
+- after saving, ChatGPT may leave the last generated image open on screen. This is acceptable if the batch continues;
+- if the batch stops, rerun the same command with `--skip-existing`.
+- Gemini uses the same foreground-window protection and the same single visible tab rule; keep it in a separate Chrome window opened to `https://gemini.google.com/app`.
+- Gemini sign-in, Google checks, and service-side limits are not bypassed; complete them manually in the dedicated Gemini window before starting the batch.
+- Grok sign-in and service-side checks are not bypassed; use `login_grok_profile.bat` when the Grok profile needs manual login, then close the login window before the managed portrait batch.
 
 ## New Generation Flags
 
@@ -162,29 +313,71 @@ Behavior:
 - if `generate_video = false` and `generate_source_background = true`, the pipeline generates only background images;
 - if `generate_video = false` and `generate_source_background = false`, the stage fails because there is nothing to generate.
 
-When visible people are present, `*_v_prompt_*.txt` and `*_v_prm_ru_*.txt` now prefer identity-safe camera language: more distant or medium-wide framing, side / top / low / drone-like angles, and less aggressive facial enlargement. The goal is to reduce face drift in generated videos.
+When visible people are present, `*_v_prompt_*.(txt|json)` and `*_v_prm_ru_*.(txt|json)` now prefer identity-safe camera language: more distant or medium-wide framing, side / top / low / drone-like angles, and less aggressive facial enlargement. The goal is to reduce face drift in generated videos.
 
-This identity-safe behavior is now the default, but it is configurable through three optional JSON flags:
+This identity-safe behavior is now the default, but it is configurable through six framing-mode flags plus one ratio key:
 
 ```json
 {
   "prefer_face_closeups": false,
   "use_ai_optimal_framing": false,
-  "generate_dual_framing_videos": false
+  "use_ai_optimal_then_identity_safe_framing": false,
+  "ai_optimal_then_identity_safe_ai_optimal_percent": 70,
+  "generate_dual_framing_videos": false,
+  "generate_identity_safe_closeup_videos": false,
+  "generate_triple_framing_videos": false
 }
 ```
 
 Framing mode rules:
-- if all three flags are `false`, the pipeline keeps the default identity-safe framing and tries to avoid aggressive face enlargement;
+- if all six flags are `false`, the pipeline keeps the default identity-safe framing and tries to avoid aggressive face enlargement;
 - if `prefer_face_closeups = true`, close facial framing may be preferred and the video prompt may move into a tighter portrait scale;
-- if `use_ai_optimal_framing = true`, the AI chooses the most effective cinematic framing for the source image even if that includes stronger facial emphasis;
+- if `use_ai_optimal_framing = true`, the AI chooses the most effective cinematic framing for the source image without letting the face become significantly enlarged or distorted;
+- if `use_ai_optimal_then_identity_safe_framing = true`, one video is generated from one source image, but inside that single video the first `ai_optimal_then_identity_safe_ai_optimal_percent` percent uses AI-optimal framing and the remaining percent transitions into identity-safe framing from a safer distance;
+- if `ai_optimal_then_identity_safe_ai_optimal_percent` is omitted, the default ratio is `70 / 30`; for example, `50` means `50%` AI-optimal and `50%` identity-safe.
 - if `generate_dual_framing_videos = true`, the pipeline builds two branches from the same source frame: one identity-safe branch and one AI-optimal branch.
+- if `generate_identity_safe_closeup_videos = true`, the pipeline builds two branches from the same source frame: one identity-safe branch and one face-closeup branch.
+- if `generate_triple_framing_videos = true`, the pipeline builds three branches from the same source frame: identity-safe, face-closeup, and AI-optimal.
 
 Dual-mode output count:
 - with `video_count = 1`, dual mode produces `2` videos;
 - with `video_count = N`, dual mode produces `2 x N` videos.
 
-Only one of these three framing flags can be enabled at a time.
+Only one of these six framing flags can be enabled at a time. The percentage key is not a separate mode flag; it only refines the hybrid mode.
+
+### `generate_grok_multiscene_json_prompt`
+
+Controls a special Grok prompt mode where the usual `*_v_prompt_*.txt` file is replaced by a JSON prompt artifact.
+
+In `config.json`:
+
+```json
+{
+  "generate_grok_multiscene_json_prompt": true,
+  "grok_multiscene_prompt_size": 2000
+}
+```
+
+Behavior:
+- the pipeline writes `*_v_prompt_*.json` in English and `*_v_prm_ru_*.json` in Russian instead of TXT prompt files;
+- each JSON file is a one-item array with a `prompt` field, similar in spirit to `Gen_Video_Seedance`;
+- Grok reads the English `prompt` text from that JSON automatically, so batch execution still works through the normal Grok runners;
+- the prompt is treated as a compact three-shot video plan built from one input image, where `@image1` is the input image itself.
+
+Current fixed layout:
+- `Shot 1`, `0-2s`: strongest current AI-optimal cinematic interpretation;
+- `Shot 2`, `2-4s`: alternative AI-optimal interpretation with a clearly different camera solution;
+- `Shot 3`, `4-6s`: safer distance / angle view with wider spatial reveal.
+
+Current limits:
+- total duration is fixed at `6s`;
+- aspect ratio is fixed at `16:9`;
+- the English prompt is validated against the configured `grok_multiscene_prompt_size` in characters, and the word budget is derived automatically as approximately `size / 5`.
+
+Prompt-size parameter:
+- `grok_multiscene_prompt_size` — default `1000`, which gives about `200` words;
+- `2000` gives about `400` words and allows a more detailed JSON video prompt for Grok;
+- the builder still keeps the prompt concise, but may preserve more scene detail when the size is increased.
 
 When to use `--skip-video`:
 - when you only need background images;
@@ -264,6 +457,8 @@ When to enable it:
 All current `GenerationConfig` fields:
 
 - `generate_video` — default `true`; generate video prompts and run the video stage.
+- `generate_grok_multiscene_json_prompt` — default `false`; write Grok-ready EN/RU JSON prompt artifacts instead of TXT video prompt files, using a fixed three-shot `6s` layout built from one input image.
+- `grok_multiscene_prompt_size` — default `1000`; maximum prompt size for Grok multiscene JSON mode in approximate characters. The word budget is derived automatically, for example `1000 -> 200 words`, `2000 -> 400 words`.
 - `video_count` — default `2`; how many videos to build from one source frame for each active framing mode.
 - `camera_segments` — default `1`; how many motion segments are planned inside one video prompt.
 - `motion_source` — default `table`; choose camera motions from the local table or from AI (`ai`).
@@ -271,20 +466,25 @@ All current `GenerationConfig` fields:
 - `generate_source_background` — default `false`; create background prompts and run the background-image stage in Grok.
 - `save_grok_debug_artifacts` — default `false`; keep Grok diagnostic candidate/debug artifacts in `output`.
 - `final_videos_dir` — default `final_project/videos`; final delivery folder for generated `mp4` files and background images.
+- `final_output_dir` — default `final_project/output`; final delivery root for portrait/image-edit PNG copies produced by ChatGPT, Gemini, Grok, API, or local portrait batch flows when `--delivery-config-file` is provided. Project `output/...` subfolders are mirrored below this root.
 - `regeneration_assets_dir` — default `final_project/regeneration_assets`; delivery folder for prompts, manifests, and non-video stage artifacts.
 - `continue_after_failure` — default `false`; continue with the next image after moving a failed stage into `error`.
 - `write_description` — default `true`; write the stage description / analysis text file.
 - `generate_final_frames` — default `false`; generate final-frame images through the image API.
 - `read_input_list` — default `true`; read all supported source images from `input`.
 - `generate_music` — default `false`; generate a music prompt after the last processed image.
-- `prefer_face_closeups` — default `false`; prefer closer facial framing when that matches the source image.
-- `use_ai_optimal_framing` — default `false`; let AI choose the strongest cinematic framing, even if faces become more prominent.
+- `prefer_face_closeups` — default `false`; allow and prefer closer facial framing when that matches the source image.
+- `use_ai_optimal_framing` — default `false`; let AI choose the strongest cinematic framing, but do not significantly enlarge or distort the face.
+- `use_ai_optimal_then_identity_safe_framing` — default `false`; generate one video where the first part uses AI-optimal framing and the remaining part transitions into identity-safe distance / angles.
+- `ai_optimal_then_identity_safe_ai_optimal_percent` — default `70`; only for `use_ai_optimal_then_identity_safe_framing = true`; how much of the video duration is reserved for the AI-optimal part. Valid range: `1..99`. The identity-safe remainder is calculated automatically as `100 - value`.
 - `generate_dual_framing_videos` — default `false`; generate both identity-safe and AI-optimal framing branches from the same source frame.
-- `hide_phone_in_selfie` — default `true`; if the input looks like a selfie / self-portrait, keep the selfie feel but try not to show the phone or phone reflection when plausible.
-- `prefer_loving_kindness_tone` — default `false`; where appropriate for the specific input image, gently bias the prompts toward loving-kindness, friendliness, benevolence, warm goodwill, and gentle mercy through light, color, atmosphere, environment, and background.
+- `generate_identity_safe_closeup_videos` — default `false`; generate both identity-safe and face-closeup framing branches from the same source frame.
+- `generate_triple_framing_videos` — default `false`; generate identity-safe, face-closeup, and AI-optimal framing branches from the same source frame.
+- `hide_phone_in_selfie` — default `true`; if the input looks like a selfie / self-portrait, keep the selfie feel but try not to show the phone, photo camera, video camera, or their reflections when plausible.
+- `prefer_loving_kindness_tone` — default `true`; where appropriate for the specific input image, gently bias the prompts toward loving-kindness, friendliness, benevolence, warm goodwill, and gentle mercy through light, color, atmosphere, environment, and background.
 
 Important framing rule:
-- Only one of `prefer_face_closeups`, `use_ai_optimal_framing`, or `generate_dual_framing_videos` can be enabled at a time.
+- Only one of `prefer_face_closeups`, `use_ai_optimal_framing`, `use_ai_optimal_then_identity_safe_framing`, `generate_dual_framing_videos`, `generate_identity_safe_closeup_videos`, or `generate_triple_framing_videos` can be enabled at a time.
 
 ## Architecture And Change Control
 
@@ -304,25 +504,22 @@ Use this compact map when you need to quickly see which `.bat` launches which Py
 ```mermaid
 flowchart LR
   B1["run_full_grok_pipeline*.bat"] --> P1["main_full_pipeline.py"]
-  B1A["run_full_grok_pipeline_api.bat"] --> P1A["main_full_pipeline_api.py"]
   B2["run_grok_automation*.bat"] --> P2["main_grok_web.py / main_grok_batch.py"]
   B3A["run_project_sequence_batch_(project).bat"] --> B3["run_project_sequence_batch.bat"]
-  B6A["copy_sequence_media_(project).bat"] --> B6["run_copy_sequence_media_batch.bat"]
-  B6 --> P6["main_copy_sequence_media_batch.py"]
   B3 --> P3["main_project_sequence_batch.py"]
   B4["run_project_publication*.bat"] --> P4["main_project_publication_push.py"]
+  B5["run_chatgpt_portrait_batch_existing.bat / run_gemini_portrait_batch_existing.bat / run_grok_portrait_batch_existing.bat"] --> P6["main_chatgpt_portrait_batch.py"]
 
   A1["CLI flags"] --> P1
   A2["CLI flags"] --> P2
+  A5["CLI flags\n--config-file\n--skip-existing\n--desktop-*\n--grok-*"] --> P6
   C1["config.json / config.local.json / config_*.json"] --> G1["config.py / GenerationConfig"]
   G1 --> P1
   G1 --> P2
+  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_watercolor_scene_expansion_config.json"] --> P6
 
   C3["project_sequence_batch_*.json"] --> P3
   P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
-
-  C6["copy_sequence_media_*.json"] --> P6
-  P6 --> O6["copies:\nimage_dest/ (images)\nvideo_dest/ (videos, if copy_videos)\nmanifest JSON"]
 
   A4["CLI flags"] --> P4
   R1["project_structure_registry.json\n(optional --source-root)"] --> P4
@@ -331,6 +528,7 @@ flowchart LR
   P2 --> O2["results:\n*_video_*.mp4\n*_bg_image_16x9.*\ngrok debug artifacts if enabled"]
   P5 --> O3["reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)"]
   P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
+  P6 --> O5["portrait / image-edit results:\noutput/chatgpt_*/*.png\noutput/gemini_*/*.png\noutput/grok_*/*.png"]
 ```
 
 The left side of the diagram shows launch wrappers and parameter sources, and the right side shows the reports and result artifacts produced by each route.
@@ -453,6 +651,15 @@ Important location rule:
 - `output` is a temporary workspace area.
 - If everything finishes successfully, `output` should ideally end up empty.
 
+The optimizer can now work not only with `mp4` clips, but also with visual timelines that mix photos and videos. When enabled in the batch config, it writes an edit plan into the JSON/TXT report and can apply the plan during `.prproj` export:
+
+- recommended still-image duration on the timeline;
+- gentle video-fragment duration adjustment;
+- transition recommendation for `image -> image`;
+- transition recommendation for `image -> video`;
+- transition recommendation for `video -> image`;
+- transition recommendation for `video -> video`.
+
 ## Sequence Optimization Batch
 
 Run the batch optimizer with a JSON config:
@@ -469,6 +676,14 @@ Example config fields:
   "regeneration_assets_dir": "<LOCAL_PATH>",
   "output_project_path": "<LOCAL_PATH>",
   "reports_dir": "<LOCAL_PATH>",
+  "transition_mode": "apply",
+  "enable_auto_transitions": true,
+  "enable_visual_transitions": true,
+  "enable_auto_durations": true,
+  "enable_auto_transforms": true,
+  "generate_premiere_transform_script": true,
+  "premiere_transform_script_add_video_effects": true,
+  "include_visual_media": true,
   "generate_personalized_report": false,
   "human_detail_txt": "<LOCAL_PATH>",
   "sequence_jobs": [
@@ -479,6 +694,10 @@ Example config fields:
   ]
 }
 ```
+
+Use `include_visual_media` when the source sequence contains photos and videos on the same visual track. Use `enable_auto_durations` to let the optimizer adjust timeline durations. Use `transition_mode: "apply"` together with `enable_auto_transitions` and `enable_visual_transitions` when the exported `.prproj` should receive transitions for mixed visual pairs, not only pure mp4 pairs. Automatic transition selection now uses a broad safe template pool: dissolve/fade, dip, wipe/iris, slide/push/zoom, and light/stylized transitions. `Morph Cut` is intentionally excluded from automatic application because Premiere can fail with `Can't apply to a single clip`; keep it for manual use only after checking handles and clip conditions. Use `enable_auto_transforms` and `generate_premiere_transform_script` to create a companion `<sequence>_apply_transforms.jsx` file for still-image Transform effects such as `Grow`, `Shrink`, `Move`, and fallback `Transform`. `Offset` is intentionally manual-only because it needs careful composition tuning in Premiere. Transform choice is content- and neighbor-aware: portraits tend toward `Grow`, groups and wide/context frames toward `Shrink`, action frames toward `Move`, and adjacent similar frames are varied to avoid repeated zooms.
+
+The generated transform JSX is run from the same Premiere panel as transition scripts. Open the optimized sequence first, then run the `<sequence>_apply_transforms.jsx` script. With `premiere_transform_script_add_video_effects: true`, the script applies the named Premiere Transform effects (`Grow`, `Shrink`, `Move`) to the planned still images and skips intrinsic `Motion > Scale` keyframes. Set it to `false` only when you intentionally want the fallback scale-keyframe workflow. The transform effect list/template is documented in `styles\List of Video transform effects.txt`.
 
 The final optimized `.prproj` is stored next to the source `project_path`. During the batch, the program also keeps a temporary working `.prproj` inside `reports\temp_projects`, and cleanup may remove that temporary copy later.
 
@@ -631,77 +850,6 @@ Important rule:
 - the human text should adjust hero portrait, wording tone, and music preferences;
 - professions, biography facts, diet, education, and other non-visible details should not be turned into direct video facts unless they are visible in the sequence.
 
-## Copy Images (And Video) From A Sequence
-
-This mode extracts every source media file actually used by a specific Premiere sequence and copies it into dedicated folders. By default only images are copied (not video); copying video is a separate, opt-in mode controlled by a flag.
-
-Purpose: quickly gather the full set of photos used in an edited sequence (for example, to re-run AI processing from `input`) without walking the timeline by hand.
-
-How it works:
-
-- reads the `.prproj` (gzip-XML); the auxiliary `.prin` file is not parsed;
-- walks all track groups and all clips of the requested sequence;
-- classifies each clip by its source extension as image (`.jpg/.jpeg/.png/.webp/.bmp/.tif/.tiff/.heic`) or video (`.mp4/.mov/.m4v/.avi/.mkv/.webm/.mts/.m2ts`);
-- de-duplicates paths, copies images into `image_dest` and videos into `video_dest`;
-- on a name conflict the file is renamed by default (`name_1.jpg`); `overwrite` and `skip` modes are also available;
-- writes a JSON manifest listing what was copied and any missing sources.
-
-Run from the project-specific batch file:
-
-```powershell
-.\copy_sequence_media_sveta_igr_26_2.bat
-```
-
-Generic run with any config:
-
-```powershell
-.\run_copy_sequence_media_batch.bat .\copy_sequence_media_sveta_igr_26_2.json
-```
-
-Direct Python call:
-
-```powershell
-python .\main_copy_sequence_media_batch.py --config .\copy_sequence_media_sveta_igr_26_2.json
-```
-
-Config (`copy_sequence_media_*.json`, mirroring `project_sequence_batch_*.json`):
-
-```json
-{
-  "project_path": "e:\\Git\\video_projects\\Sveta_I\\Svt_Igr_26_2.prproj",
-  "prin_path": "e:\\Git\\video_projects\\Sveta_I\\Svt_Igr_26_2.prin",
-  "image_dest": "e:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026_Sv\\input",
-  "video_dest": "e:\\Git\\P_h_o_t_o\\Igor_Brams_1\\Igor_Brams\\2026_Sv\\input_video",
-  "copy_images": true,
-  "copy_videos": false,
-  "on_conflict": "rename",
-  "dry_run": false,
-  "manifest_path": "e:\\Git\\AI_PIC_DEF\\def_AI\\img-style-ag_1\\output\\Svt_Igr_26_2_media_copy_manifest.json",
-  "sequence_jobs": [
-    { "sequence_name": "Svt_Igr_262_e01" }
-  ]
-}
-```
-
-Config keys:
-
-- `project_path` — path to the `.prproj`; `prin_path` is a Premiere helper file kept for reference and not parsed.
-- `image_dest` / `video_dest` — destination folders for images and videos (created automatically).
-- `copy_images` — copy images (default `true`); `copy_videos` — copy videos (default `false`, this is the "future" mode).
-- `on_conflict` — `rename` | `overwrite` | `skip`.
-- `dry_run` — only count and report, copying nothing.
-- `manifest_path` — optional path for the JSON operation report.
-- `sequence_jobs` — list of sequences (`sequence_name`); multiple sequences per run are supported.
-
-A simpler images-only mode is also available via command-line arguments (no config):
-
-```powershell
-python .\main_copy_sequence_images.py `
-  --project "<PRPROJ>" --sequence "<SEQUENCE>" --dest "<IMAGE_DIR>"
-```
-
-Note: in a `.bat`, do not put a trailing `\` in the destination path value — the backslash escapes the closing quote and breaks argument parsing.
-
 ## Cleanup Of Old And Temporary Files
 
 Preview cleanup only:
@@ -798,6 +946,38 @@ Grok batch only for already prepared prompt files:
 run_grok_automation_all.bat --upload-timeout 300
 ```
 
+ChatGPT artistic portrait batch from all images in `input` using the full base style bank:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+ChatGPT watercolor portrait + scene expansion batch:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_watercolor_scene_expansion_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+ChatGPT short watercolor/pastel portrait batch:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --skip-existing
+```
+
+Gemini portrait batch using the same JSON config format and a dedicated one-tab Gemini Chrome window:
+
+```bat
+.\login_gemini_profile.bat
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Grok portrait batch using the same JSON config format and the Grok automation profile:
+
+```bat
+.\login_grok_profile.bat
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error
+```
+
 Premiere sequence optimization batch:
 
 ```powershell
@@ -838,10 +1018,160 @@ run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_202603
 - Open final optimized `.prproj` files from the same folder as the source `project_path`; `reports\temp_projects` only holds the temporary batch working copy.
 - If you changed an optimized sequence manually, rebuild reports with `main_sequence_reports.py`.
 - Before deleting old artifacts, run cleanup in dry-run mode first and preferably keep an archive copy.
+- For ChatGPT portrait batches, keep only one automation run active and always use `--skip-existing` when resuming after a UI failure.
+
+## Multi-Scene Video Prompt Composer
+
+Use `main_video_prompt_composer.py` when you already have `regeneration_assets` for a set of source images and want one combined multi-scene prompt from ordered scene notes and `@imageN` references.
+
+Mandatory bilingual rule for video-generation tasks:
+
+- Any task that produces final video-generation prompt artifacts through `main_video_prompt_composer.py` must emit both English and Russian outputs in the same run.
+- This rule applies to combined TXT prompts and to Seedance JSON generation tasks, including every item produced through `scenario_variants`.
+- The English artifact is the production prompt, and the Russian artifact is the required control/review companion.
+- A video-generation task is considered incomplete if the matching RU output file is missing.
+
+Input contract:
+
+- JSON request with `technical_preamble`, `total_duration_seconds`, `aspect_ratio`, `regeneration_assets_dir`, `references`, and ordered `scenes`.
+- Alternatively, you can use `--config-file` with one full JSON/JSONC config that contains both the scenario payload and the Seedance/TXT generation settings.
+- Optional `max_prompt_chars` controls the prompt length limit; default is `2000`.
+- Optional `scenario_variants` lets one scenario produce multiple alternative JSON generation tasks from the same scene list.
+- Each reference item maps a source file to a stable `@imageN` tag.
+- Each scene contains `duration_seconds` and a short scene description that may reference one or more `@imageN` tags.
+
+Outputs in `regeneration_assets_dir`:
+
+- `Gen_Video_<timestamp>.txt` - English prompt.
+- `Gen_Video_RU_<timestamp>.txt` - Russian translation.
+- `Gen_Video_Seedance_<timestamp>.json` - Seedance 2.0 JSON prompt when `--seedance-json` is enabled.
+- `Gen_Video_Seedance_RU_<timestamp>.json` - Russian control JSON for manual review of the same Seedance prompt.
+- `Gen_Video_Seedance_<VariantId>_<timestamp>.json` and `Gen_Video_Seedance_RU_<VariantId>_<timestamp>.json` - per-variant outputs when `scenario_variants` contains more than one scenario branch.
+
+Typical command:
+
+```powershell
+.\.venv\Scripts\python.exe -u .\main_video_prompt_composer.py --request-file .\video_prompt_request_slava_volga_example.json --seedance-json
+```
+
+Config-file command:
+
+```powershell
+.\.venv\Scripts\python.exe -u .\main_video_prompt_composer.py --config-file .\video_prompt_config_maya_africa_home_two_variants.json
+```
+
+Seedance JSON only:
+
+```powershell
+.\.venv\Scripts\python.exe -u .\main_video_prompt_composer.py --request-file .\video_prompt_request_slava_volga_example.json --seedance-json --seedance-json-only
+```
+
+Variant rule:
+
+- `Variant_1` should be the most likely, most suitable, and most coherent interpretation.
+- `Variant_2` should be a fully distinct alternative interpretation based on the same scenario facts.
+
+Seedance notes:
+
+- Requirements are loaded from `services\Seedance_2.0_Director.md`.
+- The English Seedance JSON output is a strict one-item array: `[{"lang":"en","prompt":"..."}]`.
+- The paired Russian control JSON output is a strict one-item array: `[{"lang":"ru","prompt":"..."}]`.
+- The generated prompt is validated for `Shot N:` labels, `Total:` footer, aspect ratio, required `@imageN` tags, and 2000-character limit.
+- The generator must avoid extreme remote aerial/drone/bird's-eye framing that turns characters into tiny figures; wide shots are allowed only when people remain clearly legible and consistent with the reference-image scale.
+- Full reusable config examples live in `video_prompt_composer_config_example.jsonc` and `video_prompt_config_*.json`.
+- `seedance_json_only: true` automatically implies `seedance_json: true`.
+
+## Multi-Scene Video Story Preview
+
+Use `main_video_prompt_story.py` when you already have restored images in `output/chatgpt_photo_restoration` and stage metadata in `regeneration_assets`, but want to **review and edit the story in HTML first** before exporting a composer JSON and generating Seedance prompts.
+
+Workflow:
+
+1. Generate story HTML + JSON draft with OpenAI.
+2. Review thumbnails, `@imageN` tags, preamble, and scene text in the browser.
+3. Edit fields and click **Обновить черновик** to update the embedded draft JSON.
+4. Export `video_prompt_config_*.json` for `main_video_prompt_composer.py`.
+5. Run composer to create `Gen_Video_Seedance_*.json`.
+
+Default timing contract:
+
+- `image_count`: 7
+- `scene_count`: 5
+- `scene_duration_seconds`: 2
+- `total_duration_seconds`: 10
+- For 15 seconds, use `scene_duration_seconds: 3` and `total_duration_seconds: 15`
+
+Config files:
+
+- `video_prompt_story_config.py` — loader / validation
+- `video_prompt_story_config_alex_krvz.json` — primary chronology example
+- `video_prompt_story_config_alex_krvz_alt.json` — alternative montage example
+- Optional `generation_config_file: config_*.json` inherits `regeneration_assets_dir`, `final_output_dir`, and `grok_multiscene_prompt_size`
+
+Generate:
+
+```powershell
+.\run_video_prompt_story_generate.bat
+```
+
+Or:
+
+```powershell
+.\.venv\Scripts\python.exe -u .\main_video_prompt_story.py --config-file .\video_prompt_story_config_alex_krvz.json --generate
+```
+
+Alternative story:
+
+```powershell
+.\.venv\Scripts\python.exe -u .\main_video_prompt_story.py --config-file .\video_prompt_story_config_alex_krvz_alt.json --generate
+```
+
+Export composer JSON after review:
+
+```powershell
+.\run_video_prompt_story_export.bat path\to\video_prompt_story_YYYYMMDD_HHMMSS.html
+```
+
+Or:
+
+```powershell
+.\.venv\Scripts\python.exe -u .\main_video_prompt_story.py `
+  --config-file .\video_prompt_story_config_alex_krvz.json `
+  --export-config `
+  --story-json path\to\video_prompt_story_YYYYMMDD_HHMMSS.json `
+  --output-config path\to\video_prompt_config_birthday_hero_primary.json
+```
+
+Then run composer:
+
+```powershell
+.\.venv\Scripts\python.exe -u .\main_video_prompt_composer.py --config-file path\to\video_prompt_config_birthday_hero_primary.json
+```
+
+Story-review notes:
+
+- HTML shows restored-image thumbnails, filenames, and `@imageN` tags together with editable scene text.
+- `story_brief` controls facts such as birthday tribute, classmate reunion instead of family story, excluded source files, and neutral hero naming (`герой видео`, not personal names).
+- Use inline `@imageN` tags inside scene sentences.
+- If Seedance validation fails at 2000 characters, set exported composer `max_prompt_chars` to `2500`.
+- If `Variant_2` fails on distant-viewpoint validation, rerun composer with a Variant_2-only config and forbid bird's-eye / drone / aerial wording in the variant instruction.
+
+Outputs in `output_dir` / `regeneration_assets_dir`:
+
+- `video_prompt_story_<timestamp>.html` — review page
+- `video_prompt_story_<timestamp>.json` — machine-readable draft
+- `video_prompt_story_alt_<timestamp>.html` / `.json` — alternative story branch
+- `video_prompt_config_*.json` — input for `main_video_prompt_composer.py`
+- `Gen_Video_Seedance_Variant_*_<timestamp>.json` — final Seedance EN prompts
+- `Gen_Video_Seedance_RU_Variant_*_<timestamp>.json` — matching RU control JSON
+
+Cursor skill: `.cursor/skills/video-prompt-story/SKILL.md`
 
 ## Documentation Sync Rule
 
-Whenever workflow, file locations, naming, cleanup rules, or report outputs change, update both guide files together:
+Whenever workflow, file locations, naming, cleanup rules, or report outputs change, update all guide files together:
 
 - `USER_GUIDE.md`
+- `USER_GUIDE.html`
 - `Руководство_пользователя.md`
+- `Руководство_пользователя.html`

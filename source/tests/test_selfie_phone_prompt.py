@@ -42,11 +42,11 @@ def test_generation_config_hides_phone_in_selfie_by_default() -> None:
     assert GenerationConfig().hide_phone_in_selfie is True
 
 
-def test_generation_config_keeps_loving_kindness_disabled_by_default() -> None:
-    assert GenerationConfig().prefer_loving_kindness_tone is False
+def test_generation_config_enables_loving_kindness_by_default() -> None:
+    assert GenerationConfig().prefer_loving_kindness_tone is True
 
 
-def test_prompt_builder_adds_phone_avoidance_for_selfie_scene() -> None:
+def test_prompt_builder_adds_recording_device_avoidance_for_selfie_scene() -> None:
     builder = PromptBuilder(
         metadata=_metadata(),
         stage_id="stage_selfie",
@@ -66,9 +66,48 @@ def test_prompt_builder_adds_phone_avoidance_for_selfie_scene() -> None:
 
     assert "selfie" in video_prompt_lower
     assert "avoid showing the phone" in video_prompt_lower
+    assert "photo camera" in video_prompt_lower
+    assert "video camera" in video_prompt_lower
     assert "\u0441\u0435\u043b\u0444\u0438" in video_prompt_ru_lower
     assert "\u0442\u0435\u043b\u0435\u0444\u043e\u043d" in video_prompt_ru_lower
+    assert "\u0444\u043e\u0442\u043e\u0430\u043f\u043f\u0430\u0440\u0430\u0442" in video_prompt_ru_lower
+    assert "\u0432\u0438\u0434\u0435\u043e\u043a\u0430\u043c\u0435\u0440" in video_prompt_ru_lower
     assert "\u0442\u0435\u043b\u0435\u0444\u043e\u043d" in final_frame_prompt_lower
+
+
+def test_prompt_builder_hides_photo_camera_for_self_capture_scene_without_selfie_keyword() -> None:
+    scene = SceneAnalysis(
+        summary="\u0414\u0435\u0432\u0443\u0448\u043a\u0430 \u0441\u043d\u0438\u043c\u0430\u0435\u0442 \u0441\u0435\u0431\u044f \u0432 \u0437\u0435\u0440\u043a\u0430\u043b\u0435",
+        people_count=1,
+        people=[
+            PersonInFrame(
+                label="\u0434\u0435\u0432\u0443\u0448\u043a\u0430",
+                pose="\u0434\u0435\u0440\u0436\u0438\u0442 \u0444\u043e\u0442\u043e\u0430\u043f\u043f\u0430\u0440\u0430\u0442 \u043f\u0435\u0440\u0435\u0434 \u0441\u043e\u0431\u043e\u0439",
+            )
+        ],
+        background="\u043a\u043e\u043c\u043d\u0430\u0442\u0430 \u0441 \u0437\u0435\u0440\u043a\u0430\u043b\u043e\u043c",
+        shot_type="mirror portrait",
+        main_action="\u0441\u043d\u0438\u043c\u0430\u0435\u0442 \u0441\u0435\u0431\u044f \u043d\u0430 \u0444\u043e\u0442\u043e\u0430\u043f\u043f\u0430\u0440\u0430\u0442",
+        mood=["calm"],
+    )
+    builder = PromptBuilder(
+        metadata=_metadata(),
+        stage_id="stage_camera_self_capture",
+        scene_analysis=scene,
+    )
+
+    bundle = builder.build_video_prompt(
+        prompt_index=1,
+        total_videos=1,
+        initial_frame_description="frame A (source frame)",
+        motion_sequence=["Slow push in"],
+    )
+
+    video_prompt_lower = bundle.video_prompt.lower()
+    video_prompt_ru_lower = bundle.video_prompt_ru.lower()
+
+    assert "photo camera" in video_prompt_lower
+    assert "\u0444\u043e\u0442\u043e\u0430\u043f\u043f\u0430\u0440\u0430\u0442" in video_prompt_ru_lower
 
 
 def test_prompt_builder_adds_loving_kindness_tone_when_enabled() -> None:

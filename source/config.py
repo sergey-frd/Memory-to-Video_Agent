@@ -20,6 +20,7 @@ class VideoFramingMode(str, Enum):
     IDENTITY_SAFE = "identity_safe"
     FACE_CLOSEUP = "face_closeup"
     AI_OPTIMAL = "ai_optimal"
+    AI_OPTIMAL_THEN_IDENTITY_SAFE = "ai_optimal_then_identity_safe"
 
 
 class ConfigValidationError(ValueError):
@@ -28,6 +29,7 @@ class ConfigValidationError(ValueError):
 
 CONFIG_BOOL_FIELDS = {
     "generate_video",
+    "generate_grok_multiscene_json_prompt",
     "generate_source_background",
     "save_grok_debug_artifacts",
     "continue_after_failure",
@@ -37,17 +39,24 @@ CONFIG_BOOL_FIELDS = {
     "generate_music",
     "prefer_face_closeups",
     "use_ai_optimal_framing",
+    "use_ai_optimal_then_identity_safe_framing",
     "generate_dual_framing_videos",
+    "generate_identity_safe_closeup_videos",
+    "generate_triple_framing_videos",
     "hide_phone_in_selfie",
     "prefer_loving_kindness_tone",
 }
 CONFIG_INT_FIELDS = {
     "video_count",
     "camera_segments",
+    "video_duration_seconds",
+    "ai_optimal_then_identity_safe_ai_optimal_percent",
+    "grok_multiscene_prompt_size",
 }
 CONFIG_STR_FIELDS = {
     "motion_model",
     "final_videos_dir",
+    "final_output_dir",
     "regeneration_assets_dir",
 }
 CONFIG_ENUM_FIELDS = {
@@ -95,6 +104,19 @@ def _validate_config_data(data: Dict[str, Any], path: Path | None) -> None:
             raise ConfigValidationError(
                 f"Config key '{field_name}' in {location} must be >= 1."
             )
+        if field_name == "ai_optimal_then_identity_safe_ai_optimal_percent" and value > 99:
+            raise ConfigValidationError(
+                "Config key 'ai_optimal_then_identity_safe_ai_optimal_percent' "
+                f"in {location} must be between 1 and 99."
+            )
+        if field_name == "grok_multiscene_prompt_size" and value < 200:
+            raise ConfigValidationError(
+                f"Config key 'grok_multiscene_prompt_size' in {location} must be >= 200."
+            )
+        if field_name == "video_duration_seconds" and value not in (6, 10):
+            raise ConfigValidationError(
+                f"Config key 'video_duration_seconds' in {location} must be either 6 or 10."
+            )
 
     for field_name in CONFIG_STR_FIELDS:
         if field_name not in data:
@@ -119,27 +141,34 @@ def _validate_config_data(data: Dict[str, Any], path: Path | None) -> None:
         for field_name in (
             "prefer_face_closeups",
             "use_ai_optimal_framing",
+            "use_ai_optimal_then_identity_safe_framing",
             "generate_dual_framing_videos",
+            "generate_identity_safe_closeup_videos",
+            "generate_triple_framing_videos",
         )
         if data.get(field_name)
     ]
     if len(framing_flags) > 1:
         raise ConfigValidationError(
             "Only one framing-mode config key can be enabled at a time: "
-            "prefer_face_closeups, use_ai_optimal_framing, generate_dual_framing_videos."
+            "prefer_face_closeups, use_ai_optimal_framing, use_ai_optimal_then_identity_safe_framing, "
+            "generate_dual_framing_videos, generate_identity_safe_closeup_videos, generate_triple_framing_videos."
         )
 
 
 @dataclass
 class GenerationConfig:
     generate_video: bool = True
+    generate_grok_multiscene_json_prompt: bool = False
     video_count: int = 2
     camera_segments: int = 1
+    video_duration_seconds: int = 6
     motion_source: MotionSource = field(default_factory=lambda: MotionSource.TABLE)
     motion_model: str = "gpt-4.1"
     generate_source_background: bool = False
     save_grok_debug_artifacts: bool = False
     final_videos_dir: str = "final_project/videos"
+    final_output_dir: str = "final_project/output"
     regeneration_assets_dir: str = "final_project/regeneration_assets"
     continue_after_failure: bool = False
     write_description: bool = True
@@ -148,24 +177,46 @@ class GenerationConfig:
     generate_music: bool = False
     prefer_face_closeups: bool = False
     use_ai_optimal_framing: bool = False
+    use_ai_optimal_then_identity_safe_framing: bool = False
+    ai_optimal_then_identity_safe_ai_optimal_percent: int = 70
+    grok_multiscene_prompt_size: int = 1000
     generate_dual_framing_videos: bool = False
+    generate_identity_safe_closeup_videos: bool = False
+    generate_triple_framing_videos: bool = False
     hide_phone_in_selfie: bool = True
-    prefer_loving_kindness_tone: bool = False
+    prefer_loving_kindness_tone: bool = True
 
     def __post_init__(self) -> None:
+        if self.video_duration_seconds not in (6, 10):
+            raise ConfigValidationError(
+                "Config key 'video_duration_seconds' must be either 6 or 10."
+            )
+        if not 1 <= self.ai_optimal_then_identity_safe_ai_optimal_percent <= 99:
+            raise ConfigValidationError(
+                "Config key 'ai_optimal_then_identity_safe_ai_optimal_percent' "
+                "must be between 1 and 99."
+            )
+        if self.grok_multiscene_prompt_size < 200:
+            raise ConfigValidationError(
+                "Config key 'grok_multiscene_prompt_size' must be >= 200."
+            )
         enabled = [
             flag
             for flag, active in (
                 ("prefer_face_closeups", self.prefer_face_closeups),
                 ("use_ai_optimal_framing", self.use_ai_optimal_framing),
+                ("use_ai_optimal_then_identity_safe_framing", self.use_ai_optimal_then_identity_safe_framing),
                 ("generate_dual_framing_videos", self.generate_dual_framing_videos),
+                ("generate_identity_safe_closeup_videos", self.generate_identity_safe_closeup_videos),
+                ("generate_triple_framing_videos", self.generate_triple_framing_videos),
             )
             if active
         ]
         if len(enabled) > 1:
             raise ConfigValidationError(
                 "Only one framing-mode config key can be enabled at a time: "
-                "prefer_face_closeups, use_ai_optimal_framing, generate_dual_framing_videos."
+                "prefer_face_closeups, use_ai_optimal_framing, use_ai_optimal_then_identity_safe_framing, "
+                "generate_dual_framing_videos, generate_identity_safe_closeup_videos, generate_triple_framing_videos."
             )
 
     @classmethod
@@ -175,13 +226,19 @@ class GenerationConfig:
         motion_source = MotionSource(motion_value)
         return cls(
             generate_video=data.get("generate_video", default.generate_video),
+            generate_grok_multiscene_json_prompt=data.get(
+                "generate_grok_multiscene_json_prompt",
+                default.generate_grok_multiscene_json_prompt,
+            ),
             video_count=data.get("video_count", default.video_count),
             camera_segments=data.get("camera_segments", default.camera_segments),
+            video_duration_seconds=data.get("video_duration_seconds", default.video_duration_seconds),
             motion_source=motion_source,
             motion_model=str(data.get("motion_model", default.motion_model)),
             generate_source_background=data.get("generate_source_background", default.generate_source_background),
             save_grok_debug_artifacts=data.get("save_grok_debug_artifacts", default.save_grok_debug_artifacts),
             final_videos_dir=str(data.get("final_videos_dir", default.final_videos_dir)),
+            final_output_dir=str(data.get("final_output_dir", default.final_output_dir)),
             regeneration_assets_dir=str(data.get("regeneration_assets_dir", default.regeneration_assets_dir)),
             continue_after_failure=data.get("continue_after_failure", default.continue_after_failure),
             write_description=data.get("write_description", default.write_description),
@@ -190,9 +247,29 @@ class GenerationConfig:
             generate_music=data.get("generate_music", default.generate_music),
             prefer_face_closeups=data.get("prefer_face_closeups", default.prefer_face_closeups),
             use_ai_optimal_framing=data.get("use_ai_optimal_framing", default.use_ai_optimal_framing),
+            use_ai_optimal_then_identity_safe_framing=data.get(
+                "use_ai_optimal_then_identity_safe_framing",
+                default.use_ai_optimal_then_identity_safe_framing,
+            ),
+            ai_optimal_then_identity_safe_ai_optimal_percent=data.get(
+                "ai_optimal_then_identity_safe_ai_optimal_percent",
+                default.ai_optimal_then_identity_safe_ai_optimal_percent,
+            ),
+            grok_multiscene_prompt_size=data.get(
+                "grok_multiscene_prompt_size",
+                default.grok_multiscene_prompt_size,
+            ),
             generate_dual_framing_videos=data.get(
                 "generate_dual_framing_videos",
                 default.generate_dual_framing_videos,
+            ),
+            generate_identity_safe_closeup_videos=data.get(
+                "generate_identity_safe_closeup_videos",
+                default.generate_identity_safe_closeup_videos,
+            ),
+            generate_triple_framing_videos=data.get(
+                "generate_triple_framing_videos",
+                default.generate_triple_framing_videos,
             ),
             hide_phone_in_selfie=data.get("hide_phone_in_selfie", default.hide_phone_in_selfie),
             prefer_loving_kindness_tone=data.get(
@@ -204,13 +281,16 @@ class GenerationConfig:
     def override(self, **kwargs: Any) -> "GenerationConfig":
         values = {
             "generate_video": self.generate_video,
+            "generate_grok_multiscene_json_prompt": self.generate_grok_multiscene_json_prompt,
             "video_count": self.video_count,
             "camera_segments": self.camera_segments,
+            "video_duration_seconds": self.video_duration_seconds,
             "motion_source": self.motion_source,
             "motion_model": self.motion_model,
             "generate_source_background": self.generate_source_background,
             "save_grok_debug_artifacts": self.save_grok_debug_artifacts,
             "final_videos_dir": self.final_videos_dir,
+            "final_output_dir": self.final_output_dir,
             "regeneration_assets_dir": self.regeneration_assets_dir,
             "continue_after_failure": self.continue_after_failure,
             "write_description": self.write_description,
@@ -219,7 +299,12 @@ class GenerationConfig:
             "generate_music": self.generate_music,
             "prefer_face_closeups": self.prefer_face_closeups,
             "use_ai_optimal_framing": self.use_ai_optimal_framing,
+            "use_ai_optimal_then_identity_safe_framing": self.use_ai_optimal_then_identity_safe_framing,
+            "ai_optimal_then_identity_safe_ai_optimal_percent": self.ai_optimal_then_identity_safe_ai_optimal_percent,
+            "grok_multiscene_prompt_size": self.grok_multiscene_prompt_size,
             "generate_dual_framing_videos": self.generate_dual_framing_videos,
+            "generate_identity_safe_closeup_videos": self.generate_identity_safe_closeup_videos,
+            "generate_triple_framing_videos": self.generate_triple_framing_videos,
             "hide_phone_in_selfie": self.hide_phone_in_selfie,
             "prefer_loving_kindness_tone": self.prefer_loving_kindness_tone,
         }
@@ -228,9 +313,27 @@ class GenerationConfig:
             values["motion_source"] = MotionSource(values["motion_source"])
         return GenerationConfig(**values)
 
+    @property
+    def ai_optimal_then_identity_safe_identity_safe_percent(self) -> int:
+        return 100 - self.ai_optimal_then_identity_safe_ai_optimal_percent
+
+    @property
+    def grok_multiscene_prompt_max_words(self) -> int:
+        return max(1, self.grok_multiscene_prompt_size // 5)
+
     def framing_modes(self) -> list[VideoFramingMode]:
+        if self.generate_triple_framing_videos:
+            return [
+                VideoFramingMode.IDENTITY_SAFE,
+                VideoFramingMode.FACE_CLOSEUP,
+                VideoFramingMode.AI_OPTIMAL,
+            ]
         if self.generate_dual_framing_videos:
             return [VideoFramingMode.IDENTITY_SAFE, VideoFramingMode.AI_OPTIMAL]
+        if self.generate_identity_safe_closeup_videos:
+            return [VideoFramingMode.IDENTITY_SAFE, VideoFramingMode.FACE_CLOSEUP]
+        if self.use_ai_optimal_then_identity_safe_framing:
+            return [VideoFramingMode.AI_OPTIMAL_THEN_IDENTITY_SAFE]
         if self.prefer_face_closeups:
             return [VideoFramingMode.FACE_CLOSEUP]
         if self.use_ai_optimal_framing:

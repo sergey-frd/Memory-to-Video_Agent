@@ -1,0 +1,36 @@
+Create a premium artistic portrait based on the uploaded source photo.
+
+Main goal:
+carefully isolate the main subject or subjects from the original image and transform them into a beautiful cinematic fine-art photograph that positively enhances the original scene while preserving its real emotional atmosphere.
+
+CRITICAL REQUIREMENTS:
+— strictly preserve the real identity of all people
+— keep the original facial structure, eyes, nose, lips, age, expression, hairstyle, and natural features
+— do NOT replace people with idealized AI faces
+— maintain 100% recognizability
+— preserve the emotional authenticity and spirit of the original photo
+
+Style:
+— elegant artistic photography
+— cinematic composition
+— warm positive atmosphere
+— emotionally uplifting mood
+— realistic premium photography look
+— natural beauty and realism
+— visually rich but believable
+— soft cinematic lighting
+— subtle depth of field
+— realistic skin texture
+— expressive natural eyes
+— detailed hair and clothing
+— gentle professional retouching without plastic skin
+— natural colors with beautiful tonal balance
+— harmonious background separation with soft bokeh
+— museum-quality artistic portrait
+— DSLR photography aesthetic
+— ultra realistic
+— highly detailed
+— 8K quality
+
+IMPORTANT:
+Enhance the beauty, emotion, and artistic impact of the original photograph without changing the real people, their personalities, or the truthful feeling of the scene.

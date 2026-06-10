@@ -7,7 +7,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 try:
     from openai import OpenAI, OpenAIError
@@ -36,9 +36,12 @@ def _get_client() -> OpenAI:
     return _CLIENT
 
 
-def _prepare_uploadable(image_path: Path) -> tuple[Path, bool]:
+def _prepare_uploadable(image_path: Path, model_name: str) -> tuple[Path, bool]:
     work_path = Path(tempfile.NamedTemporaryFile(delete=False, suffix=".png").name)
-    _save_compressed_png(image_path, work_path)
+    if model_name == "dall-e-2":
+        _save_dalle2_uploadable_png(image_path, work_path)
+    else:
+        _save_compressed_png(image_path, work_path)
     if work_path.stat().st_size > MAX_IMAGE_BYTES:
         raise RuntimeError("Could not reduce image below 4 MB.")
     return work_path, True
@@ -59,6 +62,28 @@ def _save_compressed_png(source: Path, destination: Path) -> None:
             raise RuntimeError("Could not reduce image below 4 MB.")
 
 
+def _save_dalle2_uploadable_png(source: Path, destination: Path) -> None:
+    with Image.open(source) as img:
+        base = img.convert("RGBA")
+        side = min(max(base.width, base.height), 1024)
+        factor = 1.0
+        while True:
+            target_side = max(256, int(side * factor))
+            squared = ImageOps.pad(
+                base,
+                (target_side, target_side),
+                method=Image.LANCZOS,
+                color=(255, 255, 255, 255),
+                centering=(0.5, 0.5),
+            )
+            squared.save(destination, format="PNG", optimize=True, compress_level=9)
+            if destination.stat().st_size <= MAX_IMAGE_BYTES or target_side <= 256:
+                break
+            factor -= 0.05
+        if destination.stat().st_size > MAX_IMAGE_BYTES:
+            raise RuntimeError("Could not reduce DALL-E 2 image below 4 MB.")
+
+
 def _model_name() -> ModelName:
     return os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1.5")
 
@@ -76,22 +101,28 @@ def edit_image_with_openai(
     metadata: ImageMetadata,
     stage_id: str,
     prompt_override: Optional[str] = None,
+    model_name: Optional[str] = None,
 ) -> Path:
     """Call OpenAI Images edit API to create a transformed frame."""
     prompt_text = prompt_override or _default_prompt(style=style, metadata=metadata, stage_id=stage_id)
     prompt_text = _fit_prompt_length(prompt_text)
-    model_name = _model_name()
-    _validate_model_name(model_name)
+    resolved_model_name = model_name or _model_name()
+    _validate_model_name(resolved_model_name)
     client = _get_client()
-    upload_path, temp_used = _prepare_uploadable(image_path)
+    upload_path, temp_used = _prepare_uploadable(image_path, resolved_model_name)
     try:
         with open(upload_path, "rb") as source_file:
-            response = client.images.edit(
-                model=model_name,
-                prompt=prompt_text,
-                image=source_file,
-                response_format="b64_json",
-            )
+            request_kwargs: dict[str, object] = {
+                "model": resolved_model_name,
+                "prompt": prompt_text,
+                "image": source_file,
+            }
+            if resolved_model_name == "dall-e-2":
+                request_kwargs["response_format"] = "b64_json"
+                request_kwargs["size"] = "1024x1024"
+            else:
+                request_kwargs["output_format"] = "png"
+            response = client.images.edit(**request_kwargs)
     except OpenAIError as exc:
         raise RuntimeError("OpenAI Images API request failed.") from exc
     finally:

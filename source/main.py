@@ -28,6 +28,7 @@ from config import (
 from models.scene_analysis import SceneAnalysis
 from utils.camera_movements import CameraMovementSets, load_camera_movements
 from utils.image_analysis import ImageMetadata, analyze_image
+from utils.grok_prompt_json import build_grok_multiscene_json_bundle
 from utils.project_delivery import sync_stage_non_video_assets
 from utils.prompt_builder import BackgroundPromptBundle, PromptBuilder, PromptBundle
 
@@ -138,6 +139,12 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument("--videos", type=int, help="How many videos to generate from one source frame.")
     parser.add_argument("--segments", type=int, help="How many camera motion segments each video should use.")
     parser.add_argument(
+        "--video-duration-seconds",
+        type=int,
+        choices=(6, 10),
+        help="Video prompt duration: 6 seconds uses 2-2-2, 10 seconds uses 4-3-3.",
+    )
+    parser.add_argument(
         "--motion-source",
         choices=[motion.value for motion in MotionSource],
         help="Motion source selection.",
@@ -192,6 +199,7 @@ def _build_generation_config(args: argparse.Namespace, settings: Settings) -> Ge
         "video_count": args.videos,
         "generate_video": getattr(args, "generate_video", None),
         "camera_segments": args.segments,
+        "video_duration_seconds": getattr(args, "video_duration_seconds", None),
         "motion_source": args.motion_source,
         "motion_model": getattr(args, "motion_model", None),
         "generate_source_background": getattr(args, "generate_source_background", None),
@@ -274,6 +282,20 @@ def _write_prompt_log(
 def _write_scene_analysis_json(path: Path, scene_analysis: SceneAnalysis) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(scene_analysis.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _write_scene_analysis_variants(
+    settings: Settings,
+    stage_id: str,
+    *,
+    scene_analysis_en: SceneAnalysis,
+    scene_analysis_ru: SceneAnalysis,
+) -> tuple[Path, Path]:
+    scene_analysis_en_path = settings.output_dir / f"{stage_id}_scene_analysis.json"
+    scene_analysis_ru_path = settings.output_dir / f"{stage_id}_scene_analysis_ru.json"
+    _write_scene_analysis_json(scene_analysis_en_path, scene_analysis_en)
+    _write_scene_analysis_json(scene_analysis_ru_path, scene_analysis_ru)
+    return scene_analysis_en_path, scene_analysis_ru_path
 
 
 def _write_description_file(
@@ -436,6 +458,8 @@ def _materialize_motion_sequences(
     framing_mode: VideoFramingMode | None = None,
 ) -> list[list[str]]:
     resolved_framing_mode = framing_mode or config.primary_framing_mode()
+    if config.generate_grok_multiscene_json_prompt:
+        resolved_framing_mode = VideoFramingMode.AI_OPTIMAL
     if config.motion_source == MotionSource.AI:
         if metadata is not None and scene_analysis is not None:
             selector = motion_selector or _default_motion_selector
@@ -445,6 +469,7 @@ def _materialize_motion_sequences(
                 video_count=config.video_count,
                 camera_segments=config.camera_segments,
                 framing_mode=resolved_framing_mode,
+                hybrid_ai_optimal_percent=config.ai_optimal_then_identity_safe_ai_optimal_percent,
                 model=motion_model,
             )
             return _enforce_motion_continuity(sequences)
@@ -517,6 +542,10 @@ def _default_scene_analyzer(image_path: Path, model: str | None) -> SceneAnalysi
     return analyze_scene_with_openai(image_path, model=model, language="ru")
 
 
+def _default_scene_analyzer_en(image_path: Path, model: str | None) -> SceneAnalysis:
+    return analyze_scene_with_openai(image_path, model=model, language="en")
+
+
 def _default_motion_selector(**kwargs: object) -> list[list[str]]:
     return select_motion_sequences_with_openai(**kwargs)
 
@@ -535,6 +564,7 @@ def _run_generation(
     settings: Settings | None = None,
     image_editor: ImageEditor | None = None,
     scene_analyzer: SceneAnalyzer | None = None,
+    scene_analyzer_en: SceneAnalyzer | None = None,
     motion_selector: MotionSelector | None = None,
     prompt_synthesizer: PromptSynthesizer | None = None,
     background_prompt_synthesizer: BackgroundPromptSynthesizer | None = None,
@@ -557,16 +587,26 @@ def _run_generation(
     prompt_model = getattr(args, "prompt_model", None)
     motion_model = getattr(args, "motion_model", None) or generation_config.motion_model
     analyzer = scene_analyzer or _default_scene_analyzer
+    analyzer_en = scene_analyzer_en
     resolved_motion_selector = motion_selector or _default_motion_selector
     prompt_builder = prompt_synthesizer or _default_prompt_synthesizer
     resolved_background_prompt_synthesizer = background_prompt_synthesizer or _default_background_prompt_synthesizer
     current_scene = analyzer(current_frame, scene_model)
-    scene_json_file = settings.output_dir / f"{stage_id}_scene_analysis.json"
-    _write_scene_analysis_json(scene_json_file, current_scene)
+    if analyzer_en is None:
+        current_scene_en = _default_scene_analyzer_en(current_frame, scene_model) if scene_analyzer is None else current_scene
+    else:
+        current_scene_en = analyzer_en(current_frame, scene_model)
+    _write_scene_analysis_variants(
+        settings,
+        stage_id,
+        scene_analysis_en=current_scene_en,
+        scene_analysis_ru=current_scene,
+    )
     camera_sets = load_camera_movements(settings.services_dir)
     source_frame = current_frame
     source_metadata = current_metadata
     source_scene = current_scene
+    source_scene_en = current_scene_en
     video_plans = _materialize_video_plans(
         generation_config,
         camera_sets,
@@ -618,6 +658,7 @@ def _run_generation(
     branch_frame = source_frame
     branch_metadata = source_metadata
     branch_scene = source_scene
+    branch_scene_en = source_scene_en
     last_metadata = source_metadata
     total_videos = len(video_plans)
     for plan in video_plans:
@@ -625,48 +666,107 @@ def _run_generation(
             branch_frame = source_frame
             branch_metadata = source_metadata
             branch_scene = source_scene
+            branch_scene_en = source_scene_en
             initial_desc = "frame A (source frame)"
         else:
             initial_desc = "final frame from the previous video in the same framing mode"
-        try:
-            bundle = prompt_builder(
+        bundle: PromptBundle | None = None
+        if generation_config.generate_grok_multiscene_json_prompt:
+            json_bundle = build_grok_multiscene_json_bundle(
                 metadata=branch_metadata,
-                scene_analysis=branch_scene,
-                stage_id=stage_id,
-                prompt_index=plan.prompt_index,
-                total_videos=total_videos,
-                initial_frame_description=initial_desc,
+                scene_analysis_en=branch_scene_en,
+                scene_analysis_ru=branch_scene,
                 motion_sequence=plan.motion_sequence,
-                framing_mode=plan.framing_mode,
                 hide_phone_in_selfie=generation_config.hide_phone_in_selfie,
                 prefer_loving_kindness_tone=generation_config.prefer_loving_kindness_tone,
-                model=prompt_model,
+                max_chars=generation_config.grok_multiscene_prompt_size,
+                max_words=generation_config.grok_multiscene_prompt_max_words,
+                duration_seconds=generation_config.video_duration_seconds,
             )
-        except Exception:
-            builder = PromptBuilder(
-                branch_metadata,
-                stage_id,
-                scene_analysis=branch_scene,
-                framing_mode=plan.framing_mode,
-                hide_phone_in_selfie=generation_config.hide_phone_in_selfie,
-                prefer_loving_kindness_tone=generation_config.prefer_loving_kindness_tone,
-            )
-            bundle = builder.build_video_prompt(
-                prompt_index=plan.prompt_index,
-                total_videos=total_videos,
-                initial_frame_description=initial_desc,
-                motion_sequence=plan.motion_sequence,
-            )
+            video_file = settings.output_dir / f"{stage_id}_v_prompt_{plan.prompt_index}.json"
+            _write_prompt(video_file, json_bundle.video_prompt_json_en)
+            print(f"Grok JSON video prompt #{plan.prompt_index} saved: {video_file.name}")
 
-        video_file = settings.output_dir / f"{stage_id}_v_prompt_{plan.prompt_index}.txt"
-        _write_prompt(video_file, bundle.video_prompt)
-        print(f"Video prompt #{plan.prompt_index} saved: {video_file.name}")
+            video_ru_file = settings.output_dir / f"{stage_id}_v_prm_ru_{plan.prompt_index}.json"
+            _write_prompt(video_ru_file, json_bundle.video_prompt_json_ru)
+            print(f"Russian Grok JSON prompt #{plan.prompt_index} saved: {video_ru_file.name}")
+        else:
+            try:
+                bundle = prompt_builder(
+                    metadata=branch_metadata,
+                    scene_analysis=branch_scene,
+                    stage_id=stage_id,
+                    prompt_index=plan.prompt_index,
+                    total_videos=total_videos,
+                    initial_frame_description=initial_desc,
+                    motion_sequence=plan.motion_sequence,
+                    framing_mode=plan.framing_mode,
+                    hide_phone_in_selfie=generation_config.hide_phone_in_selfie,
+                    prefer_loving_kindness_tone=generation_config.prefer_loving_kindness_tone,
+                    hybrid_ai_optimal_percent=generation_config.ai_optimal_then_identity_safe_ai_optimal_percent,
+                    video_duration_seconds=generation_config.video_duration_seconds,
+                    model=prompt_model,
+                )
+            except Exception:
+                builder = PromptBuilder(
+                    branch_metadata,
+                    stage_id,
+                    scene_analysis=branch_scene,
+                    framing_mode=plan.framing_mode,
+                    hide_phone_in_selfie=generation_config.hide_phone_in_selfie,
+                    prefer_loving_kindness_tone=generation_config.prefer_loving_kindness_tone,
+                    hybrid_ai_optimal_percent=generation_config.ai_optimal_then_identity_safe_ai_optimal_percent,
+                    video_duration_seconds=generation_config.video_duration_seconds,
+                )
+                bundle = builder.build_video_prompt(
+                    prompt_index=plan.prompt_index,
+                    total_videos=total_videos,
+                    initial_frame_description=initial_desc,
+                    motion_sequence=plan.motion_sequence,
+                )
 
-        video_ru_file = settings.output_dir / f"{stage_id}_v_prm_ru_{plan.prompt_index}.txt"
-        _write_prompt(video_ru_file, bundle.video_prompt_ru)
-        print(f"Russian video prompt #{plan.prompt_index} saved: {video_ru_file.name}")
+            video_file = settings.output_dir / f"{stage_id}_v_prompt_{plan.prompt_index}.txt"
+            _write_prompt(video_file, bundle.video_prompt)
+            print(f"Video prompt #{plan.prompt_index} saved: {video_file.name}")
+
+            video_ru_file = settings.output_dir / f"{stage_id}_v_prm_ru_{plan.prompt_index}.txt"
+            _write_prompt(video_ru_file, bundle.video_prompt_ru)
+            print(f"Russian video prompt #{plan.prompt_index} saved: {video_ru_file.name}")
 
         if generate_final_frames:
+            if bundle is None:
+                try:
+                    bundle = prompt_builder(
+                        metadata=branch_metadata,
+                        scene_analysis=branch_scene,
+                        stage_id=stage_id,
+                        prompt_index=plan.prompt_index,
+                        total_videos=total_videos,
+                        initial_frame_description=initial_desc,
+                        motion_sequence=plan.motion_sequence,
+                        framing_mode=plan.framing_mode,
+                        hide_phone_in_selfie=generation_config.hide_phone_in_selfie,
+                        prefer_loving_kindness_tone=generation_config.prefer_loving_kindness_tone,
+                        hybrid_ai_optimal_percent=generation_config.ai_optimal_then_identity_safe_ai_optimal_percent,
+                        video_duration_seconds=generation_config.video_duration_seconds,
+                        model=prompt_model,
+                    )
+                except Exception:
+                    bundle = PromptBuilder(
+                        branch_metadata,
+                        stage_id,
+                        scene_analysis=branch_scene,
+                        framing_mode=plan.framing_mode,
+                        hide_phone_in_selfie=generation_config.hide_phone_in_selfie,
+                        prefer_loving_kindness_tone=generation_config.prefer_loving_kindness_tone,
+                        hybrid_ai_optimal_percent=generation_config.ai_optimal_then_identity_safe_ai_optimal_percent,
+                        video_duration_seconds=generation_config.video_duration_seconds,
+                    ).build_video_prompt(
+                        prompt_index=plan.prompt_index,
+                        total_videos=total_videos,
+                        initial_frame_description=initial_desc,
+                        motion_sequence=plan.motion_sequence,
+                    )
             final_frame_prompt_file = settings.output_dir / f"{stage_id}_final_frame_prompt_{plan.prompt_index}.txt"
             _write_prompt(final_frame_prompt_file, bundle.final_frame_prompt)
             print(f"Final frame prompt #{plan.prompt_index} saved: {final_frame_prompt_file.name}")
@@ -690,10 +790,19 @@ def _run_generation(
             branch_frame = final_frame_image
             branch_metadata = analyze_image(branch_frame)
             branch_scene = analyzer(branch_frame, scene_model)
+            if analyzer_en is None:
+                branch_scene_en = _default_scene_analyzer_en(branch_frame, scene_model) if scene_analyzer is None else branch_scene
+            else:
+                branch_scene_en = analyzer_en(branch_frame, scene_model)
             last_metadata = branch_metadata
-            _write_scene_analysis_json(scene_json_file, branch_scene)
+            _write_scene_analysis_variants(
+                settings,
+                stage_id,
+                scene_analysis_en=branch_scene_en,
+                scene_analysis_ru=branch_scene,
+            )
 
-        if bundle.image_edit_prompt:
+        if bundle and bundle.image_edit_prompt:
             edit_file = settings.output_dir / f"{stage_id}_image_edit_prompt_{plan.prompt_index}.txt"
             _write_prompt(edit_file, bundle.image_edit_prompt)
             print(f"Intermediate image prompt #{plan.prompt_index} saved: {edit_file.name}")

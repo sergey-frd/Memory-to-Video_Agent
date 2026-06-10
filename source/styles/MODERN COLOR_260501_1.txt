@@ -1,0 +1,292 @@
+Вот сильный, универсальный **MASTER-PROMPT для восстановления старых фотографий** — его можно использовать в большинстве AI-сервисов (Midjourney, DALL·E, Leonardo, SD и др.):
+
+---
+
+### 🎯 MASTER PROMPT (восстановление и осовременивание фото)
+
+```
+Fully restore and enhance an old, damaged, low-resolution photograph and transform it into a clean, modern, high-quality image.
+
+CRITICAL: Strictly preserve the person's real identity, facial structure, expression, age, and proportions. Do NOT alter the face, do NOT beautify, do NOT invent details that are not present.
+
+Restoration tasks:
+- Remove dust, scratches, stains, film grain, noise, and scanning artifacts
+- Gently reduce blur while preserving original softness (do not oversharpen)
+- Restore missing or faded details carefully, based only on existing visual information
+- Improve clarity, contrast, and tonal balance naturally
+
+Colorization (if black and white):
+- Apply realistic, historically accurate colors
+- Use soft, natural skin tones (avoid oversaturation)
+- Keep colors muted and believable (no bright artificial colors)
+
+Lighting and tone:
+- Preserve original light direction and shadows
+- Soft, natural lighting (no HDR, no dramatic artificial effects)
+- Maintain authentic atmosphere of the original photo
+
+Texture and detail:
+- Keep skin natural, slightly soft if original is low detail
+- Avoid artificial sharpness or plastic look
+- Restore clothing texture in a simple, realistic way
+
+Background:
+- Keep original background composition
+- Clean and soften it slightly, without reconstruction or invention
+
+Final result:
+- Photorealistic modern image
+- High resolution (4K quality look)
+- Clean, natural, cinematic photograph
+- No stylization, no artistic filters
+
+Output: one single restored realistic photo, no collage, no text, no watermarks.
+```
+
+---
+
+### 🔧 Если хочешь усилить под задачу (варианты)
+
+**1. Для очень старых и сильно повреждённых:**
+добавь:
+
+```
+extremely degraded, heavily blurred, severely damaged archival photograph
+```
+
+**2. Если нужно «чуть современнее» (как будто снято сегодня):**
+добавь в конец:
+
+```
+modern camera look, subtle depth of field, natural lens rendering, contemporary photographic quality
+```
+
+**3. Для портретов (особенно важно для тебя):**
+добавь:
+
+```
+focus on accurate face restoration, eyes and expression must remain unchanged
+```
+
+---
+
+Если хочешь — я могу сделать **ещё более жёсткий “PRO-вариант” под твой стиль** (как ты любишь: без малейших искажений лица, с контролем мягкости и света, прямо под твои видео-проекты).
+----------------
+
+Поняла задачу — делаем **максимально строгий, «кинематографичный PRO-уровень»**, где лицо — абсолютный приоритет, а всё остальное подчинено реалистичности и мягкости.
+
+Ниже — твой **MASTER-PROMPT PRO (fine-tuned, жёсткая версия)**:
+
+---
+
+### 🎬 MASTER PROMPT PRO — ULTRA STRICT FACE PRESERVATION
+
+```text
+Fully restore and enhance an old, heavily degraded, low-resolution photograph into a clean, modern, high-quality realistic image.
+
+ABSOLUTE PRIORITY — FACE IDENTITY PRESERVATION:
+- Preserve 100% of the real person's identity
+- Do NOT modify facial structure, proportions, expression, or age
+- Do NOT beautify, stylize, or idealize the face
+- Do NOT reconstruct or invent eyes, eyelashes, teeth, or micro-details
+- If details are missing or blurred — keep them naturally soft and undefined
+- Maintain original asymmetry and natural imperfections
+
+RESTORATION (STRICT & REALISTIC):
+- Remove dust, scratches, stains, film grain, noise, compression artifacts
+- Reduce blur carefully without artificial sharpening
+- Restore only what is physically present in the image
+- Do NOT hallucinate missing features
+- Preserve original contours and transitions
+
+SKIN & TEXTURE CONTROL:
+- Skin must remain natural, slightly soft if source is low-detail
+- No plastic skin, no over-smoothing, no AI sharpness artifacts
+- Preserve pores only if they exist in the source
+- Keep natural tonal transitions, avoid harsh contrast edges
+
+COLORIZATION (if black & white):
+- Use historically plausible, natural colors
+- Soft, neutral skin tones (low saturation)
+- Avoid strong reds, blues, greens
+- Hair and clothing colors must be muted and realistic
+
+LIGHTING (STRICT MATCH):
+- Preserve original light direction, intensity, and shadow structure
+- No HDR, no artificial relighting
+- Soft natural daylight tonality
+- Maintain original contrast range (do not dramatize)
+
+BACKGROUND:
+- Keep original composition exactly
+- Clean and softly restore only
+- No reconstruction, no added objects, no depth exaggeration
+
+OPTICAL REALISM:
+- Natural lens rendering (no AI look)
+- Subtle depth of field only if it existed originally
+- No cinematic exaggeration, only realistic optics
+
+DETAIL BALANCE:
+- Slight global clarity improvement
+- No local over-sharpening
+- Maintain soft transitions between details
+
+FINAL OUTPUT:
+- Photorealistic modern photograph
+- Clean, natural, high resolution (4K look)
+- Authentic, documentary-level realism
+- No stylization, no artistic interpretation
+
+OUTPUT RULES:
+- Single image only
+- No collage
+- No text, captions, frames, or watermarks
+```
+
+---
+
+### ⚙️ ДОПОЛНИТЕЛЬНЫЕ МОДУЛИ (подключай при необходимости)
+
+**🔒 Ультра-контроль лица (если модель «плывёт»):**
+
+```text
+face must remain identical to the original photo, zero deviation allowed
+```
+
+**🕰 Для архивных фото с сильной деградацией:**
+
+```text
+extremely degraded archival photograph, minimal recoverable detail, preserve softness
+```
+
+**📷 Лёгкое «ощущение современной камеры» (очень аккуратно):**
+
+```text
+modern camera color science, subtle natural contrast, minimal lens clarity
+```
+
+---
+
+### 💡 ВАЖНО (практика, которая даёт лучший результат)
+
+Если используешь Midjourney / SD:
+
+* добавляй **низкую стилизацию** (`--stylize low` / CFG 4–6)
+* избегай “enhance”, “ultra sharp”, “cinematic dramatic”
+* если есть — включай **face reference / image guidance**
+
+---
+
+Если хочешь — следующий шаг можем сделать ещё сильнее:
+👉 **версию под видео (photo → video), где лицо вообще не двигается**, а только микро-движение (дыхание, ткань, свет).
+
+
+-----------------
+
+Отлично, здесь важна **двухэтапная логика внутри одного промпта**:
+
+1. полностью игнорировать старую раскраску → сделать чистое ч/б
+2. уже из этого «правильного» ч/б → аккуратная реалистичная колоризация
+
+Ниже — твой **жёсткий PRO-PROMPT с такой последовательностью**:
+
+---
+
+### 🎬 MASTER PROMPT — REBUILD → TRUE B&W → MODERN COLOR (PRO)
+
+```text
+Fully restore an old, damaged photograph that may contain inaccurate or artificial colorization, and convert it into a clean, authentic modern color photograph through a strict two-step process.
+
+STEP 1 — REMOVE OLD COLOR & CREATE TRUE BLACK AND WHITE:
+- Completely ignore and remove any existing colorization
+- Reconstruct a clean, neutral black-and-white image as if the photo was originally shot in monochrome
+- Use natural grayscale tones only (no color contamination)
+- Balanced tonal range: deep blacks, clean whites, smooth midtones
+- Preserve original light, shadows, and atmosphere
+
+ABSOLUTE PRIORITY — FACE IDENTITY PRESERVATION:
+- Preserve 100% of the real person's identity
+- Do NOT change facial structure, proportions, expression, or age
+- Do NOT beautify or idealize the face
+- Do NOT invent details (eyes, teeth, eyelashes, skin texture)
+- If details are missing — keep them soft and natural
+- Maintain natural asymmetry and imperfections
+
+RESTORATION (APPLIES BEFORE COLORIZATION):
+- Remove dust, scratches, stains, film grain, noise, and scanning artifacts
+- Gently reduce blur without artificial sharpening
+- Restore only real existing details
+- Do NOT hallucinate missing features
+
+STEP 2 — NATURAL COLORIZATION FROM CLEAN B&W:
+- Apply realistic, historically and physically plausible colors
+- Skin tones: soft, neutral, natural (no saturation boost)
+- Avoid bright or artificial colors
+- Hair and clothing colors must be muted and believable
+- Maintain correct tonal relationships from the black-and-white base
+
+SKIN & TEXTURE CONTROL:
+- Keep skin natural, slightly soft if source is low detail
+- No plastic smoothing, no over-sharpening
+- Preserve natural tonal transitions
+
+LIGHTING:
+- Strictly preserve original light direction and shadow structure
+- No HDR, no artificial relighting
+- Soft natural daylight tonality
+
+BACKGROUND:
+- Keep original composition exactly
+- Clean and softly restore only
+- No reconstruction, no added elements
+
+OPTICAL REALISM:
+- Natural lens rendering (no AI look)
+- Subtle depth of field only if present originally
+- No cinematic exaggeration
+
+FINAL RESULT:
+- Photorealistic modern color photograph
+- Clean, natural, high resolution (4K look)
+- Authentic, documentary-level realism
+- Looks like it was captured with a modern camera, but true to the original
+
+OUTPUT RULES:
+- One single image only
+- No collage
+- No text, captions, frames, or watermarks
+```
+
+---
+
+### ⚙️ Усиление (если нужно)
+
+**🔒 Жёстко «убить» старую раскраску:**
+
+```text
+all previous colorization must be fully discarded and not influence the final result
+```
+
+**🎯 Максимальный контроль лица (очень важно для твоих видео):**
+
+```text
+face must remain identical to the original photo, zero deviation allowed
+```
+
+---
+
+### 💡 Важный смысл этого промпта (почему он сильный)
+
+Ты фактически заставляешь модель:
+
+1. **Сначала "очистить правду"** (правильный ч/б, без чужой раскраски)
+2. И только потом — **строить цвет заново, как если бы фото было снято сегодня**
+
+Это даёт намного более **реалистичный и «не-нейросетевой» результат**, чем прямое перекрашивание старого фото.
+
+---
+
+Если хочешь — следующий уровень:
+👉 сделаю вариант, где цвет уже **под конкретную эпоху (например, СССР 70-х или Европа 50-х)**
+👉 или вариант **под киношный цвет (Kodak / Fuji look)** для видео 🎬

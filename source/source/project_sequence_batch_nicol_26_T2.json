@@ -1,0 +1,18 @@
+{
+  "project_path": "<LOCAL_PATH>",
+  "prin_path": "<LOCAL_PATH>",
+  "regeneration_assets_dir": "<LOCAL_PATH>",
+  "output_project_path": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "engine": "heuristic",
+  "sequence_jobs": [
+    {
+      "source_sequence_name": "Nicol_26_T2_1",
+      "new_sequence_name": "T2_1__optimized"
+    },
+    {
+      "source_sequence_name": "Nicol_26_T2_2",
+      "new_sequence_name": "T2_2__optimized"
+    }
+  ]
+}
