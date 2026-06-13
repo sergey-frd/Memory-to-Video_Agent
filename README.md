@@ -4,18 +4,18 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.06.10.03`
-- Git tag: `v2026.06.10.03`
+- Publication version: `2026.06.13.01`
+- Git tag: `v2026.06.13.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-06-10T09:55:29+02:00`
+- Last synchronized: `2026-06-13T19:01:41+02:00`
 - Source project: `img-style-ag_1`
-- Python files: `198`
+- Python files: `203`
 - Test files: `33`
 - Entry points: `28`
 
 ## Published Source Mirror
 
-- Mirrored source files: `403`
+- Mirrored source files: `415`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/BATCH_RUN_HISTORY.md`
@@ -57,6 +57,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/config_Rita.json`
 - `source/config_SF.json`
 - `source/config_Sergey_Hol.json`
+- `source/config_SvtaIg.json`
 - `source/config_Yakov.json`
 - `source/config_Yura.json`
 - `source/config_igor.json`
@@ -165,6 +166,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/test`
 - `source/test_openai.py`
 - `source/tests`
+- `source/tools`
 - `source/utils`
 - `source/video_prompt_config.py`
 - `source/video_prompt_config_alex_army_travel_two_variants.json`
@@ -180,6 +182,12 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/video_prompt_story_config.py`
 - `source/video_prompt_story_config_alex_krvz.json`
 - `source/video_prompt_story_config_alex_krvz_alt.json`
+- `source/video_prompt_story_config_edik.json`
+- `source/video_prompt_story_config_edik_fun.json`
+- `source/video_prompt_story_config_sf_rita_fun.json`
+- `source/video_prompt_story_config_sf_rita_romantic.json`
+- `source/video_prompt_story_config_sveta_fun.json`
+- `source/video_prompt_story_config_sveta_lyrical.json`
 - `source/Руководство_пользователя.html`
 - `source/Руководство_пользователя.md`
 

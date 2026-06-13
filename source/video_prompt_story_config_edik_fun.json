@@ -1,0 +1,41 @@
+{
+  "generation_config_file": "config_Edik.json",
+  "story_title": "Весёлый birthday — герой видео",
+  "story_brief": "15-секундный ВЕСЁЛЫЙ поздравительный ролик ко дню рождения — не слайдшоу и не sentimental montage. Герой видео: программист, музыкант, актёр, душа компании, КВН-энергия, гитара, юмор, любящий муж, отец и дед. Хронология сохраняется, но ритм праздничный и живой. В каждой сцене ОДИН главный @imageN с движением внутри кадра; остальные теги — только короткие match cut на смех или жест, без dissolve/crossfade/fade. ЗАПРЕЩЕНО: dissolve, crossfade, Ken Burns, static hold, camera lingers, slow dolly only. ОБЯЗАТЕЛЬНО: персонажи двигаются, смеются, жестикулируют; handheld, whip pan, match cut on laugh, snap push-in. Использовать все @image1..@image9. Без личных имён — только герой видео, супруга, дочь, внуки, друзья. Без drone и bird's-eye.",
+  "image_count": 9,
+  "scene_count": 5,
+  "scene_duration_seconds": 3,
+  "total_duration_seconds": 15,
+  "aspect_ratio": "16:9",
+  "max_prompt_chars": 3200,
+  "prefer_loving_kindness_tone": false,
+  "restored_images_dir": "<LOCAL_PATH>",
+  "source_files": [
+    "EdSn26_AN_4.00_00_55_22.Still001.jpg",
+    "EdSn26_AN_4.00_01_21_13.Still002.jpg",
+    "Nested Sequence 06.00_00_25_02.Still002.jpg",
+    "EdSn26_AN_4.00_02_38_00.Still009.jpg",
+    "EdSn26_AN_4.00_02_31_09.Still007.jpg",
+    "EdSn26_AN_4.00_02_33_24.Still008.jpg",
+    "EdSn26_AN_4.00_02_55_18.Still011.jpg",
+    "EdSn26_AN_4.00_02_42_09.Still014.jpg",
+    "EdSn26_AN_4.00_02_58_11.Still013.jpg"
+  ],
+  "story_output_stem": "video_prompt_story_edik_fun",
+  "output_dir": "<LOCAL_PATH>",
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1 — party energy",
+      "instruction": "High-energy birthday celebration montage with rhythmic cuts. Characters move, laugh, and gesture in every shot. Handheld tracking and match cuts on laughter. NOT a slideshow — no dissolve, crossfade, or static photo hold. Eye-level and chest-level framing only; no bird's-eye or drone."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2 — theatrical comedy",
+      "instruction": "Distinct KVN/theater comedy rhythm: exaggerated comic beats, air-guitar, mock-serious faces breaking into laughter, friends reacting big. Same scene order and facts, fully different camera plan from Variant 1. No dissolve/crossfade; snap cuts and whip pans only. No bird's-eye or drone."
+    }
+  ],
+  "seedance_json": true,
+  "seedance_json_only": true,
+  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+}

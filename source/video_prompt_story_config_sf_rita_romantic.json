@@ -1,0 +1,41 @@
+{
+  "generation_config_file": "config_SF.json",
+  "story_title": "56 лет вместе — герой и героиня (романтическая)",
+  "story_brief": "15-секундный нежный романтический ролик: 56 лет с момента знакомства в 1970 году и свадьба 21 июля 1997. Герой видео и героиня видео — музыкант-педагог и программист, долгий путь любви через годы. Хронология: молодость → свадьба → семья → закатные годы → дети и внуки → домашнее тепло. НЕ СЛАЙДШОУ: персонажи двигаются, улыбаются, жестикулируют; мягкий handheld, match cut on smile. ЗАПРЕТ dissolve/crossfade/Ken Burns/static hold как основной приём. Все @image1..@image9. Без личных имён — только герой видео, героиня видео, сыновья, внуки, друзья. Без drone и bird's-eye.",
+  "image_count": 9,
+  "scene_count": 5,
+  "scene_duration_seconds": 3,
+  "total_duration_seconds": 15,
+  "aspect_ratio": "16:9",
+  "max_prompt_chars": 3200,
+  "prefer_loving_kindness_tone": true,
+  "restored_images_dir": "<LOCAL_PATH>",
+  "source_files": [
+    "Nested Sequence 05.00_00_00_00.Still001.jpg",
+    "Nested Sequence 05.00_00_30_02.Still002.jpg",
+    "Nested Sequence 08.00_00_06_16.Still001.jpg",
+    "Nested Sequence 04.00_00_16_02.Still003.jpg",
+    "Nested Sequence 06.00_00_29_22.Still002.jpg",
+    "Nested Sequence 04.00_00_28_23.Still005.jpg",
+    "Nested Sequence 04.00_00_05_12.Still001.jpg",
+    "Nested Sequence 06.00_00_16_14.Still001.jpg",
+    "Nested Sequence 03.00_00_14_13.Still001.jpg"
+  ],
+  "story_output_stem": "video_prompt_story_sf_rita_romantic",
+  "output_dir": "<LOCAL_PATH>",
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1 — romantic tender",
+      "instruction": "Soulful romantic interpretation with gentle camera movement and warm emotional beats. Living smiles and caring gestures every shot. NOT a slideshow. Eye-level framing only; no bird's-eye or drone."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2 — romantic poetic alt",
+      "instruction": "Distinct alternative lyrical reading with poetic pauses and intimate warmth. Same scene order and facts. Soft tracking, no dissolve-heavy slideshow. No bird's-eye or drone."
+    }
+  ],
+  "seedance_json": true,
+  "seedance_json_only": true,
+  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+}

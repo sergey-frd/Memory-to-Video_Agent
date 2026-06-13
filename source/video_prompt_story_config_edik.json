@@ -1,0 +1,39 @@
+{
+  "generation_config_file": "config_Edik.json",
+  "story_title": "День рождения — герой видео (Эдик)",
+  "story_brief": "15-секундный поздравительный ролик ко дню рождения друга. Герой видео — мужчина: программист, музыкант, актёр, любящий муж, отец и дед. Хронология жизни: зрелость и внутренняя собранность → молодость и семья → праздники и друзья → домашнее тепло → радость с внуками. Это семейная история (не одноклассники). Используй все 9 изображений через inline-теги @image1..@image9. В technical_preamble и во всех сценах НЕ использовать личные имена (Эдик, Эдуард, Наташа, Марина и т.д.) — только нейтрально: герой видео, герой ролика, мужчина, супруга, дочь, внуки, друзья. Тон тёплый, добрый, без драматизации. Кадры medium/full, без drone и bird's-eye.",
+  "image_count": 9,
+  "scene_count": 5,
+  "scene_duration_seconds": 3,
+  "total_duration_seconds": 15,
+  "aspect_ratio": "16:9",
+  "restored_images_dir": "<LOCAL_PATH>",
+  "source_files": [
+    "EdSn26_AN_4.00_00_55_22.Still001.jpg",
+    "EdSn26_AN_4.00_01_21_13.Still002.jpg",
+    "Nested Sequence 06.00_00_25_02.Still002.jpg",
+    "EdSn26_AN_4.00_02_38_00.Still009.jpg",
+    "EdSn26_AN_4.00_02_31_09.Still007.jpg",
+    "EdSn26_AN_4.00_02_33_24.Still008.jpg",
+    "EdSn26_AN_4.00_02_55_18.Still011.jpg",
+    "EdSn26_AN_4.00_02_42_09.Still014.jpg",
+    "EdSn26_AN_4.00_02_58_11.Still013.jpg"
+  ],
+  "story_output_stem": "video_prompt_story_edik",
+  "output_dir": "<LOCAL_PATH>",
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1",
+      "instruction": "Create the most likely, most suitable, and most coherent cinematic interpretation."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2",
+      "instruction": "Create a fully distinct alternative interpretation while preserving the same scene order, durations, and story facts."
+    }
+  ],
+  "seedance_json": true,
+  "seedance_json_only": true,
+  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+}

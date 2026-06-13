@@ -1,0 +1,41 @@
+{
+  "generation_config_file": "config_SvtaIg.json",
+  "story_title": "День рождения — героиня видео (лирическая)",
+  "story_brief": "15-секундный нежный лирический поздравительный ролик ко дню рождения. Героиня видео — женщина: умный программист, душевная, внимательная, сочувствующая, любящая мать и бабушка; путь от детства в Сибири через семью и репатриацию к зрелой мудрости и теплу дома. Хронология: детство → юность → семейные корни и любовь → материнство → зрелость и неизменная связь с супругом → путешествие и гостеприимство. Использовать все @image1..@image9 inline. Без личных имён — только героиня видео, супруг, сын, внуки, родня, друзья. Тон нежный, лирический, душевный — не слайдшоу: мягкое движение камеры и живые эмоции, без dissolve/crossfade как основного приёма. Без drone и bird's-eye.",
+  "image_count": 9,
+  "scene_count": 5,
+  "scene_duration_seconds": 3,
+  "total_duration_seconds": 15,
+  "aspect_ratio": "16:9",
+  "max_prompt_chars": 3200,
+  "prefer_loving_kindness_tone": true,
+  "restored_images_dir": "<LOCAL_PATH>",
+  "source_files": [
+    "Svt_Igr_26_10.00_00_31_01.Still005.jpg",
+    "Svt_Igr_26_10.00_01_06_18.Still002.jpg",
+    "Svt_Igr_26_10.00_00_54_05.Still001.jpg",
+    "Svt_Igr_26_10.00_01_31_12.Still003.jpg",
+    "Svt_Igr_26_10.00_02_01_23.Still004.jpg",
+    "Svt_Igr_26_30.00_04_07_24.Still003.jpg",
+    "Svt_Igr_26_30.00_03_03_24.Still001.jpg",
+    "Svt_Igr_26_30.00_02_47_24.Still002.jpg",
+    "Svt_Igr_26V_1.01_08_07_18.Still002.jpg"
+  ],
+  "story_output_stem": "video_prompt_story_sveta_lyrical",
+  "output_dir": "<LOCAL_PATH>",
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1 — lyrical tender",
+      "instruction": "Create a soulful, lyrical cinematic interpretation with gentle camera movement, warm light, and tender emotional beats. Characters show quiet smiles and caring gestures. NOT a static slideshow; use soft tracking and subtle push-ins. No bird's-eye or drone."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2 — lyrical poetic alt",
+      "instruction": "Create a distinct alternative lyrical reading with more poetic pacing and reflective pauses, while preserving scene order and facts. Softer color warmth, intimate framing, living emotions in every shot. No dissolve-heavy slideshow. No bird's-eye or drone."
+    }
+  ],
+  "seedance_json": true,
+  "seedance_json_only": true,
+  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+}

@@ -1,0 +1,41 @@
+{
+  "generation_config_file": "config_SvtaIg.json",
+  "story_title": "День рождения — героиня видео (весёлая)",
+  "story_brief": "15-секундный ВЕСЁЛЫЙ энергичный поздравительный ролик ко дню рождения. Героиня видео — активная, оптимистичная, энергичная программистка, умеет петь и танцевать, душа компании, любящая бабушка. НЕ слайдшоу. В каждой сцене движение, смех, жест; handheld, whip pan, match cut on smile. ЗАПРЕЩЕНО: dissolve, crossfade, Ken Burns, static hold. Хронология сохраняется. Все @image1..@image9. Без личных имён. Без drone и bird's-eye.",
+  "image_count": 9,
+  "scene_count": 5,
+  "scene_duration_seconds": 3,
+  "total_duration_seconds": 15,
+  "aspect_ratio": "16:9",
+  "max_prompt_chars": 3200,
+  "prefer_loving_kindness_tone": false,
+  "restored_images_dir": "<LOCAL_PATH>",
+  "source_files": [
+    "Svt_Igr_26_10.00_00_31_01.Still005.jpg",
+    "Svt_Igr_26_10.00_01_06_18.Still002.jpg",
+    "Svt_Igr_26_10.00_00_54_05.Still001.jpg",
+    "Svt_Igr_26_10.00_01_31_12.Still003.jpg",
+    "Svt_Igr_26_10.00_02_01_23.Still004.jpg",
+    "Svt_Igr_26_30.00_04_07_24.Still003.jpg",
+    "Svt_Igr_26_30.00_03_03_24.Still001.jpg",
+    "Svt_Igr_26_30.00_02_47_24.Still002.jpg",
+    "Svt_Igr_26V_1.01_08_07_18.Still002.jpg"
+  ],
+  "story_output_stem": "video_prompt_story_sveta_fun",
+  "output_dir": "<LOCAL_PATH>",
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1 — party energy",
+      "instruction": "High-energy birthday celebration with rhythmic cuts, dancing, laughter, and optimistic gestures. Handheld tracking and match cuts on smile. NOT a slideshow. No bird's-eye or drone."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2 — dance and song",
+      "instruction": "Distinct alternative emphasizing singing, dancing, and social joy — heroine leads group energy at the table and on the road. Same scene order and facts. Snap cuts only, no dissolve/crossfade. No bird's-eye or drone."
+    }
+  ],
+  "seedance_json": true,
+  "seedance_json_only": true,
+  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+}

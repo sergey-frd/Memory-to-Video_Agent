@@ -1,0 +1,41 @@
+{
+  "generation_config_file": "config_SF.json",
+  "story_title": "56 лет вместе — герой и героиня (весёлая)",
+  "story_brief": "15-секундный ВЕСЁЛЫЙ энергичный ролик: 56 лет знакомства, свадьба 21.07.1997. Герой видео и героиня видео — оптимисты, музыка, семья, гостеприимство. НЕ СЛАЙДШОУ. Движение, смех, жесты каждую сцену; handheld, whip pan, snap match cuts. ЗАПРЕТ dissolve/crossfade/Ken Burns/static hold. Все @image1..@image9. Без личных имён. Без drone и bird's-eye.",
+  "image_count": 9,
+  "scene_count": 5,
+  "scene_duration_seconds": 3,
+  "total_duration_seconds": 15,
+  "aspect_ratio": "16:9",
+  "max_prompt_chars": 3200,
+  "prefer_loving_kindness_tone": false,
+  "restored_images_dir": "<LOCAL_PATH>",
+  "source_files": [
+    "Nested Sequence 05.00_00_00_00.Still001.jpg",
+    "Nested Sequence 05.00_00_30_02.Still002.jpg",
+    "Nested Sequence 08.00_00_06_16.Still001.jpg",
+    "Nested Sequence 04.00_00_16_02.Still003.jpg",
+    "Nested Sequence 06.00_00_29_22.Still002.jpg",
+    "Nested Sequence 04.00_00_28_23.Still005.jpg",
+    "Nested Sequence 04.00_00_05_12.Still001.jpg",
+    "Nested Sequence 06.00_00_16_14.Still001.jpg",
+    "Nested Sequence 03.00_00_14_13.Still001.jpg"
+  ],
+  "story_output_stem": "video_prompt_story_sf_rita_fun",
+  "output_dir": "<LOCAL_PATH>",
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1 — party energy",
+      "instruction": "High-energy celebration with rhythmic cuts, laughter, dancing, and optimistic gestures. Handheld tracking and match cuts on smile. NOT a slideshow. No bird's-eye or drone."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2 — music and joy",
+      "instruction": "Distinct alternative emphasizing piano-lesson joy, singing romances, and lively family table energy. Snap cuts only. Never bird's-eye, drone, aerial, tiny, or distant specks."
+    }
+  ],
+  "seedance_json": true,
+  "seedance_json_only": true,
+  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+}
