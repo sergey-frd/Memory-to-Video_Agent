@@ -171,7 +171,7 @@ Sequence timing extension:
 
 1. `main_video_prompt_story.py` читает `video_prompt_story_config_*.json` и при `--generate` вызывает OpenAI для черновика истории.
 2. `utils/video_prompt_story.py` находит restored images в `chatgpt_photo_restoration`, сопоставляет их с `regeneration_assets`, рендерит HTML review и парсит правки обратно в draft JSON.
-3. `api/openai_video_prompt_story.py` синтезирует `technical_preamble` и тексты сцен с inline `@imageN`.
+3. `api/openai_video_prompt_story.py` синтезирует `technical_preamble` и тексты сцен с inline `@imageN` и правилами **динамического видео** (не слайдшоу: движение персонажей, handheld/match cut; запрет dissolve/crossfade/Ken Burns/static hold).
 4. `--export-config` пишет `video_prompt_config_*.json` для `main_video_prompt_composer.py`.
 5. Composer создает `Gen_Video_Seedance_Variant_*_<timestamp>.json` и парные RU control JSON.
 6. Cursor skill: `.cursor/skills/video-prompt-story/SKILL.md`.

@@ -74,9 +74,12 @@ The HTML shows:
 
 Story rules commonly used in this project:
 
+- **Dynamic video, not slideshow** — characters move, smile, laugh, or gesture every scene; use handheld tracking, push-ins, whip pans, and match cuts. Forbidden as the main device: dissolve, crossfade, fade, Ken Burns, static posed hold, slow dolly-only linger. One dominant `@imageN` per scene; other tags only as quick match cuts.
 - group portraits near a tree = **classmate reunion**, not a family story
 - call the subject **герой видео / герой ролика / мужчина**, not personal names like `Sasha`, when the brief forbids names
 - put `@imageN` tags inline inside scene text, not only in trailing parentheses
+
+Hand-written story scripts in `tools/` (`write_edik_fun_story.py`, `write_sveta_stories.py`, `write_sf_rita_stories.py`) bake these rules into preamble, scenes, and exported `video_prompt_config_*.json` when OpenAI output looked too much like a static montage.
 
 ## Export composer JSON
 

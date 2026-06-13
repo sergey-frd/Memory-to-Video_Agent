@@ -231,3 +231,22 @@ def test_load_video_prompt_story_config_rejects_invalid_total_duration() -> None
 
     with pytest.raises(Exception, match="total_duration_seconds must equal"):
         load_video_prompt_story_config(config_path)
+
+
+def test_openai_story_prompt_requires_dynamic_video_not_slideshow() -> None:
+    from api.openai_video_prompt_story import _story_prompt
+
+    prompt = _story_prompt(
+        {
+            "story_brief": "Birthday tribute.",
+            "scene_count": 5,
+            "scenes_to_write": 5,
+        }
+    )
+
+    lowered = prompt.casefold()
+    assert "slideshow" in lowered
+    assert "dissolve" in lowered
+    assert "ken burns" in lowered
+    assert "handheld" in lowered
+    assert "match cut" in lowered

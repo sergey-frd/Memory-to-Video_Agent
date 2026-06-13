@@ -1002,6 +1002,7 @@ python .\main_project_publication_push.py --repo-dir <LOCAL_PATH> --commit-messa
         <div class="code-label">bat</div><pre><code class="language-bat">.\run_video_prompt_story_export.bat path\to\video_prompt_story_YYYYMMDD_HHMMSS.html</code></pre>
         <p>Then run composer:</p>
         <div class="code-label">powershell</div><pre><code class="language-powershell">.\.venv\Scripts\python.exe -u .\main_video_prompt_composer.py --config-file path\to\video_prompt_config_birthday_hero_primary.json</code></pre>
+        <p><strong>Dynamic video, not slideshow:</strong> every scene should describe living movement with handheld tracking, push-ins, whip pans, or match cuts. Forbidden as the main device: dissolve, crossfade, fade, Ken Burns, static posed hold. Prefer one dominant <code>@imageN</code> per scene. See <code>tools/write_*_stories.py</code> and <code>api/openai_video_prompt_story.py</code>.</p>
         <p>Cursor skill: <code>.cursor/skills/video-prompt-story/SKILL.md</code></p>
         <h2 id="documentation-sync-rule">Documentation Sync Rule</h2>
         <p>Whenever workflow, file locations, naming, cleanup rules, or report outputs change, update all guide files together:</p>

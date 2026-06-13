@@ -14,18 +14,19 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 ## Current version
 
 - Workspace `VERSION`: see [`VERSION`](VERSION)
-- Latest publication on GitHub: **`2026.06.10.03`** (`v2026.06.10.03`)
+- Latest publication on GitHub: **`2026.06.13.01`** (`v2026.06.13.01`)
 - **Canonical version on GitHub:** repository root [`VERSION`](https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/VERSION) and [`data/project_snapshot.json`](https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/data/project_snapshot.json). The source mirror also carries [`source/VERSION`](https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/source/VERSION).
 
 ## Published on GitHub (Internet)
 
-Everything through **2026-06-10** is synchronized to the public repository:
+Everything through **2026-06-13** is synchronized to the public repository:
 
 - https://github.com/sergey-frd/Memory-to-Video_Agent
-- Tag: https://github.com/sergey-frd/Memory-to-Video_Agent/releases/tag/v2026.06.10.03
+- Tag: https://github.com/sergey-frd/Memory-to-Video_Agent/releases/tag/v2026.06.13.01
 
 Included in this publication wave:
 
+- Video story batch: **dynamic living video, not slideshow** — anti-dissolve/Ken Burns rules in story configs, `tools/write_*_stories.py`, and OpenAI story synthesis (`api/openai_video_prompt_story.py`)
 - Multi-scene video story HTML preview workflow (`main_video_prompt_story.py`, skill, docs)
 - ChatGPT portrait batch result-capture fixes and configurable `result_timeout`
 - Project configs `config_‭AlxKrvz.json`, `config_‭IgorSv.json`

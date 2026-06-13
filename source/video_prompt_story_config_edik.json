@@ -1,7 +1,7 @@
 {
   "generation_config_file": "config_Edik.json",
   "story_title": "День рождения — герой видео (Эдик)",
-  "story_brief": "15-секундный поздравительный ролик ко дню рождения друга. Герой видео — мужчина: программист, музыкант, актёр, любящий муж, отец и дед. Хронология жизни: зрелость и внутренняя собранность → молодость и семья → праздники и друзья → домашнее тепло → радость с внуками. Это семейная история (не одноклассники). Используй все 9 изображений через inline-теги @image1..@image9. В technical_preamble и во всех сценах НЕ использовать личные имена (Эдик, Эдуард, Наташа, Марина и т.д.) — только нейтрально: герой видео, герой ролика, мужчина, супруга, дочь, внуки, друзья. Тон тёплый, добрый, без драматизации. Кадры medium/full, без drone и bird's-eye.",
+  "story_brief": "15-секундный поздравительный ролик ко дню рождения друга. Герой видео — мужчина: программист, музыкант, актёр, любящий муж, отец и дед. Хронология жизни: зрелость → молодость и семья → праздники → домашнее тепло → радость с внуками. НЕ слайдшоу: персонажи двигаются, улыбаются, жестикулируют; мягкий handheld, match cut on smile. ЗАПРЕТ dissolve/crossfade/Ken Burns/static hold как основного приёма. Используй все @image1..@image9 inline. Без личных имён — герой видео, супруга, дочь, внуки, друзья. Тон тёплый, добрый. Medium/full, без drone и bird's-eye.",
   "image_count": 9,
   "scene_count": 5,
   "scene_duration_seconds": 3,
@@ -25,12 +25,12 @@
     {
       "variant_id": "Variant_1",
       "label": "Variant 1",
-      "instruction": "Create the most likely, most suitable, and most coherent cinematic interpretation."
+      "instruction": "Create the most likely, most suitable, and most coherent cinematic interpretation. Living movement in every shot — NOT a slideshow. Soft handheld and match cuts; no dissolve/crossfade/Ken Burns/static hold."
     },
     {
       "variant_id": "Variant_2",
       "label": "Variant 2",
-      "instruction": "Create a fully distinct alternative interpretation while preserving the same scene order, durations, and story facts."
+      "instruction": "Create a fully distinct alternative interpretation while preserving the same scene order, durations, and story facts. Same dynamic-video rule: characters move and emote; no dissolve-heavy slideshow. No bird's-eye or drone."
     }
   ],
   "seedance_json": true,

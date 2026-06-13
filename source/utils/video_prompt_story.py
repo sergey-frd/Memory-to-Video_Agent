@@ -26,6 +26,18 @@ STORY_DRAFT_VERSION = 1
 STORY_DRAFT_SCRIPT_ID = "story-draft"
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
 
+# Shared anti-slideshow rules for OpenAI story synthesis and operator docs.
+DYNAMIC_VIDEO_STORY_PROMPT_RULES = (
+    "11. The result must be a dynamic living video, NOT a static slideshow or sentimental photo montage.\n"
+    "12. Characters must move, smile, laugh, or gesture in every scene; prefer handheld tracking, push-ins, whip pans, and match cuts.\n"
+    "13. FORBIDDEN as the main device: dissolve, crossfade, fade, Ken Burns, static posed hold, slow dolly-only linger.\n"
+    "14. Prefer one dominant @image per scene; use other tags only as quick match cuts, not as dissolve transitions between stills."
+)
+DYNAMIC_VIDEO_STORY_BRIEF_HINT_RU = (
+    "НЕ слайдшоу: персонажи двигаются в каждой сцене; handheld, match cut; "
+    "ЗАПРЕТ dissolve/crossfade/Ken Burns/static hold как основного приёма."
+)
+
 
 @dataclass(frozen=True)
 class StoryImageCandidate:

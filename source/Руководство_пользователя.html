@@ -996,6 +996,7 @@ python .\main_project_publication_push.py --repo-dir <LOCAL_PATH> --commit-messa
         <p>Базовый тайминг: 7 изображений, 5 сцен по 2 секунды, итого 10 секунд.</p>
         <div class="code-label">bat</div><pre><code class="language-bat">.\run_video_prompt_story_generate.bat</code></pre>
         <div class="code-label">bat</div><pre><code class="language-bat">.\run_video_prompt_story_export.bat path\to\video_prompt_story_YYYYMMDD_HHMMSS.html</code></pre>
+        <p><strong>Динамическое видео, не слайдшоу:</strong> в каждой сцене — движение персонажей, handheld/match cut; запрет dissolve/crossfade/Ken Burns/static hold. См. <code>tools/write_*_stories.py</code> и <code>api/openai_video_prompt_story.py</code>.</p>
         <p>Cursor skill: <code>.cursor/skills/video-prompt-story/SKILL.md</code></p>
         <h2 id="правило-синхронизации-документации">Правило синхронизации документации</h2>
         <p>При любом изменении workflow, путей, схемы именования, cleanup-правил или набора отчетов нужно одновременно обновлять все файлы руководства:</p>

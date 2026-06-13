@@ -5,7 +5,7 @@ import os
 import re
 
 from utils.video_prompt_composer import ReferenceContext, reference_contexts_to_payload
-from utils.video_prompt_story import VideoPromptStoryDraft
+from utils.video_prompt_story import DYNAMIC_VIDEO_STORY_PROMPT_RULES, VideoPromptStoryDraft
 from video_prompt_story_config import VideoPromptStoryConfig
 
 try:
@@ -77,6 +77,7 @@ def _story_prompt(payload: dict[str, object]) -> str:
         "8. If story_brief forbids personal names, never write Sasha or any other personal name in technical_preamble or scene_descriptions. Use neutral Russian phrasing such as герой видео, герой ролика, мужчина, танцующий герой.\n"
         "9. Keep each scene description short and concrete; no markdown headings.\n"
         "10. Do not output markdown fences or any prose outside JSON.\n"
+        f"{DYNAMIC_VIDEO_STORY_PROMPT_RULES}\n"
         "Input JSON:\n"
         f"{json.dumps(payload, ensure_ascii=False, indent=2)}"
     )

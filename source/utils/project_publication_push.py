@@ -11,6 +11,11 @@ from utils.project_publication import write_publication_bundle
 
 DEFAULT_PUBLICATION_REMOTE = "https://github.com/sergey-frd/Memory-to-Video_Agent.git"
 GIT_ADD_BATCH_SIZE = 40
+SOURCE_VERSION_RELATIVE_PATHS = (
+    "VERSION",
+    "data/project_snapshot.json",
+    "data/publication_manifest.json",
+)
 
 
 @dataclass
@@ -204,6 +209,19 @@ def push_publication_tag(repo_dir: Path, tag_name: str, remote_name: str = "orig
     return True
 
 
+def sync_source_version_files(*, source_root: Path, repo_dir: Path) -> list[str]:
+    synced: list[str] = []
+    for relpath in SOURCE_VERSION_RELATIVE_PATHS:
+        published_file = repo_dir / relpath
+        if not published_file.is_file():
+            continue
+        target_file = source_root / relpath
+        target_file.parent.mkdir(parents=True, exist_ok=True)
+        target_file.write_text(published_file.read_text(encoding="utf-8"), encoding="utf-8")
+        synced.append(relpath)
+    return synced
+
+
 def sync_publication_repo(
     *,
     source_root: Path,
@@ -214,6 +232,7 @@ def sync_publication_repo(
     publication_result = write_publication_bundle(source_root=source_root, target_dir=repo_dir, registry_path=registry_path)
     current_files = list(publication_result.written_files)
     removed_files = remove_stale_managed_files(repo_dir, previous_files, current_files)
+    sync_source_version_files(source_root=source_root, repo_dir=repo_dir)
     return current_files, removed_files
 
 

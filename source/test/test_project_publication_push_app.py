@@ -110,6 +110,10 @@ def test_prepare_publication_push_stages_managed_files_and_removes_stale_outputs
     assert "old.txt" in staged_payload["relpaths"]
     assert result.publication_version is not None
     assert result.git_tag == f"v{result.publication_version}"
+    version_text = (source_root / "VERSION").read_text(encoding="utf-8").strip()
+    assert version_text == result.publication_version
+    snapshot = json.loads((source_root / "data" / "project_snapshot.json").read_text(encoding="utf-8"))
+    assert snapshot["publication_version"] == result.publication_version
 
 
 def test_prepare_publication_push_rejects_remote_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:

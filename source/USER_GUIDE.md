@@ -1151,7 +1151,9 @@ Then run composer:
 Story-review notes:
 
 - HTML shows restored-image thumbnails, filenames, and `@imageN` tags together with editable scene text.
-- `story_brief` controls facts such as birthday tribute, classmate reunion instead of family story, excluded source files, and neutral hero naming (`герой видео`, not personal names).
+- **Dynamic video, not slideshow:** every scene should describe living movement — smiles, gestures, walking, dancing — with handheld tracking, push-ins, whip pans, or match cuts. Do not treat the montage as dissolve/crossfade/Ken Burns stills. Prefer one dominant `@imageN` per scene; use other tags only as quick match cuts.
+- `story_brief` controls facts such as birthday tribute, classmate reunion instead of family story, excluded source files, neutral hero naming (`герой видео`, not personal names), and the anti-slideshow camera language above.
+- Hand-written helpers in `tools/write_*_stories.py` regenerate preamble/scenes/composer JSON when a first OpenAI draft still feels like a static montage.
 - Use inline `@imageN` tags inside scene sentences.
 - If Seedance validation fails at 2000 characters, set exported composer `max_prompt_chars` to `2500`.
 - If `Variant_2` fails on distant-viewpoint validation, rerun composer with a Variant_2-only config and forbid bird's-eye / drone / aerial wording in the variant instruction.
