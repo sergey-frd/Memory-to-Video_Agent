@@ -1,0 +1,13 @@
+{
+  "portrait_styles": [
+    {
+      "name": "RENOIR Pierre-Auguste Renoir impressionist portrait",
+      "slug": "rnr",
+      "prompt": "Use ChatGPT image generation to create the final edited image now from the attached photo. Generate the actual image; do not answer with text. Do not write a prompt, description, explanation, checklist, or instructions. Return only one generated image file in the chat.\n\nRENOIR:\nTransform the source image into a refined artistic painting in the style of Pierre-Auguste Renoir. Preserve the main subject, composition, and recognizable facial features, while reimagining the image with Renoir's signature Impressionist brushwork, soft luminous colors, warm natural light, delicate skin tones, and elegant painterly texture. Use a gentle, romantic atmosphere, subtle blending, rich yet airy color harmony, and a graceful late-19th-century fine art feeling. The final result should look like a classic Renoir oil painting, with soft edges, lively brushstrokes, and a warm, timeless beauty.\n\nCreate one finished portrait, not a collage. Do not add text, captions, watermarks, frames, or extra people."
+    }
+  ],
+  "prompt_template": "{style}",
+  "output_dir": "output/chatgpt_renoir",
+  "save_response_text": false,
+  "new_chat_per_job": true
+}

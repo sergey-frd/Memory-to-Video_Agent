@@ -193,12 +193,15 @@ Main files:
 - `run_grok_portrait_batch_existing.bat` - Grok launcher that reuses the same portrait JSON configs.
 - `chatgpt_portrait_config.json` - short working style set, currently watercolor and pastel.
 - `chatgpt_portrait_base_config.json` - full base style bank for artistic portraits and image-edit service styles.
+- `chatgpt_all_styles_config.json` - batch config for the full base style list with a dedicated output folder `output\chatgpt_all_styles`. Trim `portrait_styles` to run a subset.
 - `chatgpt_pair_base_config.json` - pair portrait prompt bank for constructing one cinematic artistic couple image from two source photos.
 - `chatgpt_watercolor_scene_expansion_config.json` - special two-style config for `watercolor` and `scene_expansion`.
 - `BATCH_RUN_HISTORY.md` - non-repeating examples for all batch launchers and their parameters.
 - `styles\art_styles_Prompt_list.txt` - source human-readable style prompt list.
 
-The base config contains the full portrait/style bank, including Rembrandt, Renaissance, Impressionist, Watercolor, Van Gogh post-impressionism, Klimt art nouveau, Art Deco, Karsh black-and-white studio portrait, Pop Art, Cubist, Chagall poetic modernism, plus service styles such as MODERN_COLOR, COLORIZE, FACE_ENLARGEMENT, and SCENE_EXPANSION.
+The base config contains the full portrait/style bank, including Rembrandt, Renaissance, Impressionist, Renoir, Andrei Rublev, Watercolor, Van Gogh post-impressionism, Klimt art nouveau, Art Deco, Karsh black-and-white studio portrait, Pop Art, Cubist, Picasso graphic, Chagall poetic modernism, PHOTO_PORTRET, ARTISTIC_PORTRAIT, plus service styles such as MODERN_COLOR, COLORIZE, FACE_ENLARGEMENT, and SCENE_EXPANSION.
+
+`chatgpt_all_styles_config.json` mirrors the full bank for mass batch runs: for each image in `input\`, the batch applies every style and writes `<image_stem>_<slug>.png` to `output\chatgpt_all_styles`.
 
 Output:
 - generated PNG files are written to `output\chatgpt_portraits`;
@@ -220,6 +223,18 @@ Recommended automatic command:
 
 ```bat
 .\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+All base styles command (separate output folder):
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_all_styles_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+On the laptop bundle, the same config can be launched via the generic style launcher:
+
+```bat
+run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --delivery-config-file config_Ziggi.json --skip-existing
 ```
 
 Watercolor + scene expansion command:
@@ -516,7 +531,7 @@ flowchart LR
   C1["config.json / config.local.json / config_*.json"] --> G1["config.py / GenerationConfig"]
   G1 --> P1
   G1 --> P2
-  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_watercolor_scene_expansion_config.json"] --> P6
+  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_all_styles_config.json\nchatgpt_watercolor_scene_expansion_config.json"] --> P6
 
   C3["project_sequence_batch_*.json"] --> P3
   P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
@@ -695,6 +710,38 @@ Example config fields:
 }
 ```
 
+## Sequence Trim Review
+
+Use this when the source sequence is long raw footage and you need recommendations for what to keep vs drop **inside each clip**, not only a full-clip reorder.
+
+```bat
+.\run_sequence_trim_review.bat .\sequence_trim_review_01.json
+```
+
+```powershell
+python .\main_sequence_trim_review.py --config .\sequence_trim_review_template.json
+```
+
+What it produces:
+
+- one review `.prproj` with two sequences by default: `*_trim_heuristic` and `*_trim_semantic`
+- each source clip split into `[KEEP]` / `[DROP]` segments
+- KEEP on V1, DROP on V2 (mute V2 to preview the compact cut)
+- reports under `reports_dir` (bundle + per-engine JSON/TXT)
+
+Engines:
+
+- `heuristic` — length/position budget rules
+- `semantic` — frame sampling + OpenAI vision (`OPENAI_API_KEY`, `semantic_model`)
+
+Compact keep (`compact_keep: true`):
+
+- still/photo holds aim for about **1.5–3.0s**
+- video keep islands aim for about **2.0–8.0s** so the moment is readable without inflating total runtime
+
+Key config fields: `engines`, `context_notes`, `compact_keep`, `photo_keep_*`, `video_keep_*`, `semantic_frames_per_clip`, `new_sequence_name_heuristic`, `new_sequence_name_semantic`.
+
+Requires two video tracks in the source sequence so DROP can land on V2. Empty Premiere tracks often omit `TrackItems`; the exporter creates that container automatically.
 Use `include_visual_media` when the source sequence contains photos and videos on the same visual track. Use `enable_auto_durations` to let the optimizer adjust timeline durations. Use `transition_mode: "apply"` together with `enable_auto_transitions` and `enable_visual_transitions` when the exported `.prproj` should receive transitions for mixed visual pairs, not only pure mp4 pairs. Automatic transition selection now uses a broad safe template pool: dissolve/fade, dip, wipe/iris, slide/push/zoom, and light/stylized transitions. `Morph Cut` is intentionally excluded from automatic application because Premiere can fail with `Can't apply to a single clip`; keep it for manual use only after checking handles and clip conditions. Use `enable_auto_transforms` and `generate_premiere_transform_script` to create a companion `<sequence>_apply_transforms.jsx` file for still-image Transform effects such as `Grow`, `Shrink`, `Move`, and fallback `Transform`. `Offset` is intentionally manual-only because it needs careful composition tuning in Premiere. Transform choice is content- and neighbor-aware: portraits tend toward `Grow`, groups and wide/context frames toward `Shrink`, action frames toward `Move`, and adjacent similar frames are varied to avoid repeated zooms.
 
 The generated transform JSX is run from the same Premiere panel as transition scripts. Open the optimized sequence first, then run the `<sequence>_apply_transforms.jsx` script. With `premiere_transform_script_add_video_effects: true`, the script applies the named Premiere Transform effects (`Grow`, `Shrink`, `Move`) to the planned still images and skips intrinsic `Motion > Scale` keyframes. Set it to `false` only when you intentionally want the fallback scale-keyframe workflow. The transform effect list/template is documented in `styles\List of Video transform effects.txt`.

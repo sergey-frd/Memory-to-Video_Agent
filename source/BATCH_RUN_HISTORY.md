@@ -42,17 +42,20 @@
 | B024 | `run_video_prompt_story_generate.bat` | Сгенерировать reviewable HTML/JSON историю для multi-scene video prompt | `.\run_video_prompt_story_generate.bat` |
 | B025 | `run_video_prompt_story_export.bat` | Экспортировать composer JSON после правок HTML-истории | `.\run_video_prompt_story_export.bat <LOCAL_PATH>` |
 | B026 | `run_project_publication_push.bat` | Опубликовать полный bundle на GitHub (`Memory-to-Video_Agent`, tag `v2026.06.10.02`) | `.\run_project_publication_push.bat --source-root .` |
+| B027 | `run_chatgpt_style_batch_existing.bat` | Все 21 стиля base-банка по `input/` через `chatgpt_all_styles_config.json`; результаты в `output\chatgpt_all_styles` | `run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --skip-existing --continue-on-error` |
+| B028 | `run_chatgpt_portrait_batch_existing.bat` | То же «все стили», но через основной desktop-launcher (не laptop style-batch) | `.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_all_styles_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer` |
+| B029 | `run_sequence_trim_review.bat` | Premiere Sequence Trim Review: heuristic + semantic KEEP/DROP сегменты, compact keep | `.\run_sequence_trim_review.bat .\sequence_trim_review_01.json` |
 
-## GitHub publication note (2026-06-10)
+## GitHub publication note (2026-07-22)
 
-Dev history lives in the private repo https://github.com/sergey-frd/img-style-ag_1 (`git push origin main`).
+Dev history: https://github.com/sergey-frd/img-style-ag_1 (`git push origin main`).
 
-The public Internet bundle is https://github.com/sergey-frd/Memory-to-Video_Agent at version **`2026.06.10.02`**. Everything through the video story workflow, portrait batch fixes, project configs, and Cursor rules reached GitHub in this wave. Older tags such as `v2026.05.25.01` are historical snapshots only.
+Public Internet bundle: https://github.com/sergey-frd/Memory-to-Video_Agent at version **`2026.07.22.01`** (tag `v2026.07.22.01`). Headline: Sequence Trim Review.
 
 ## Рабочая команда для текущей задачи
 
 ```bat
-.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_watercolor_scene_expansion_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+.\run_sequence_trim_review.bat .\sequence_trim_review_01.json
 ```
 
 Gemini equivalent with the same config format:

@@ -13,10 +13,12 @@ from typing import Any, Callable, Optional
 
 from PIL import Image, ImageChops, ImageEnhance, ImageFilter, ImageOps
 
+from shutil import copy2
+
 from api.openai_image import edit_image_with_openai
 from api.chatgpt_web import ChatGPTWebConfig, ChatGPTWebSessionRunner
 from config import GenerationConfig, Settings, load_generation_config
-from utils.project_delivery import sync_final_output_file
+from utils.project_delivery import resolve_final_output_target, sync_final_output_file
 from utils.image_analysis import analyze_image
 
 SUPPORTED_INPUT_SUFFIXES = {".png", ".jpg", ".jpeg", ".jfif", ".webp", ".bmp", ".tif", ".tiff"}
@@ -174,6 +176,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--desktop-new-chat", action="store_true", help="Try to open a new service chat before every desktop job.")
     parser.add_argument("--desktop-no-home-navigation", action="store_true", help="Use only the visible New chat control between jobs; do not navigate the browser address bar to the service home URL.")
     parser.add_argument("--desktop-clipboard-attach", action="store_true", help="Attach images by pasting the file from Windows clipboard into the active service composer.")
+    parser.add_argument(
+        "--desktop-no-file-dialog-fallback",
+        action="store_true",
+        help="Do not fall back to Windows file dialog when clipboard attachment is not confirmed.",
+    )
     parser.add_argument("--desktop-capture-result", action="store_true", help="Capture a generated image from the desktop UI after submitting.")
     parser.add_argument("--desktop-save-context-menu", action="store_true", help="Try to save the generated image through the browser image context menu.")
     parser.add_argument("--desktop-reactivate-delay", type=float, default=0.0, help="Seconds to wait before each desktop job so you can activate the service composer.")
@@ -648,9 +655,20 @@ def _sync_final_portrait_output(
     return delivered_path
 
 
-def _existing_output_for_skip(job: PortraitJob) -> Optional[Path]:
+def _existing_output_for_skip(
+    job: PortraitJob,
+    settings: Settings | None = None,
+    delivery_config: GenerationConfig | None = None,
+) -> Optional[Path]:
     if job.output_path.exists():
         return job.output_path
+    if settings is not None and delivery_config is not None:
+        delivered_path = resolve_final_output_target(settings, delivery_config, job.output_path)
+        if delivered_path.is_file():
+            job.output_path.parent.mkdir(parents=True, exist_ok=True)
+            copy2(delivered_path, job.output_path)
+            print(f"Restored existing portrait from delivery: {job.output_path}", flush=True)
+            return job.output_path
     if job.source_label is None:
         return None
     pair_slug = _slugify(job.source_label) or job.source_label
@@ -756,10 +774,11 @@ def run_batch(
     outputs: list[Path] = []
     try:
         for job in jobs:
-            if args.skip_existing and job.output_path.exists():
-                _sync_final_portrait_output(settings, delivery_config, job.output_path)
-                print(f"Skipped existing portrait: {job.output_path}")
-                outputs.append(job.output_path)
+            existing_output_path = _existing_output_for_skip(job, settings, delivery_config) if args.skip_existing else None
+            if existing_output_path is not None:
+                _sync_final_portrait_output(settings, delivery_config, existing_output_path)
+                print(f"Skipped existing portrait: {existing_output_path}")
+                outputs.append(existing_output_path)
                 continue
 
             web_config = ChatGPTWebConfig(
@@ -819,12 +838,14 @@ def _run_desktop_jobs(
         default_target_url = None
 
     outputs: list[Path] = []
-    reuse_selected_window = bool(getattr(args, "desktop_reuse_selected_window", False))
+    reuse_selected_window = bool(getattr(args, "desktop_reuse_selected_window", False)) and not bool(
+        getattr(args, "desktop_active_window", False)
+    )
     selected_window_handle: int | None = None
     selected_manual_composer_position: tuple[int, int] | None = None
     selected_manual_send_position: tuple[int, int] | None = None
     for job in jobs:
-        existing_output_path = _existing_output_for_skip(job) if args.skip_existing else None
+        existing_output_path = _existing_output_for_skip(job, settings, delivery_config) if args.skip_existing else None
         if existing_output_path is not None:
             delivered_path = _sync_final_portrait_output(settings, delivery_config, existing_output_path)
             print(f"Skipped existing portrait: {existing_output_path}")
@@ -870,7 +891,9 @@ def _run_desktop_jobs(
         click_composer_before_paste = getattr(args, "desktop_click_composer", False) or open_new_chat_before_run
 
         attach_via_clipboard = getattr(args, "desktop_clipboard_attach", False)
-        force_clean_chat = job.source_label is not None
+        # Force explicit clean-chat navigation whenever per-job New chat is requested,
+        # so previous result cards/attachments cannot leak into the next image job.
+        force_clean_chat = bool(open_new_chat_before_run) or job.source_label is not None
         require_new_attachment_preview = bool(job.source_image_paths) and (
             attach_via_clipboard or job.source_label is not None
         )
@@ -901,6 +924,9 @@ def _run_desktop_jobs(
             require_single_tab_window=getattr(args, "desktop_require_single_tab_window", False),
             require_new_attachment_preview=require_new_attachment_preview,
             attach_via_clipboard=attach_via_clipboard,
+            allow_file_dialog_fallback=not bool(
+                getattr(args, "desktop_no_file_dialog_fallback", False)
+            ),
             skip_capture_result=not getattr(args, "desktop_capture_result", False),
             save_result_via_context_menu=getattr(args, "desktop_save_context_menu", False),
             click_composer_before_paste=click_composer_before_paste,
@@ -921,6 +947,10 @@ def _run_desktop_jobs(
                     selected_manual_composer_position = manual_composer_position
                 selected_manual_send_position = getattr(agent, "selected_manual_send_position", None)
         except Exception as exc:
+            if reuse_selected_window:
+                selected_window_handle = None
+                selected_manual_composer_position = None
+                selected_manual_send_position = None
             if job.output_path.exists() and not args.no_submit:
                 try:
                     delivered_path = _sync_final_portrait_output(settings, delivery_config, job.output_path)
@@ -982,10 +1012,11 @@ def _run_grok_jobs(
     outputs: list[Path] = []
     try:
         for job in jobs:
-            if args.skip_existing and job.output_path.exists():
-                _sync_final_portrait_output(settings, delivery_config, job.output_path)
-                print(f"Skipped existing Grok image: {job.output_path}")
-                outputs.append(job.output_path)
+            existing_output_path = _existing_output_for_skip(job, settings, delivery_config) if args.skip_existing else None
+            if existing_output_path is not None:
+                _sync_final_portrait_output(settings, delivery_config, existing_output_path)
+                print(f"Skipped existing Grok image: {existing_output_path}")
+                outputs.append(existing_output_path)
                 continue
 
             print(f"Using Grok window/profile: {job.image_path.name} / {job.style.name}", flush=True)
@@ -1068,10 +1099,11 @@ def _run_local_jobs(
 ) -> list[Path]:
     outputs: list[Path] = []
     for job in jobs:
-        if args.skip_existing and job.output_path.exists():
-            _sync_final_portrait_output(settings, delivery_config, job.output_path)
-            print(f"Skipped existing portrait: {job.output_path}")
-            outputs.append(job.output_path)
+        existing_output_path = _existing_output_for_skip(job, settings, delivery_config) if args.skip_existing else None
+        if existing_output_path is not None:
+            _sync_final_portrait_output(settings, delivery_config, existing_output_path)
+            print(f"Skipped existing portrait: {existing_output_path}")
+            outputs.append(existing_output_path)
             continue
         if args.no_submit:
             print(f"Local portrait request prepared: {job.image_path.name} / {job.style.name}")
@@ -1136,10 +1168,11 @@ def _run_api_jobs(
 ) -> list[Path]:
     outputs: list[Path] = []
     for job in jobs:
-        if args.skip_existing and job.output_path.exists():
-            _sync_final_portrait_output(settings, delivery_config, job.output_path)
-            print(f"Skipped existing portrait: {job.output_path}")
-            outputs.append(job.output_path)
+        existing_output_path = _existing_output_for_skip(job, settings, delivery_config) if args.skip_existing else None
+        if existing_output_path is not None:
+            _sync_final_portrait_output(settings, delivery_config, existing_output_path)
+            print(f"Skipped existing portrait: {existing_output_path}")
+            outputs.append(existing_output_path)
             continue
         if args.no_submit:
             print(f"OpenAI portrait request prepared: {job.image_path.name} / {job.style.name}")

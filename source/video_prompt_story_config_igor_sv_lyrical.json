@@ -1,0 +1,41 @@
+{
+  "generation_config_file": "config_‭IgorSv.json",
+  "story_title": "Игорь и Света — лирическая история любви",
+  "story_brief": "15-секундный нежный лирический ролик о герое видео и героине видео: программисты, свадьба 24.7.1983, путь от молодой любви через сына и репатриацию в Израиль к зрелой мудрости, путешествиям и внукам. Хронология: праздник и тост → интимный ужин → домашний уют → рождение сына → река и флаг → годы вместе → путешествия → объятия дома → семья у камина. НЕ СЛАЙДШОУ: персонажи двигаются, улыбаются, жестикулируют; мягкий handheld, match cut on smile. ЗАПРЕТ dissolve/crossfade/Ken Burns/static hold как основной приём. Все @image1..@image9 inline. Без личных имён — только герой видео, героиня видео, сын, внуки, родня. Без drone и bird's-eye.",
+  "image_count": 9,
+  "scene_count": 5,
+  "scene_duration_seconds": 3,
+  "total_duration_seconds": 15,
+  "aspect_ratio": "16:9",
+  "max_prompt_chars": 3200,
+  "prefer_loving_kindness_tone": true,
+  "restored_images_dir": "<LOCAL_PATH>",
+  "source_files": [
+    "IMG-20180409-WA0019-s.jpeg",
+    "SvIg_BarMizva18_11_00.JPG",
+    "IMG_8656.JPG",
+    "IMG-20181124-WA0001.jpg",
+    "IMG_20170618_153658_1.jpg",
+    "IMG_4552-s.jpeg",
+    "20211206_044850915.jpg",
+    "1809_siberia_0050-s.jpeg",
+    "Svt_Igr_23_7.00_01_35_22.Still023.jpg"
+  ],
+  "story_output_stem": "video_prompt_story_igor_sv_lyrical",
+  "output_dir": "<LOCAL_PATH>",
+  "scenario_variants": [
+    {
+      "variant_id": "Variant_1",
+      "label": "Variant 1 — lyrical tender",
+      "instruction": "Create a soulful lyrical cinematic interpretation with gentle camera movement, warm light, and tender emotional beats. Video hero and video heroine show quiet smiles and caring gestures every shot. NOT a static slideshow; use soft tracking and subtle push-ins. No bird's-eye or drone."
+    },
+    {
+      "variant_id": "Variant_2",
+      "label": "Variant 2 — lyrical poetic alt",
+      "instruction": "Create a distinct alternative lyrical reading with poetic pauses and reflective warmth, while preserving scene order and facts. Softer color warmth, intimate framing, living emotions in every shot. No dissolve-heavy slideshow. No bird's-eye or drone."
+    }
+  ],
+  "seedance_json": true,
+  "seedance_json_only": true,
+  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+}

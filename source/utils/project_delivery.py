@@ -41,9 +41,11 @@ def sync_video_file(settings: Settings, generation_config: GenerationConfig, vid
     return sync_final_media_file(settings, generation_config, video_path)
 
 
-def sync_final_output_file(settings: Settings, generation_config: GenerationConfig, artifact_path: Path) -> Path:
-    if not artifact_path.exists():
-        return artifact_path
+def resolve_final_output_target(
+    settings: Settings,
+    generation_config: GenerationConfig,
+    artifact_path: Path,
+) -> Path:
     target_dir = resolve_delivery_dir(settings, generation_config.final_output_dir)
     try:
         relative_output_path = artifact_path.resolve(strict=False).relative_to(
@@ -51,7 +53,13 @@ def sync_final_output_file(settings: Settings, generation_config: GenerationConf
         )
     except ValueError:
         relative_output_path = Path(artifact_path.name)
-    target_path = target_dir / relative_output_path
+    return target_dir / relative_output_path
+
+
+def sync_final_output_file(settings: Settings, generation_config: GenerationConfig, artifact_path: Path) -> Path:
+    if not artifact_path.exists():
+        return artifact_path
+    target_path = resolve_final_output_target(settings, generation_config, artifact_path)
     target_path.parent.mkdir(parents=True, exist_ok=True)
     if target_path.exists() and target_path.stat().st_size == artifact_path.stat().st_size:
         if target_path.stat().st_mtime >= artifact_path.stat().st_mtime:

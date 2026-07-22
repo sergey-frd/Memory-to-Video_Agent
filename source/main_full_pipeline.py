@@ -234,6 +234,12 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
                     return run_generation(run_args, settings=settings, runner=grok_session_runner.run)
 
                 print("Starting Grok for current image...", flush=True)
+                if not generation_config.generate_video and not generation_config.generate_source_background:
+                    print(
+                        "Warning: generate_video=false and generate_source_background=false; "
+                        "Grok will not submit any prompts unless you enable one of them in config.",
+                        flush=True,
+                    )
                 stage_outputs = run_batch(grok_args, settings=settings, runner=stage_runner)
                 results.extend(stage_outputs)
                 print("Closing Grok for current image...", flush=True)

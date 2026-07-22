@@ -21,6 +21,11 @@ except ModuleNotFoundError:
     pyperclip = None  # type: ignore[assignment]
     send_keys = None  # type: ignore[assignment]
 
+try:
+    from PIL import ImageGrab
+except ModuleNotFoundError:
+    ImageGrab = None  # type: ignore[assignment]
+
 
 WINDOW_TITLE_RE = ".*ChatGPT.*"
 ATTACH_BUTTON_PATTERNS = (
@@ -157,7 +162,9 @@ CHATGPT_WINDOW_TITLE_MARKERS = (
 )
 CHATGPT_WINDOW_EXCLUDED_TITLE_PARTS = (
     "command prompt",
+    "cmd.exe",
     "powershell",
+    ".bat",
     "total commander",
     "faststone",
     "codex",
@@ -190,6 +197,23 @@ NEW_CHAT_BUTTON_PATTERNS = (
     "Start new chat",
     "Новый чат",
     "Создать чат",
+    "Создать новый чат",
+    "Новая беседа",
+)
+NEW_CHAT_EXCLUDE_PARTS = (
+    "проект",
+    "project",
+    "искать",
+    "search",
+    "поиск",
+    "закрыт",
+    "close",
+    "боков",
+    "sidebar",
+    "закреп",
+    "pin",
+    "библиот",
+    "library",
 )
 BROWSER_LOCATION_TEXT_PREFIXES = (
     "http://",
@@ -225,6 +249,10 @@ MOUSEEVENTF_LEFTDOWN = 0x0002
 MOUSEEVENTF_LEFTUP = 0x0004
 MOUSEEVENTF_RIGHTDOWN = 0x0008
 MOUSEEVENTF_RIGHTUP = 0x0010
+SM_XVIRTUALSCREEN = 76
+SM_YVIRTUALSCREEN = 77
+SM_CXVIRTUALSCREEN = 78
+SM_CYVIRTUALSCREEN = 79
 
 
 class DROPFILES(ctypes.Structure):
@@ -338,6 +366,7 @@ class DesktopAgentConfig:
     require_single_tab_window: bool = False
     require_new_attachment_preview: bool = False
     attach_via_clipboard: bool = False
+    allow_file_dialog_fallback: bool = True
     skip_capture_result: bool = False
     save_result_via_context_menu: bool = False
     click_composer_before_paste: bool = False
@@ -375,9 +404,11 @@ class ChatGPTDesktopAgent:
             self._log("window focused")
         self._activate_browser_tab_if_needed(self._window)
         self._close_chatgpt_overlay_if_needed(self._window)
+        self._close_unexpected_file_dialogs_if_needed()
         if self.config.open_new_chat_before_run:
             self._log("opening a new chat")
             self._open_new_chat(self._window)
+        self._enforce_clean_composer_surface(self._window)
         source_image_paths = self._source_image_paths()
         if len(source_image_paths) > 1 and self.config.attach_via_clipboard:
             names = ", ".join(path.name for path in source_image_paths)
@@ -392,8 +423,7 @@ class ChatGPTDesktopAgent:
                 self._log(f"image attached{suffix}")
         self._log("pasting prompt")
         self._paste_prompt(self._window, self.config.prompt_text)
-        if len(source_image_paths) > 1:
-            self._wait_for_prompt_after_multi_image_paste(self._window, self.config.prompt_text)
+        self._ensure_prompt_after_paste(self._window, self.config.prompt_text)
         if self.config.submit:
             self._capture_manual_send_position_after_paste()
             self._log("capturing baseline state")
@@ -811,15 +841,145 @@ class ChatGPTDesktopAgent:
             f"Could not find a browser tab matching '{self.config.browser_tab_title_re}'."
         )
 
+    def _new_chat_target_url(self) -> str:
+        # Plain ChatGPT home. Temporary-chat URLs were tried for isolation but they force
+        # a full page reload that blocks image paste on this setup; isolation between jobs
+        # is handled by clicking the in-app New chat button instead.
+        return self.config.target_url or "https://chatgpt.com/"
+
+    def _find_new_chat_control(self, window: BaseWrapper) -> Optional[BaseWrapper]:
+        # The ChatGPT "New chat" control can be a Button, a link, or a menu/list item,
+        # so search several control types (not just Button). Restrict to the left part of
+        # the window (the sidebar) and exclude lookalikes such as "New project".
+        try:
+            window_rect = window.rectangle()
+            left_limit = window_rect.left + int(window_rect.width() * 0.45)
+        except Exception:
+            left_limit = None
+        candidates: list[tuple[int, int, str, BaseWrapper]] = []
+        for control_type in ("Button", "Hyperlink", "MenuItem", "ListItem", "TabItem", "Text"):
+            for wrapper in self._safe_descendants(window, control_type=control_type):
+                try:
+                    if not wrapper.is_visible() or not wrapper.is_enabled():
+                        continue
+                    title = (wrapper.window_text() or "").strip()
+                    name = (getattr(wrapper.element_info, "name", "") or "").strip()
+                    searchable = " ".join(part for part in (title, name) if part).casefold()
+                    if not searchable:
+                        continue
+                    if not any(pattern.casefold() in searchable for pattern in NEW_CHAT_BUTTON_PATTERNS):
+                        continue
+                    if any(bad in searchable for bad in NEW_CHAT_EXCLUDE_PARTS):
+                        continue
+                    rect = wrapper.rectangle()
+                    if left_limit is not None and rect.left > left_limit:
+                        continue
+                    candidates.append((rect.top, rect.left, searchable, wrapper))
+                except Exception:
+                    continue
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: (item[0], item[1]))
+        self._log(f"new-chat control candidate: {candidates[0][2]!r}")
+        return candidates[0][3]
+
+    def _log_sidebar_controls(self, window: BaseWrapper) -> None:
+        if not self.config.verbose:
+            return
+        try:
+            window_rect = window.rectangle()
+            left_limit = window_rect.left + int(window_rect.width() * 0.45)
+        except Exception:
+            left_limit = None
+        names: list[str] = []
+        for control_type in ("Button", "Hyperlink", "MenuItem", "ListItem", "Text"):
+            for wrapper in self._safe_descendants(window, control_type=control_type):
+                try:
+                    if not wrapper.is_visible():
+                        continue
+                    title = (wrapper.window_text() or "").strip()
+                    name = (getattr(wrapper.element_info, "name", "") or "").strip()
+                    label = title or name
+                    if not label:
+                        continue
+                    rect = wrapper.rectangle()
+                    if left_limit is not None and rect.left > left_limit:
+                        continue
+                    names.append(f"{control_type}:{label}")
+                except Exception:
+                    continue
+        self._log(f"left-side controls (diagnostic for New chat): {names[:40]}")
+
+    def _start_new_chat_via_button(self, window: BaseWrapper) -> bool:
+        control = self._find_new_chat_control(window)
+        if control is None:
+            self._log("New chat control not found by accessible name")
+            self._log_sidebar_controls(window)
+            return False
+        try:
+            self._ensure_foreground_window(window, "click New chat control")
+            if not self._click_wrapper_center(
+                control,
+                expected_window=window,
+                purpose="click New chat control",
+            ):
+                control.click_input()
+        except Exception as exc:
+            self._log(f"New chat control click failed: {exc}")
+            return False
+        if self._wait_for_clean_new_chat_surface(
+            window,
+            timeout_sec=max(self.config.post_new_chat_delay_sec, 6.0),
+        ):
+            self._log("started a clean new chat via New chat button")
+            return True
+        return False
+
     def _open_new_chat(self, window: BaseWrapper) -> None:
+        # Make sure ChatGPT actually finished loading before we try to reset/attach.
+        # On a slow laptop the first job can otherwise race a still-blank page and fail
+        # immediately. On later jobs the composer is already present and this returns at once.
+        if self._wait_for_prompt_input(window, timeout_sec=25.0) is None:
+            self._log("ChatGPT prompt input not visible yet; waiting a bit longer for the page to load")
+            time.sleep(3.0)
         if self.config.force_new_chat_navigation and self.config.allow_new_chat_navigation:
-            target_url = self.config.target_url or "https://chatgpt.com/"
-            self._log("forcing current tab to ChatGPT home before this job")
+            # Primary path: click the in-app "New chat" button. This resets the chat
+            # client-side (no page reload, composer stays interactive, image paste keeps
+            # working) and gives a brand-new empty chat with no prior result to leak.
+            self._log("forcing a fresh ChatGPT chat before this job (New chat button)")
+            if self._start_new_chat_via_button(window):
+                return
+
+            self._log("New chat button did not yield a clean chat; falling back to navigation")
+            target_url = self._new_chat_target_url()
             self._navigate_to_url(target_url, window)
+            time.sleep(1.6)
+            self._close_chatgpt_overlay_if_needed(window)
             if self._wait_for_clean_new_chat_surface(
                 window,
-                timeout_sec=max(self.config.post_new_chat_delay_sec, 6.0),
+                timeout_sec=max(self.config.post_new_chat_delay_sec, 8.0),
             ):
+                return
+            if self._start_new_chat_via_button(window):
+                return
+            if self._url_points_to_conversation(window):
+                self._log(
+                    "forced navigation stayed on a conversation URL; opening a fresh tab for clean chat"
+                )
+                self._open_new_browser_tab(target_url, window)
+                time.sleep(1.6)
+                if self._wait_for_clean_new_chat_surface(
+                    window,
+                    timeout_sec=max(self.config.post_new_chat_delay_sec, 8.0),
+                ):
+                    return
+                if self._start_new_chat_via_button(window):
+                    return
+            if self._can_continue_with_prompt_surface(window):
+                self._log(
+                    "could not prove a fully clean chat surface after forced navigation, "
+                    "but prompt input is ready and no stale source attachments/results are visible; continuing"
+                )
                 return
             raise DesktopAutomationError("Could not confirm a clean ChatGPT chat after forced navigation.")
 
@@ -855,11 +1015,23 @@ class ChatGPTDesktopAgent:
                 "Browser-address navigation is disabled for this work-window run."
             )
 
-        self._log("trying verified browser-address navigation back to ChatGPT home")
-        self._navigate_to_url("https://chatgpt.com/", window)
+        self._log("trying verified browser-address navigation to a fresh temporary ChatGPT chat")
+        self._navigate_to_url(self._new_chat_target_url(), window)
+        time.sleep(0.8)
+        if self._url_points_to_conversation(window):
+            self._log(
+                "browser navigation stayed on a conversation URL; opening a fresh tab for clean chat"
+            )
+            self._open_new_browser_tab(self._new_chat_target_url(), window)
+            time.sleep(0.8)
+            if self._url_points_to_conversation(window):
+                raise DesktopAutomationError(
+                    "Browser keeps returning to a conversation URL (/c/...) even after opening a fresh tab. "
+                    "Stopping to avoid reusing prior image context."
+                )
         if self._wait_for_clean_new_chat_surface(
             window,
-            timeout_sec=max(self.config.post_new_chat_delay_sec, 4.0),
+            timeout_sec=max(self.config.post_new_chat_delay_sec, 8.0),
         ):
             return
 
@@ -867,6 +1039,19 @@ class ChatGPTDesktopAgent:
             "Could not open a clean new ChatGPT chat using the visible New chat control "
             "or verified browser-address navigation."
         )
+
+    def _can_continue_with_prompt_surface(self, window: BaseWrapper) -> bool:
+        if self._find_prompt_input(window) is None:
+            return False
+        if self._attachment_remove_control_count(window) != 0:
+            return False
+        if self._find_result_images(window):
+            self._log(
+                "refusing to continue without a clean chat: a prior result image is still "
+                "visible on the chat surface (would contaminate the next job)"
+            )
+            return False
+        return True
 
     def _wait_for_clean_new_chat_surface(self, window: BaseWrapper, *, timeout_sec: float) -> bool:
         deadline = time.time() + max(0.5, timeout_sec)
@@ -892,6 +1077,79 @@ class ChatGPTDesktopAgent:
             last_attachment_count = attachment_count
             time.sleep(0.5)
         return False
+
+    def _enforce_clean_composer_surface(self, window: BaseWrapper) -> None:
+        attempts = 4
+        for attempt in range(1, attempts + 1):
+            removed = self._remove_visible_attachment_controls(window)
+            self._clear_prompt_input_text(window)
+            time.sleep(0.35)
+            attachment_count = self._attachment_remove_control_count(window)
+            has_text = self._composer_still_has_text(window)
+            if attachment_count == 0:
+                if attempt > 1 or removed > 0:
+                    self._log(
+                        "confirmed clean composer surface after forced cleanup: "
+                        f"attachments={attachment_count}, has_text={has_text}"
+                    )
+                return
+            self._log(
+                "composer cleanup retry required: "
+                f"attempt {attempt}/{attempts}, attachments={attachment_count}, has_text={has_text}"
+            )
+            self._close_chatgpt_overlay_if_needed(window)
+            time.sleep(0.5)
+        raise DesktopAutomationError(
+            "Could not clear stale attachment controls before the next image job. "
+            "Stopping to avoid mixing source images across requests."
+        )
+
+    def _clear_prompt_input_text(self, window: BaseWrapper) -> None:
+        if not self._focus_prompt_input_or_composer(window):
+            return
+        try:
+            self._press_ctrl_key(window, VK_A)
+            time.sleep(0.08)
+            self._press_key(window, VK_BACK)
+            time.sleep(0.08)
+            self._press_key(window, VK_BACK)
+        except Exception as exc:
+            self._log(f"could not clear prompt input text: {exc}")
+
+    def _remove_visible_attachment_controls(self, window: BaseWrapper) -> int:
+        removed = 0
+        for _ in range(10):
+            candidates: list[tuple[int, int, BaseWrapper]] = []
+            for wrapper in self._safe_descendants(window, control_type="Button"):
+                try:
+                    if not wrapper.is_visible() or not wrapper.is_enabled():
+                        continue
+                    search_text = self._control_search_text(wrapper).casefold()
+                    if not any(pattern.casefold() in search_text for pattern in ATTACHMENT_CONFIRMATION_PATTERNS):
+                        continue
+                    rect = wrapper.rectangle()
+                    candidates.append((rect.bottom, rect.right, wrapper))
+                except Exception:
+                    continue
+            if not candidates:
+                break
+            candidates.sort()
+            target = candidates[-1][2]
+            if not self._click_wrapper_center(
+                target,
+                expected_window=window,
+                purpose="remove stale attachment before next job",
+            ):
+                try:
+                    self._ensure_foreground_window(window, "remove stale attachment before next job")
+                    target.click_input()
+                except Exception:
+                    break
+            removed += 1
+            time.sleep(0.2)
+        if removed > 0:
+            self._log(f"removed stale attachment controls before next job: {removed}")
+        return removed
 
     def _open_new_browser_tab(self, url: str, window: Optional[BaseWrapper] = None) -> None:
         target_window = window or self._window
@@ -923,55 +1181,65 @@ class ChatGPTDesktopAgent:
             self._ensure_foreground_window(window, "focus browser address bar")
             self._assert_foreground_window(window, "focus browser address bar")
 
-        for attempt_name, action in (
-            ("raw Ctrl+L", lambda: self._press_ctrl_key_raw(VK_L)),
-            ("pywinauto Ctrl+L", lambda: send_keys("^l")),
-        ):
-            self._log(f"trying browser address-bar focus via {attempt_name}")
-            action()
-            time.sleep(0.35)
-            if window is not None:
-                self._assert_foreground_window(window, f"verify browser address bar selection after {attempt_name}")
-            if self._browser_address_selection_is_verified():
-                return True
-
-        if window is not None:
-            for x_ratio, y_offset in (
-                (0.46, 50),
-                (0.54, 50),
-                (0.36, 50),
-                (0.46, 64),
-                (0.54, 64),
+        # The laptop browser can be slow to hand keyboard focus to the address bar right
+        # after a full page reload (fresh temporary chat), so retry the whole focus
+        # sequence a few times instead of giving up after the first miss.
+        for round_index in range(1, 4):
+            for attempt_name, action in (
+                ("raw Ctrl+L", lambda: self._press_ctrl_key_raw(VK_L)),
+                ("pywinauto Ctrl+L", lambda: send_keys("^l")),
             ):
-                try:
-                    rect = window.rectangle()
-                    x = rect.left + int(rect.width() * x_ratio)
-                    y = rect.top + y_offset
-                    self._log(f"trying browser address-bar focus via toolbar click: x={x}, y={y}")
-                    self._click_screen_point(
-                        x,
-                        y,
-                        expected_window=window,
-                        purpose="click browser address bar",
-                    )
-                    self._press_ctrl_key_raw(VK_A)
-                    time.sleep(0.1)
-                    if self._browser_address_selection_is_verified():
-                        return True
-                except Exception as exc:
-                    self._log(f"browser address-bar toolbar click focus failed: {exc}")
+                label = attempt_name if round_index == 1 else f"{attempt_name} (round {round_index})"
+                self._log(f"trying browser address-bar focus via {label}")
+                action()
+                time.sleep(0.35 + 0.25 * round_index)
+                if window is not None:
+                    self._assert_foreground_window(window, f"verify browser address bar selection after {label}")
+                if self._browser_address_selection_is_verified():
+                    return True
+
+            if window is not None:
+                for x_ratio, y_offset in (
+                    (0.46, 50),
+                    (0.54, 50),
+                    (0.36, 50),
+                    (0.46, 64),
+                    (0.54, 64),
+                ):
+                    try:
+                        rect = window.rectangle()
+                        x = rect.left + int(rect.width() * x_ratio)
+                        y = rect.top + y_offset
+                        self._log(f"trying browser address-bar focus via toolbar click: x={x}, y={y}")
+                        self._click_screen_point(
+                            x,
+                            y,
+                            expected_window=window,
+                            purpose="click browser address bar",
+                        )
+                        self._press_ctrl_key_raw(VK_A)
+                        time.sleep(0.15)
+                        if self._browser_address_selection_is_verified():
+                            return True
+                    except Exception as exc:
+                        self._log(f"browser address-bar toolbar click focus failed: {exc}")
+            time.sleep(0.5)
         return False
 
     def _browser_address_selection_is_verified(self) -> bool:
         sentinel = "__codex_address_probe__"
-        try:
-            pyperclip.copy(sentinel)
-            self._press_ctrl_key_raw(VK_C)
-            time.sleep(0.2)
-            copied = (pyperclip.paste() or "").strip()
-        except Exception as exc:
-            self._log(f"browser address-bar verification failed: {exc}")
-            return False
+        copied = ""
+        for read_attempt in range(3):
+            try:
+                pyperclip.copy(sentinel)
+                self._press_ctrl_key_raw(VK_C)
+                time.sleep(0.25 + 0.15 * read_attempt)
+                copied = (pyperclip.paste() or "").strip()
+            except Exception as exc:
+                self._log(f"browser address-bar verification failed: {exc}")
+                copied = ""
+            if copied and copied != sentinel:
+                break
         if not copied or copied == sentinel:
             self._log("browser address-bar verification copied no URL text")
             return False
@@ -982,6 +1250,30 @@ class ChatGPTDesktopAgent:
         else:
             self._log(f"browser address-bar verification copied unexpected text: {copied[:120]!r}")
         return verified
+
+    def _read_browser_address_bar_text(self, window: Optional[BaseWrapper]) -> str:
+        if window is not None:
+            self._ensure_foreground_window(window, "read browser address bar")
+            self._assert_foreground_window(window, "read browser address bar")
+        sentinel = "__codex_address_probe_read__"
+        try:
+            pyperclip.copy(sentinel)
+            self._press_ctrl_key_raw(VK_L)
+            time.sleep(0.1)
+            self._press_ctrl_key_raw(VK_C)
+            time.sleep(0.15)
+            copied = (pyperclip.paste() or "").strip()
+        except Exception:
+            return ""
+        if not copied or copied == sentinel:
+            return ""
+        return copied
+
+    def _url_points_to_conversation(self, window: Optional[BaseWrapper]) -> bool:
+        copied_cf = self._read_browser_address_bar_text(window).casefold()
+        if not copied_cf:
+            return False
+        return "/c/" in copied_cf or "chatgpt.com/c/" in copied_cf
 
     def _attach_image(self, window: BaseWrapper, image_path: Path) -> None:
         baseline_attachment_signatures = self._result_signatures(
@@ -1017,6 +1309,8 @@ class ChatGPTDesktopAgent:
                     )
                     time.sleep(1.5)
             if last_error is not None:
+                if not self.config.allow_file_dialog_fallback:
+                    raise last_error
                 self._log(
                     "source image attachment was not confirmed after clipboard paste; "
                     "trying ChatGPT attach button/file dialog fallback"
@@ -1102,14 +1396,14 @@ class ChatGPTDesktopAgent:
             for digest in (self._result_signature_digest(signature) for signature in baseline_signatures)
             if digest
         }
+        baseline_remove_controls = self._attachment_remove_control_count_from_text(
+            baseline_surface_text
+        )
         baseline_text_cf = baseline_surface_text.casefold()
         last_log_at = 0.0
-        started_at = time.time()
-        first_seen_preview_at: dict[ImageSignature, float] = {}
         first_seen_remove_control_at: Optional[float] = None
+        first_seen_preview_at: dict[ImageSignature, float] = {}
         preview_stable_sec = 3.0 if self.config.require_new_attachment_preview else 0.0
-        remove_control_min_elapsed_sec = 30.0 if self.config.require_new_attachment_preview else 0.0
-        remove_control_stable_sec = 12.0 if self.config.require_new_attachment_preview else 0.0
 
         while time.time() < deadline:
             now = time.time()
@@ -1134,24 +1428,22 @@ class ChatGPTDesktopAgent:
                     time.sleep(10.0)
                 return
 
-            if self.config.require_new_attachment_preview:
-                remove_control_delta = (
-                    self._attachment_remove_control_count(window)
-                    - self._attachment_remove_control_count_from_text(baseline_surface_text)
-                )
-                if remove_control_delta > 0:
+            # Reliable fallback for UI variants where filename text isn't exposed:
+            # accept new remove-control only from a truly clean baseline.
+            if self.config.require_new_attachment_preview and baseline_remove_controls == 0:
+                remove_control_now = self._attachment_remove_control_count(window)
+                if remove_control_now > 0:
                     if first_seen_remove_control_at is None:
                         first_seen_remove_control_at = now
-                    if (
-                        now - started_at >= remove_control_min_elapsed_sec
-                        and now - first_seen_remove_control_at >= remove_control_stable_sec
-                    ):
+                    if now - first_seen_remove_control_at >= 4.0:
                         self._log(
-                            "confirmed source image attachment by stable remove control after wait: "
-                            f"{remove_control_delta}"
+                            "confirmed source image attachment by remove-control fallback "
+                            f"from clean baseline: {remove_control_now}"
                         )
-                        time.sleep(6.0)
+                        time.sleep(2.0)
                         return
+                else:
+                    first_seen_remove_control_at = None
 
             candidates = self._find_attachment_image_candidates(window)
             new_candidates: list[BaseWrapper] = []
@@ -1358,11 +1650,10 @@ class ChatGPTDesktopAgent:
         ):
             self._focus_prompt_input_or_composer(window)
         pyperclip.copy(prompt_text)
-        if not self.config.attach_via_clipboard and not self.config.require_new_attachment_preview:
-            self._press_ctrl_key(window, VK_A)
-            time.sleep(0.1)
-            self._press_key(window, VK_BACK)
-            time.sleep(0.1)
+        self._press_ctrl_key(window, VK_A)
+        time.sleep(0.1)
+        self._press_key(window, VK_BACK)
+        time.sleep(0.1)
         self._paste_from_clipboard(window)
         self._log("prompt paste shortcut sent")
         time.sleep(self.config.post_paste_delay_sec)
@@ -1381,6 +1672,33 @@ class ChatGPTDesktopAgent:
             "Two source images were attached, but the prompt text was not confirmed in the composer. "
             "Stopping before submit and before the next pair so another pair image cannot be pasted into "
             "the same request."
+        )
+
+    def _ensure_prompt_after_paste(self, window: BaseWrapper, prompt_text: str) -> None:
+        attempts = 3
+        for attempt in range(1, attempts + 1):
+            if self._composer_still_has_text(window):
+                if attempt > 1:
+                    self._log(f"confirmed prompt text in composer after retry {attempt}")
+                return
+            if self._prompt_text_anchor_is_visible(window, prompt_text):
+                if attempt > 1:
+                    self._log(f"confirmed prompt text by visible UI after retry {attempt}")
+                return
+            if attempt >= attempts:
+                break
+            self._log(
+                "prompt text was not detected after paste; "
+                f"retrying prompt paste ({attempt}/{attempts - 1})"
+            )
+            self._close_unexpected_open_dialog_if_needed()
+            self._focus_prompt_input_or_composer(window)
+            pyperclip.copy(prompt_text)
+            self._paste_from_clipboard(window)
+            time.sleep(max(self.config.post_paste_delay_sec, 0.5))
+        raise DesktopAutomationError(
+            "Prompt text was not confirmed in the ChatGPT composer after attachment. "
+            "Stopping before submit so the request cannot run with an empty prompt."
         )
 
     def _prompt_text_anchor_is_visible(self, window: BaseWrapper, prompt_text: str) -> bool:
@@ -1410,28 +1728,37 @@ class ChatGPTDesktopAgent:
         return anchors
 
     def _focus_prompt_input_or_composer(self, window: BaseWrapper) -> bool:
-        input_box = self._wait_for_prompt_input(window, timeout_sec=8.0)
-        if input_box is not None:
-            try:
-                self._ensure_foreground_window(window, "click detected ChatGPT prompt input")
-                input_box.click_input()
-                rect = input_box.rectangle()
-                if rect.width() <= 0 or rect.height() <= 0:
+        # After a full page reload (a fresh temporary chat) the composer can briefly
+        # resolve to a stale/zero-size node, so retry fetching a fresh, interactive
+        # prompt input before falling back to a fixed composer location.
+        for attempt in range(1, 4):
+            input_box = self._wait_for_prompt_input(window, timeout_sec=8.0)
+            if input_box is not None:
+                try:
+                    self._ensure_foreground_window(window, "click detected ChatGPT prompt input")
+                    input_box.click_input()
+                    rect = input_box.rectangle()
+                    if rect.width() <= 0 or rect.height() <= 0:
+                        self._log(
+                            "detected prompt input became invalid after click; "
+                            f"retrying {attempt}/3: x={rect.left}, y={rect.top}, "
+                            f"w={rect.width()}, h={rect.height()}"
+                        )
+                        time.sleep(0.6)
+                        continue
                     self._log(
-                        "detected prompt input became invalid after click; "
+                        "clicked detected prompt input: "
                         f"x={rect.left}, y={rect.top}, w={rect.width()}, h={rect.height()}"
                     )
-                    return self._click_composer_area(window)
-                self._log(
-                    "clicked detected prompt input: "
-                    f"x={rect.left}, y={rect.top}, w={rect.width()}, h={rect.height()}"
-                )
-                time.sleep(0.3)
-                return True
-            except Exception as exc:
-                self._log(f"could not click detected prompt input: {exc}")
-        else:
-            self._log("detected prompt input was not ready; using expected composer area")
+                    time.sleep(0.3)
+                    return True
+                except Exception as exc:
+                    self._log(f"could not click detected prompt input: {exc}")
+                    time.sleep(0.5)
+            else:
+                self._log("detected prompt input was not ready; retrying before composer fallback")
+                time.sleep(0.6)
+        self._log("using expected composer area after prompt input retries")
         return self._click_composer_area(window)
 
     def _wait_for_prompt_input(self, window: BaseWrapper, *, timeout_sec: float) -> Optional[BaseWrapper]:
@@ -1670,15 +1997,36 @@ class ChatGPTDesktopAgent:
         user32.mouse_event(up_event, 0, 0, 0, 0)
 
     def _close_unexpected_open_dialog_if_needed(self) -> None:
+        if self.config.attach_via_clipboard and not self.config.allow_file_dialog_fallback:
+            self._log("skipping open-dialog scan in clipboard-only mode")
+            return
         try:
             dialog = self._find_open_dialog()
-        except Exception:
+        except BaseException as exc:
+            self._log(f"skipping unexpected open-dialog cleanup due to UIA error: {exc}")
             return
         self._log("unexpected open-file dialog is still visible; closing it before prompt paste")
         try:
             self._press_key(dialog, VK_ESCAPE)
         except Exception as exc:
             self._log(f"could not close unexpected open-file dialog safely: {exc}")
+        time.sleep(0.5)
+
+    def _close_unexpected_file_dialogs_if_needed(self) -> None:
+        if self.config.attach_via_clipboard and not self.config.allow_file_dialog_fallback:
+            self._log("skipping file-dialog scan in clipboard-only mode")
+            return
+        self._close_unexpected_open_dialog_if_needed()
+        try:
+            dialog = self._find_save_dialog()
+        except BaseException as exc:
+            self._log(f"skipping unexpected save-dialog cleanup due to UIA error: {exc}")
+            return
+        self._log("unexpected save dialog is still visible; closing it before this job")
+        try:
+            self._press_key(dialog, VK_ESCAPE)
+        except Exception as exc:
+            self._log(f"could not close unexpected save dialog safely: {exc}")
         time.sleep(0.5)
 
     def _submit_prompt(self, window: BaseWrapper) -> None:
@@ -1916,7 +2264,7 @@ class ChatGPTDesktopAgent:
             baseline_signatures,
             resolve_timeout_sec=30.0,
         )
-        live_result_image.capture_as_image().save(output_path)
+        self._save_wrapper_image_with_fallback(window, live_result_image, output_path)
 
     def _save_result_image_via_context_menu(
         self,
@@ -1944,10 +2292,98 @@ class ChatGPTDesktopAgent:
                 baseline_signatures,
                 resolve_timeout_sec=60.0,
             )
-            live_result_image.capture_as_image().save(output_path)
+            self._save_wrapper_image_with_fallback(window, live_result_image, output_path)
             self._log(f"result saved via direct capture fallback: {output_path}")
             return
         time.sleep(1.0)
+
+    def _save_wrapper_image_with_fallback(
+        self,
+        window: BaseWrapper,
+        wrapper: BaseWrapper,
+        output_path: Path,
+    ) -> None:
+        last_error: Optional[Exception] = None
+        try:
+            wrapper.capture_as_image().save(output_path)
+            if output_path.exists() and output_path.stat().st_size > 0:
+                return
+            raise DesktopAutomationError("Direct wrapper capture produced an empty output file.")
+        except Exception as exc:  # pragma: no cover - GUI specific
+            last_error = exc
+            self._log(f"direct wrapper capture failed ({exc}); trying screen-region fallback")
+
+        if ImageGrab is None:
+            raise DesktopAutomationError(
+                "Could not capture the generated image: PIL ImageGrab is unavailable."
+            ) from last_error
+
+        try:
+            rect = wrapper.rectangle()
+            raw_bbox = (rect.left, rect.top, rect.right, rect.bottom)
+            bbox = self._clip_bbox_to_virtual_screen(raw_bbox)
+            if bbox is None:
+                self._log(
+                    "result wrapper area is outside visible screen; falling back to ChatGPT window crop"
+                )
+                window_rect = window.rectangle()
+                window_raw_bbox = (
+                    window_rect.left,
+                    window_rect.top,
+                    window_rect.right,
+                    window_rect.bottom,
+                )
+                bbox = self._clip_bbox_to_virtual_screen(window_raw_bbox)
+            if bbox is None:
+                raise DesktopAutomationError(
+                    f"Invalid capture area after screen clipping. result_bbox={raw_bbox!r}"
+                )
+            self._ensure_foreground_window(window, "screen-region capture fallback")
+            time.sleep(0.15)
+            try:
+                screenshot = ImageGrab.grab(bbox=bbox, all_screens=True)
+            except TypeError:
+                screenshot = ImageGrab.grab(bbox=bbox)
+            screenshot.save(output_path)
+            if not output_path.exists() or output_path.stat().st_size <= 0:
+                raise DesktopAutomationError("Screen-region fallback produced an empty output file.")
+        except Exception as exc:  # pragma: no cover - GUI specific
+            details = str(exc)
+            if last_error is not None:
+                details = f"direct={last_error}; fallback={exc}"
+            raise DesktopAutomationError(
+                "Could not save the generated result image via direct capture or screen-region fallback. "
+                f"Details: {details}"
+            ) from exc
+
+    def _clip_bbox_to_virtual_screen(
+        self,
+        bbox: tuple[int, int, int, int],
+    ) -> Optional[tuple[int, int, int, int]]:
+        left, top, right, bottom = bbox
+        if right <= left or bottom <= top:
+            return None
+        screen_left, screen_top, screen_right, screen_bottom = self._virtual_screen_bounds()
+        clipped_left = max(left, screen_left)
+        clipped_top = max(top, screen_top)
+        clipped_right = min(right, screen_right)
+        clipped_bottom = min(bottom, screen_bottom)
+        if clipped_right <= clipped_left or clipped_bottom <= clipped_top:
+            return None
+        return (clipped_left, clipped_top, clipped_right, clipped_bottom)
+
+    def _virtual_screen_bounds(self) -> tuple[int, int, int, int]:
+        user32 = ctypes.windll.user32
+        left = int(user32.GetSystemMetrics(SM_XVIRTUALSCREEN))
+        top = int(user32.GetSystemMetrics(SM_YVIRTUALSCREEN))
+        width = int(user32.GetSystemMetrics(SM_CXVIRTUALSCREEN))
+        height = int(user32.GetSystemMetrics(SM_CYVIRTUALSCREEN))
+        if width <= 0 or height <= 0:
+            left = 0
+            top = 0
+            width = int(user32.GetSystemMetrics(0))
+            height = int(user32.GetSystemMetrics(1))
+        return (left, top, left + max(1, width), top + max(1, height))
 
     def _open_save_dialog_from_image(
         self,
@@ -2050,18 +2486,21 @@ class ChatGPTDesktopAgent:
         first_seen: dict[ImageSignature, float] = {}
         stable_signature: Optional[ImageSignature] = None
         stable_since: Optional[float] = None
+        generation_running_since: Optional[float] = None
+        running_indicator_grace_sec = max(20.0, stable_wait + 8.0)
         last_candidate: Optional[BaseWrapper] = None
         last_log_at = 0.0
         while time.time() < deadline:
             now = time.time()
-            if self._has_generation_running_indicator(window):
+            running_now = self._has_generation_running_indicator(window)
+            if running_now:
+                if generation_running_since is None:
+                    generation_running_since = now
                 if self.config.verbose and now - last_log_at >= 10.0:
                     self._log("generation still running; postponing result acceptance")
                     last_log_at = now
-                stable_signature = None
-                stable_since = None
-                time.sleep(2.0)
-                continue
+            else:
+                generation_running_since = None
             candidates = self._find_result_images(window)
             new_candidates: list[tuple[ImageSignature, BaseWrapper, float]] = []
             for candidate in candidates:
@@ -2107,6 +2546,24 @@ class ChatGPTDesktopAgent:
                     stable_since = now
                     self._log(f"result candidate appeared; waiting {stable_wait:g}s for it to stabilize")
                 elif stable_since is not None and now - stable_since >= stable_wait:
+                    if running_now:
+                        running_elapsed = (
+                            now - generation_running_since
+                            if generation_running_since is not None
+                            else 0.0
+                        )
+                        if running_elapsed < running_indicator_grace_sec:
+                            if self.config.verbose and now - last_log_at >= 10.0:
+                                self._log(
+                                    "result candidate is stable, but generation indicator is still visible; "
+                                    f"waiting up to {int(running_indicator_grace_sec)}s before forced accept"
+                                )
+                                last_log_at = now
+                            time.sleep(2.0)
+                            continue
+                        self._log(
+                            "generation indicator appears stale; accepting stable result candidate anyway"
+                        )
                     self._log(f"result image accepted after {int(now - start)}s")
                     return candidate, signature
             time.sleep(2.0)
@@ -2219,7 +2676,7 @@ class ChatGPTDesktopAgent:
             self._log(f"accepted foreground open dialog: {title!r}")
             return foreground
 
-        for dialog in desktop.windows(title_re=OPEN_DIALOG_TITLE_RE, visible_only=True):
+        for dialog in self._safe_windows_query(desktop, title_re=OPEN_DIALOG_TITLE_RE, visible_only=True):
             try:
                 title = dialog.window_text()
                 if self._is_open_dialog_candidate(dialog, prefer_foreground=False):
@@ -2228,7 +2685,7 @@ class ChatGPTDesktopAgent:
             except Exception:
                 continue
         if not dialogs:
-            for dialog in desktop.windows(visible_only=True):
+            for dialog in self._safe_windows_query(desktop, visible_only=True):
                 try:
                     if not self._is_open_dialog_candidate(dialog, prefer_foreground=False):
                         continue
@@ -2239,7 +2696,7 @@ class ChatGPTDesktopAgent:
                     continue
         if not dialogs and self.config.verbose:
             titles = []
-            for window in desktop.windows(visible_only=True):
+            for window in self._safe_windows_query(desktop, visible_only=True):
                 try:
                     titles.append(window.window_text())
                 except Exception:
@@ -2249,6 +2706,13 @@ class ChatGPTDesktopAgent:
             raise DesktopAutomationError("Open-file dialog did not appear.")
         self._log(f"open dialogs: {[title for title, _ in dialogs]}")
         return dialogs[-1][1]
+
+    def _safe_windows_query(self, desktop: Desktop, **kwargs) -> list[BaseWrapper]:
+        try:
+            return list(desktop.windows(**kwargs))
+        except BaseException as exc:
+            self._log(f"UIA windows query failed; returning empty list: {exc}")
+            return []
 
     def _is_open_dialog_candidate(self, dialog: BaseWrapper, *, prefer_foreground: bool) -> bool:
         try:
@@ -2295,7 +2759,7 @@ class ChatGPTDesktopAgent:
     def _activate_save_image_menu_item(self) -> bool:
         desktop = Desktop(backend="uia")
         menu_items = []
-        for window in desktop.windows(visible_only=True):
+        for window in self._safe_windows_query(desktop, visible_only=True):
             try:
                 descendants = window.descendants(control_type="MenuItem")
             except Exception:
@@ -2338,7 +2802,7 @@ class ChatGPTDesktopAgent:
             self._log(f"accepted foreground save dialog: {title!r}")
             return foreground
 
-        for dialog in desktop.windows(title_re=SAVE_DIALOG_TITLE_RE, visible_only=True):
+        for dialog in self._safe_windows_query(desktop, title_re=SAVE_DIALOG_TITLE_RE, visible_only=True):
             try:
                 title = dialog.window_text()
                 if self._is_save_dialog_candidate(dialog, prefer_foreground=False):
@@ -2346,7 +2810,7 @@ class ChatGPTDesktopAgent:
             except Exception:
                 continue
         if not dialogs:
-            for dialog in desktop.windows(visible_only=True):
+            for dialog in self._safe_windows_query(desktop, visible_only=True):
                 try:
                     if not self._is_save_dialog_candidate(dialog, prefer_foreground=False):
                         continue
@@ -2358,7 +2822,7 @@ class ChatGPTDesktopAgent:
         if not dialogs:
             if self.config.verbose:
                 titles = []
-                for window in desktop.windows(visible_only=True):
+                for window in self._safe_windows_query(desktop, visible_only=True):
                     try:
                         titles.append(window.window_text())
                     except Exception:
@@ -2722,7 +3186,7 @@ class ChatGPTDesktopAgent:
     def _confirm_overwrite_if_needed(self) -> None:
         try:
             desktop = Desktop(backend="uia")
-            for dialog in desktop.windows(visible_only=True):
+            for dialog in self._safe_windows_query(desktop, visible_only=True):
                 title = dialog.window_text()
                 if not re.search(r"(Confirm|Replace|Подтверж|Замен|Сохран)", title, re.I):
                     continue
@@ -3143,7 +3607,8 @@ class ChatGPTDesktopAgent:
                 try:
                     if not wrapper.is_visible():
                         continue
-                    text = wrapper.window_text().strip()
+                    # Avoid expensive rich-text calls that can hang on unstable UIA nodes.
+                    text = (getattr(wrapper.element_info, "name", "") or "").strip()
                     if not text:
                         continue
                     if text in seen:

@@ -23,7 +23,7 @@ Generates stylized portraits (Rembrandt, Renaissance, Watercolor, Van Gogh, Klim
 
 ```
 - [ ] Source images: input/ for portraits, input_pair/<id>/ for pair portraits
-- [ ] A style config picked: chatgpt_portrait_config.json (short), chatgpt_portrait_base_config.json (full bank), chatgpt_pair_base_config.json (pair bank), or one of the special configs (watercolor_scene_expansion, picasso_graphic, etc.)
+- [ ] A style config picked: chatgpt_portrait_config.json (short), chatgpt_portrait_base_config.json (full bank), chatgpt_all_styles_config.json (full bank batch into output/chatgpt_all_styles), chatgpt_pair_base_config.json (pair bank), or one of the special configs (watercolor_scene_expansion, picasso_graphic, etc.)
 - [ ] For desktop flows: ONE Chrome window with the target service open and signed in. ChatGPT must be the only ChatGPT window (the launcher enforces `--desktop-require-single-tab-window`).
 - [ ] Foreground safety: no Premiere Pro / Total Commander / random app on top of the target window when the batch starts.
 - [ ] For OpenAI API path: `.env` has OPENAI_API_KEY.
@@ -35,6 +35,18 @@ Full base style bank through ChatGPT:
 
 ```bat
 .\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+All base styles into `output/chatgpt_all_styles` (trim `portrait_styles` in the config for subsets):
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_all_styles_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Laptop bundle shortcut:
+
+```bat
+run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --skip-existing
 ```
 
 Watercolor + scene expansion only:

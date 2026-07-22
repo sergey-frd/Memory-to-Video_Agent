@@ -1,0 +1,13 @@
+{
+  "portrait_styles": [
+    {
+      "name": "ANDREI_RUBLEV Russian icon Andrei Rublev portrait",
+      "slug": "arb",
+      "prompt": "Use ChatGPT image generation to create the final edited image now from the attached photo. Generate the actual image; do not answer with text. Do not write a prompt, description, explanation, checklist, or instructions. Return only one generated image file in the chat.\n\nANDREI_RUBLEV:\nTransform the source image into a monumental Old Russian icon inspired by the artistic tradition of Andrei Rublev. Preserve the recognizable facial features, the main poses, the number of figures, and the overall composition of the original image, while completely reimagining it according to the traditions of 15th-century Russian icon painting.\n\nUse elongated, spiritualized proportions, serene and noble facial expressions, soft inner illumination, delicate lines, restrained gestures, and a profound sense of sacred stillness. Use a muted palette of ochre, gold, terracotta, olive green, deep blue, and subdued red. Transform the original clothing into traditional iconographic robes with subtle golden highlights and gracefully flowing folds.\n\nCreate a golden or pale ochre background with the appearance of an aged wooden panel, natural egg tempera, gesso, fine craquelure, and gentle signs of time and wear. The space should feel symbolic and flattened, with reverse perspective, balanced symmetry, and harmonious proportions. The image should convey peace, purity, compassion, humility, and elevated spirituality.\n\nPreserve strong portrait likeness while avoiding photographic realism, modern clothing, cinematic lighting, glossy surfaces, excessive detail, and decorative overload. The final result should resemble an authentic hand-painted medieval Russian icon rather than a modern digital illustration.\n\nCreate one complete, finished image. Do not add inscriptions, halos, religious symbols, or additional figures unless they are already present in the source image. No frame, text, captions, watermarks, or collage."
+    }
+  ],
+  "prompt_template": "{style}",
+  "output_dir": "output/chatgpt_andrei_rublev",
+  "save_response_text": false,
+  "new_chat_per_job": true
+}

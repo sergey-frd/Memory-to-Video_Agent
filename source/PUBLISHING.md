@@ -37,14 +37,14 @@ python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Vi
 
 Never `git push origin main` from the publication clone, and never push the dev workspace root to `publication`.
 
-## GitHub sync status (2026-06-10)
+## GitHub sync status (2026-07-22)
 
-Publication **`2026.06.10.03`** is on the Internet:
+Publication **`2026.07.22.01`** targets the Internet:
 
 - Repository: https://github.com/sergey-frd/Memory-to-Video_Agent
-- Canonical version file: https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/VERSION
-- Machine-readable snapshot: https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/data/project_snapshot.json
-- Source mirror copy: https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/source/VERSION
-- Tag: `v2026.06.10.03`
+- Dev remote: https://github.com/sergey-frd/img-style-ag_1
+- Tag: `v2026.07.22.01`
 
-Do **not** read version from nested `source/data/project_snapshot.json`; that stale copy is no longer published. Older tags such as `v2026.05.25.01` are historical snapshots only; `main` and the latest tag reflect the current bundle.
+Headline feature: Sequence Trim Review (heuristic + semantic KEEP/DROP, compact keep).
+
+Do **not** read version from nested `source/data/project_snapshot.json`; that stale copy is no longer published. Older tags are historical snapshots only; `main` and the latest tag reflect the current bundle.

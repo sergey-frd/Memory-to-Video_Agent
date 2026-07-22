@@ -480,6 +480,15 @@ Example config fields:
 }
 ```
 
+## Sequence Trim Review
+
+Shorten raw Premiere footage by proposing KEEP/DROP segments inside every clip.
+
+```bat
+.\run_sequence_trim_review.bat .\sequence_trim_review_template.json
+```
+
+Default run builds one review `.prproj` with heuristic and semantic sequences, KEEP on V1 and DROP on V2. Compact keep shortens still holds (~1.5–3s) and video keep islands (~2–8s). Semantic mode needs `OPENAI_API_KEY`.
 The final optimized `.prproj` is stored next to the source `project_path`. During the batch, the program also keeps a temporary working `.prproj` inside `reports\temp_projects`, and cleanup may remove that temporary copy later.
 
 If an older config still points `output_project_path` into `reports`, the file name is preserved, but the persistent optimized project is still written next to `project_path`.

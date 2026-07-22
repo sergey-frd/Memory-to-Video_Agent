@@ -2,20 +2,20 @@
 
 This document is generated from the source project and is intended for the external project-information repository.
 
-- Generated at: `2026-06-13T19:19:21+02:00`
+- Generated at: `2026-07-22T19:55:17+02:00`
 - Source project: `img-style-ag_1`
 
 ## Snapshot
 
-- Files scanned: `422`
-- Python files: `203`
-- Test files: `33`
-- Config JSON files: `36`
-- Markdown docs: `25`
-- Entry points: `28`
-- API modules: `14`
-- Utils modules: `32`
-- Model modules: `3`
+- Files scanned: `457`
+- Python files: `215`
+- Test files: `34`
+- Config JSON files: `39`
+- Markdown docs: `27`
+- Entry points: `29`
+- API modules: `15`
+- Utils modules: `37`
+- Model modules: `4`
 
 ## Entry Points
 
@@ -45,6 +45,7 @@ This document is generated from the source project and is intended for the exter
 - `main_sequence_optimizer.py`
 - `main_sequence_presentation.py`
 - `main_sequence_reports.py`
+- `main_sequence_trim_review.py`
 - `main_video_prompt_composer.py`
 - `main_video_prompt_story.py`
 

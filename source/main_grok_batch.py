@@ -130,6 +130,7 @@ def run_batch(args: argparse.Namespace, settings: Settings | None = None, runner
         resolved_runner = runner
     outputs: list[Path] = []
     prepared_background_stages: set[str] = set()
+    skipped_by_config = 0
 
     try:
         for prompt_path in prompts:
@@ -138,6 +139,7 @@ def run_batch(args: argparse.Namespace, settings: Settings | None = None, runner
             stage_id = prompt_path.stem.split("_v_prompt_", 1)[0]
             should_generate_background = bool(generation_config.generate_source_background and stage_id not in prepared_background_stages)
             if not generation_config.generate_video and not should_generate_background:
+                skipped_by_config += 1
                 continue
             if args.skip_existing and output_video.exists():
                 sync_video_file(settings, generation_config, output_video)
@@ -178,6 +180,13 @@ def run_batch(args: argparse.Namespace, settings: Settings | None = None, runner
         if session_runner is not None:
             print("Closing Grok for current image...", flush=True)
             session_runner.close()
+
+    if skipped_by_config and not outputs and not args.no_submit:
+        print(
+            "Warning: Grok skipped all prompts because generate_video=false and "
+            "generate_source_background=false. Enable one of them in the config or pass --generate-video.",
+            flush=True,
+        )
 
     if not args.no_submit and not getattr(args, "keep_workdirs", False):
         clear_directory_contents(settings.input_dir)

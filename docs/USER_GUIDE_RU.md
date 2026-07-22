@@ -140,12 +140,15 @@ run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300
 - `run_grok_portrait_batch_existing.bat` — launcher Grok, который использует те же portrait JSON-конфиги.
 - `chatgpt_portrait_config.json` — короткий рабочий набор стилей, сейчас watercolor и pastel.
 - `chatgpt_portrait_base_config.json` — полный базовый банк художественных портретных стилей и image-edit сервисов.
+- `chatgpt_all_styles_config.json` — batch-конфиг «все стили из base»: тот же полный список `portrait_styles`, что в `chatgpt_portrait_base_config.json`, но с отдельным каталогом результатов `output\chatgpt_all_styles`. Для подмножества стилей удалите лишние элементы из массива `portrait_styles`.
 - `chatgpt_pair_base_config.json` — банк prompt для построения одной общей кинематографической художественной фотографии пары из двух исходных фотографий.
 - `chatgpt_watercolor_scene_expansion_config.json` — специальный конфиг для `watercolor` и `scene_expansion`.
 - `BATCH_RUN_HISTORY.md` — неповторяющиеся примеры запуска всех batch-файлов с параметрами.
 - `styles\art_styles_Prompt_list.txt` — исходный человекочитаемый список style prompts.
 
-Базовый конфиг содержит полный банк portrait/style prompts: Rembrandt, Renaissance, Impressionist, Watercolor, post-impressionism Van Gogh, art nouveau Klimt, Art Deco, черно-белый студийный Karsh, Pop Art, Cubist, poetic modernism Chagall, а также сервисные стили MODERN_COLOR, COLORIZE, FACE_ENLARGEMENT и SCENE_EXPANSION.
+Базовый конфиг содержит полный банк portrait/style prompts: Rembrandt, Renaissance, Impressionist, Renoir, Andrei Rublev, Watercolor, post-impressionism Van Gogh, art nouveau Klimt, Art Deco, черно-белый студийный Karsh, Pop Art, Cubist, Picasso graphic, poetic modernism Chagall, PHOTO_PORTRET, ARTISTIC_PORTRAIT, а также сервисные стили MODERN_COLOR, COLORIZE, FACE_ENLARGEMENT и SCENE_EXPANSION.
+
+Конфиг `chatgpt_all_styles_config.json` дублирует весь этот банк для массового прогона: для каждого изображения из `input\` batch последовательно применяет все стили и сохраняет `<image_stem>_<slug>.png` в `output\chatgpt_all_styles`.
 
 Результаты:
 - готовые PNG записываются в `output\chatgpt_portraits`;
@@ -167,6 +170,18 @@ run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300
 
 ```bat
 .\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Команда для всех стилей base-банка (отдельный output-каталог):
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_all_styles_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+На лэптопе тот же config можно запустить через универсальный style-launcher:
+
+```bat
+run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --delivery-config-file config_Ziggi.json --skip-existing
 ```
 
 Команда для watercolor + scene expansion:
@@ -463,7 +478,7 @@ flowchart LR
   C1["config.json / config.local.json / config_*.json"] --> G1["config.py / GenerationConfig"]
   G1 --> P1
   G1 --> P2
-  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_watercolor_scene_expansion_config.json"] --> P6
+  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_all_styles_config.json\nchatgpt_watercolor_scene_expansion_config.json"] --> P6
 
   C3["project_sequence_batch_*.json"] --> P3
   P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
@@ -642,6 +657,36 @@ python .\main_project_sequence_batch.py --config .\project_sequence_batch_igor_2
 }
 ```
 
+## Sequence Trim Review
+
+Нужен, когда sequence — длинный сырец и надо рекомендовать, **что оставить / что выбросить внутри каждого клипа**.
+
+```bat
+.\run_sequence_trim_review.bat .\sequence_trim_review_01.json
+```
+
+```powershell
+python .\main_sequence_trim_review.py --config .\sequence_trim_review_template.json
+```
+
+Результат:
+
+- один review `.prproj` с двумя sequence: `*_trim_heuristic` и `*_trim_semantic`
+- каждый исходный клип разрезан на сегменты `[KEEP]` / `[DROP]`
+- KEEP на V1, DROP на V2 (выключите V2, чтобы смотреть компактный cut)
+- отчёты в `reports_dir`
+
+Движки:
+
+- `heuristic` — бюджет по длине/позиции
+- `semantic` — кадры + OpenAI vision (`OPENAI_API_KEY`)
+
+Compact keep (`compact_keep: true`):
+
+- фото/still: примерно **1.5–3.0 с**
+- видео: короткие keep-острова примерно **2.0–8.0 с**
+
+В исходной sequence нужны две video-дорожки. Пустая V2 в Premiere часто без `TrackItems` — экспортёр создаёт контейнер сам.
 `include_visual_media` нужен, когда исходная sequence содержит фотографии и видео на одной визуальной дорожке. `enable_auto_durations` включает автоматический подбор длительности клипов. `transition_mode: "apply"` вместе с `enable_auto_transitions` и `enable_visual_transitions` позволяет записывать переходы в экспортируемый `.prproj` для смешанных пар, а не только для чистых mp4-пар. Автоматический выбор переходов теперь использует широкий безопасный пул из template: dissolve/fade, dip, wipe/iris, slide/push/zoom и light/stylized transition. `Morph Cut` намеренно исключен из автоматического применения, потому что Premiere может падать с ошибкой `Can't apply to a single clip`; оставляйте его только для ручного применения после проверки handles и условий клипов. `enable_auto_transforms` и `generate_premiere_transform_script` создают дополнительный `<sequence>_apply_transforms.jsx` для Transform-эффектов неподвижных кадров: `Grow`, `Shrink`, `Move` и fallback `Transform`. `Offset` намеренно оставлен только для ручной настройки, потому что в Premiere он требует аккуратной композиционной подгонки. Выбор Transform теперь учитывает содержимое кадра и соседние кадры: портреты чаще получают `Grow`, группы и широкие/context-кадры - `Shrink`, action-кадры - `Move`, а похожие соседние кадры варьируются, чтобы не повторять один и тот же zoom.
 
 Сгенерированный transform JSX запускается из той же Premiere-панели, что и transition-скрипты. Сначала откройте оптимизированную sequence в Premiere, затем запустите `<sequence>_apply_transforms.jsx`. При `premiere_transform_script_add_video_effects: true` скрипт применяет настоящие Premiere Transform-эффекты (`Grow`, `Shrink`, `Move`) к запланированным неподвижным кадрам и не трогает встроенный `Motion > Scale`. Устанавливайте `false` только если специально нужен старый fallback через scale-keyframes. Список/template Transform-эффектов описан в `styles\List of Video transform effects.txt`.

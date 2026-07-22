@@ -4,21 +4,22 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.06.13.02`
-- Git tag: `v2026.06.13.02`
+- Publication version: `2026.07.22.01`
+- Git tag: `v2026.07.22.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-06-13T19:19:21+02:00`
+- Last synchronized: `2026-07-22T19:55:17+02:00`
 - Source project: `img-style-ag_1`
-- Python files: `203`
-- Test files: `33`
-- Entry points: `28`
+- Python files: `215`
+- Test files: `34`
+- Entry points: `29`
 
 ## Published Source Mirror
 
-- Mirrored source files: `415`
+- Mirrored source files: `449`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/BATCH_RUN_HISTORY.md`
+- `source/MINI_LAPTOP_WATERCOLOR.md`
 - `source/PROJECT_STRUCTURE.html`
 - `source/PROJECT_STRUCTURE.md`
 - `source/PUBLISHING.md`
@@ -27,6 +28,9 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/USER_GUIDE.md`
 - `source/VERSION`
 - `source/api`
+- `source/chatgpt_all_styles_config.json`
+- `source/chatgpt_all_styles_config_3.json`
+- `source/chatgpt_andrei_rublev_config.json`
 - `source/chatgpt_artistic_photo_portret_config.json`
 - `source/chatgpt_artistic_portrait_config.json`
 - `source/chatgpt_camera_transform_config.json`
@@ -40,6 +44,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/chatgpt_portrait_base_config.json`
 - `source/chatgpt_portrait_config.json`
 - `source/chatgpt_portrait_config_0.json`
+- `source/chatgpt_renoir_config.json`
 - `source/chatgpt_watercolor_config.json`
 - `source/chatgpt_watercolor_on_paper_config.json`
 - `source/chatgpt_watercolor_scene_expansion_config.json`
@@ -60,6 +65,8 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/config_SvtaIg.json`
 - `source/config_Yakov.json`
 - `source/config_Yura.json`
+- `source/config_Ziggi.json`
+- `source/config_eZiggi.json`
 - `source/config_igor.json`
 - `source/config_kira.json`
 - `source/config_kira_bg_only.json`
@@ -68,6 +75,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/config_vika.json`
 - `source/config_‭AlxKrvz.json`
 - `source/config_‭IgorSv.json`
+- `source/config_‭Zoya_Phil.json`
 - `source/copy_sequence_images_sveta_igr_26_2.bat`
 - `source/copy_sequence_media_sveta_igr_26_2.bat`
 - `source/copy_sequence_media_sveta_igr_26_2.json`
@@ -75,6 +83,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/data`
 - `source/deploy_and_run.ps1`
 - `source/docs`
+- `source/env_baseline_chatgpt_watercolor.json`
 - `source/install_premiere_transition_panel.bat`
 - `source/login_chatgpt_debug_profile.bat`
 - `source/login_chatgpt_profile.bat`
@@ -106,6 +115,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/main_sequence_optimizer.py`
 - `source/main_sequence_presentation.py`
 - `source/main_sequence_reports.py`
+- `source/main_sequence_trim_review.py`
 - `source/main_video_prompt_composer.py`
 - `source/main_video_prompt_story.py`
 - `source/models`
@@ -130,12 +140,17 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/project_structure_registry.json`
 - `source/pytest.ini`
 - `source/requirements.txt`
+- `source/run_chatgpt_artistic_photo_portret_existing.bat`
 - `source/run_chatgpt_pair_batch_existing.bat`
 - `source/run_chatgpt_pair_batch_work_window.bat`
 - `source/run_chatgpt_portrait_batch.bat`
 - `source/run_chatgpt_portrait_batch_debug.bat`
 - `source/run_chatgpt_portrait_batch_existing.bat`
 - `source/run_chatgpt_portrait_batch_work_window.bat`
+- `source/run_chatgpt_style_batch_existing.bat`
+- `source/run_chatgpt_style_menu_existing.bat`
+- `source/run_chatgpt_watercolor_on_paper_existing.bat`
+- `source/run_copy_minimal_to_laptop_dir.bat`
 - `source/run_copy_sequence_images.bat`
 - `source/run_copy_sequence_media_batch.bat`
 - `source/run_full_grok_pipeline.bat`
@@ -146,6 +161,8 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/run_grok_automation.bat`
 - `source/run_grok_automation_all.bat`
 - `source/run_grok_portrait_batch_existing.bat`
+- `source/run_laptop_env_compare.bat`
+- `source/run_laptop_env_snapshot.bat`
 - `source/run_local_portrait_batch.bat`
 - `source/run_openai_portrait_batch.bat`
 - `source/run_premiere_transform_script.bat`
@@ -156,9 +173,12 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/run_project_sequence_batch_igor_26_1A.bat`
 - `source/run_project_sequence_batch_nicol_26_T2.bat`
 - `source/run_project_sequence_batch_vika_26_1A.bat`
+- `source/run_sequence_trim_review.bat`
 - `source/run_video_prompt_story_export.bat`
 - `source/run_video_prompt_story_generate.bat`
 - `source/scripts`
+- `source/sequence_trim_review_01.json`
+- `source/sequence_trim_review_template.json`
 - `source/services`
 - `source/setup_project.ps1`
 - `source/source`
@@ -184,6 +204,8 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/video_prompt_story_config_alex_krvz_alt.json`
 - `source/video_prompt_story_config_edik.json`
 - `source/video_prompt_story_config_edik_fun.json`
+- `source/video_prompt_story_config_igor_sv_fun.json`
+- `source/video_prompt_story_config_igor_sv_lyrical.json`
 - `source/video_prompt_story_config_sf_rita_fun.json`
 - `source/video_prompt_story_config_sf_rita_romantic.json`
 - `source/video_prompt_story_config_sveta_fun.json`

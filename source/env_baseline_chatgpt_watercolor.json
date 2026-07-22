@@ -1,0 +1,82 @@
+{
+  "snapshot_utc": "2026-06-27T12:06:52Z",
+  "project_root": "<LOCAL_PATH>",
+  "python": {
+    "version": "3.14.2",
+    "major_minor": "3.14",
+    "implementation": "CPython",
+    "executable": "<LOCAL_PATH>"
+  },
+  "os": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "system": "Windows",
+    "release": "11",
+    "machine": "AMD64"
+  },
+  "requirements_file": "<LOCAL_PATH>",
+  "requirements": [
+    {
+      "name": "openai",
+      "operator": ">=",
+      "required_version": "1.0",
+      "installed_version": "2.30.0"
+    },
+    {
+      "name": "Pillow",
+      "operator": ">=",
+      "required_version": "10.0",
+      "installed_version": "12.2.0"
+    },
+    {
+      "name": "python-dotenv",
+      "operator": ">=",
+      "required_version": "1.0",
+      "installed_version": "1.2.2"
+    },
+    {
+      "name": "pyperclip",
+      "operator": ">=",
+      "required_version": "1.9",
+      "installed_version": "1.11.0"
+    },
+    {
+      "name": "pywinauto",
+      "operator": ">=",
+      "required_version": "0.6.8",
+      "installed_version": "0.6.9"
+    },
+    {
+      "name": "xai-sdk",
+      "operator": ">=",
+      "required_version": "1.0",
+      "installed_version": "1.11.0"
+    },
+    {
+      "name": "playwright",
+      "operator": ">=",
+      "required_version": "1.58",
+      "installed_version": "1.58.0"
+    },
+    {
+      "name": "opencv-python-headless",
+      "operator": ">=",
+      "required_version": "4.13",
+      "installed_version": "4.13.0.92"
+    }
+  ],
+  "required_files": {
+    "main_chatgpt_portrait_batch.py": true,
+    "run_chatgpt_portrait_batch_existing.bat": true,
+    "run_chatgpt_watercolor_on_paper_existing.bat": true,
+    "chatgpt_watercolor_on_paper_config.json": true,
+    "config_Ziggi.json": true
+  },
+  "required_dirs": {
+    "input": true,
+    "output": true,
+    "models": true
+  },
+  "optional_dirs": {
+    "output/chatgpt_watercolor_on_paper": false
+  }
+}

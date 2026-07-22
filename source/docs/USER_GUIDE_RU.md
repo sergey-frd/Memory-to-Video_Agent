@@ -489,6 +489,16 @@ python .\main_project_sequence_batch.py --config .\project_sequence_batch_igor_2
 }
 ```
 
+## Sequence Trim Review
+
+Сокращение сырца Premiere: рекомендации KEEP/DROP **внутри каждого клипа**.
+
+```bat
+.\run_sequence_trim_review.bat .\sequence_trim_review_template.json
+```
+
+По умолчанию один review `.prproj` с heuristic и semantic sequence, KEEP на V1 и DROP на V2. Compact keep ужимает фото (~1.5–3 с) и видео-острова (~2–8 с). Semantic нужен `OPENAI_API_KEY`.
+
 Итоговый оптимизированный `.prproj` теперь хранится рядом с исходным `project_path`. Во время batch-запуска программа также держит временный рабочий `.prproj` внутри `reports\temp_projects`, и cleanup позже может удалить эту временную копию.
 
 Если старый config по-прежнему указывает `output_project_path` внутрь `reports`, имя файла все равно сохраняется, но постоянный оптимизированный проект будет записан рядом с `project_path`.

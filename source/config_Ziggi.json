@@ -1,0 +1,10 @@
+{
+  "generate_video": false,
+  "continue_after_failure": true,
+  "write_description": false,
+  "read_input_list": true,
+  "generate_music": false,
+  "final_output_dir": "<LOCAL_PATH>",
+  "final_videos_dir": "<LOCAL_PATH>",
+  "regeneration_assets_dir": "<LOCAL_PATH>"
+}

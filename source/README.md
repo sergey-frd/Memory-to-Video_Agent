@@ -13,26 +13,23 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 
 ## Current version
 
-- Workspace `VERSION`: see [`VERSION`](VERSION)
-- Latest publication on GitHub: **`2026.06.13.01`** (`v2026.06.13.01`)
-- **Canonical version on GitHub:** repository root [`VERSION`](https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/VERSION) and [`data/project_snapshot.json`](https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/data/project_snapshot.json). The source mirror also carries [`source/VERSION`](https://github.com/sergey-frd/Memory-to-Video_Agent/blob/main/source/VERSION).
+- Workspace `VERSION`: **`2026.07.22.01`** ([`VERSION`](VERSION))
+- Latest intended publication tag: **`v2026.07.22.01`**
 
 ## Published on GitHub (Internet)
 
-Everything through **2026-06-13** is synchronized to the public repository:
+Public repository:
 
 - https://github.com/sergey-frd/Memory-to-Video_Agent
-- Tag: https://github.com/sergey-frd/Memory-to-Video_Agent/releases/tag/v2026.06.13.01
 
-Included in this publication wave:
+This release wave (**2026.07.22.01**) adds Sequence Trim Review:
 
-- Video story batch: **dynamic living video, not slideshow** — anti-dissolve/Ken Burns rules in story configs, `tools/write_*_stories.py`, and OpenAI story synthesis (`api/openai_video_prompt_story.py`)
-- Multi-scene video story HTML preview workflow (`main_video_prompt_story.py`, skill, docs)
-- ChatGPT portrait batch result-capture fixes and configurable `result_timeout`
-- Project configs `config_‭AlxKrvz.json`, `config_‭IgorSv.json`
-- Cursor rule `.cursor/rules/always-russian.mdc`
+- Heuristic + semantic KEEP/DROP segmentation inside each Premiere clip
+- Compact keep for stills (~1.5–3s) and short video islands (~2–8s)
+- Review `.prproj` with KEEP on V1 and DROP on V2
+- Entry points: `main_sequence_trim_review.py`, `run_sequence_trim_review.bat`, skill `sequence-trim-review`
 
-Dev-only history (private `origin`) additionally stores local batch configs and the full commit trail between publication snapshots.
+Also carries earlier waves already on the public repo (video story dynamic rules, portrait batch tooling, publication workflow).
 
 ## Operator docs
 

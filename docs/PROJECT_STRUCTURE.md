@@ -98,9 +98,10 @@
 | Full Sequential Pipeline | `main_full_pipeline.py`, `main_full_pipeline_api.py` | Prompt generation + Grok-run для каждого изображения из `input/`; `main_full_pipeline_api.py` использует `GrokVideoAPISessionRunner` вместо браузера | delivered stage outputs, cleanup of `input/` and `output/` |
 | Delivery & Lifecycle | `utils/project_delivery.py`, `utils/artifact_cleanup.py`, `main_cleanup_artifacts.py` | Доставка, очистка, перенос ошибок, архивирование | `final_videos_dir`, `final_output_dir`, `regeneration_assets_dir`, `error/`, cleanup reports |
 | Sequence Optimization | `main_sequence_optimizer.py`, `utils/sequence_optimizer.py`, `utils/sequence_optimizer_runtime.py`, `utils/premiere_xml.py`, `utils/premiere_project.py`, `models/video_sequence.py` | Рекомендованный порядок клипов и export | optimized JSON/TXT/XML/PRPROJ |
+| Sequence Trim Review | `main_sequence_trim_review.py`, `utils/sequence_trim_review.py`, `utils/sequence_trim_classifier.py`, `utils/sequence_trim_semantic.py`, `utils/premiere_trim_review_export.py`, `utils/video_frame_extract.py`, `api/openai_trim_semantic.py`, `models/sequence_trim_review.py` | Per-clip KEEP/DROP segments (heuristic + semantic), compact still/video keep | review `.prproj`, bundle/JSON/TXT reports |
 | Reports & Batch Orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/premiere_transition_script.py`, `utils/premiere_transform_script.py`, `utils/fcp_translation_results.py` | Reports, batch delivery, human-profile overlays, transition and transform scripts | reports, batch summaries, transition reports, Premiere JSX scripts |
 | Desktop/Web Automation | `main_desktop.py`, `api/chatgpt_desktop.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/chatgpt_web.py`, `api/grok_web.py` | Prompt-driven interaction with external UIs | submitted prompts, saved media |
-| Portrait/Image Batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `chatgpt_pair_base_config.json`, `run_chatgpt_portrait_batch_existing.bat`, `run_chatgpt_pair_batch_existing.bat`, `run_gemini_portrait_batch_existing.bat`, `run_grok_portrait_batch_existing.bat` | Batch generation of artistic portraits, pair portraits, and image-edit tasks through ChatGPT, Gemini, Grok, OpenAI API, or local stylizer | `output/chatgpt_*`, `output/gemini_*`, `output/grok_*`, `output/pair`, optional `final_output_dir` copy, optional response text |
+| Portrait/Image Batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `chatgpt_all_styles_config.json`, `chatgpt_pair_base_config.json`, `run_chatgpt_portrait_batch_existing.bat`, `run_chatgpt_pair_batch_existing.bat`, `run_gemini_portrait_batch_existing.bat`, `run_grok_portrait_batch_existing.bat` | Batch generation of artistic portraits, pair portraits, and image-edit tasks through ChatGPT, Gemini, Grok, OpenAI API, or local stylizer | `output/chatgpt_*`, `output/gemini_*`, `output/grok_*`, `output/pair`, optional `final_output_dir` copy, optional response text |
 
 </section>
 
@@ -238,7 +239,7 @@ flowchart LR
   G1 --> P2
   ENV["XAI_API_KEY (.env)"] --> P1A
 
-  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nspecial portrait configs"] --> P6
+  C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_all_styles_config.json\nspecial portrait configs"] --> P6
   C6["chatgpt_pair_base_config.json"] --> P6
 
   P1 --> O1["final_videos_dir\nregeneration_assets_dir"]
@@ -414,7 +415,7 @@ Parameter precedence:
 | Prompt/config | `test/test_config_cli_defaults.py`, `test/test_scene_pipeline_integration.py`, `test/test_motion_selection.py`, `test/test_video_framing_modes.py`, `tests/test_selfie_phone_prompt.py` |
 | Grok pipeline | `test/test_grok_web_app.py`, `test/test_grok_batch_app.py`, `test/test_full_pipeline.py`, `test/test_project_delivery.py` |
 | Scene analysis | `test/test_openai_scene.py`, `test/test_scene_app.py`, `test/test_scene_pipeline_integration.py` |
-| Sequence/reporting | `test/test_sequence_optimizer_app.py`, `test/test_project_delivery.py` |
+| Sequence/reporting | `test/test_sequence_optimizer_app.py`, `test/test_sequence_trim_review_app.py`, `test/test_project_delivery.py` |
 | Portrait/image batch | `test/test_chatgpt_portrait_batch.py`, syntax check for `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, `main_chatgpt_portrait_batch.py` |
 
 Useful targeted commands:
