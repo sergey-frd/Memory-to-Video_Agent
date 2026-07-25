@@ -16,9 +16,9 @@ def test_build_impact_report_for_generation_flag_uses_registry() -> None:
 
     assert [item.id for item in report.selected_change_types] == ["generation_flag"]
     assert "config.py" in report.files_to_touch
-    assert "USER_GUIDE.md" in report.files_to_touch
+    assert "docs/USER_GUIDE_EN.md" in report.files_to_touch
     assert "test/test_config_cli_defaults.py" in report.tests_to_run
-    assert "PROJECT_STRUCTURE.md" in report.documents_to_review
+    assert "docs/PROJECT_STRUCTURE.md" in report.documents_to_review
     assert {item.id for item in report.matched_subsystems} >= {"config", "prompt_generation"}
 
 

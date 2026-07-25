@@ -26,8 +26,8 @@ Must update:
 - `main_desktop_pipeline.py`
 - `api/openai_prompt_synthesizer.py`
 - `utils/prompt_builder.py`
-- `USER_GUIDE.md`
-- `Руководство_пользователя.md`
+- `docs/USER_GUIDE_EN.md`
+- `docs/USER_GUIDE_RU.md`
 
 Must review:
 - `main_full_pipeline.py`

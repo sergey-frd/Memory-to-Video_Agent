@@ -35,7 +35,10 @@ from utils.premiere_project_export import (
 )
 
 
-_LABEL_PREFIX_PATTERN = re.compile(r"^\[(?:KEEP|DROP)\]\s*(?:s\d+\s+)?", re.IGNORECASE)
+_LABEL_PREFIX_PATTERN = re.compile(
+    r"^\[(?:KEEP(?:-(?:HIGH|MEDIUM|REVIEW))?|DROP)\]\s*(?:s\d+\s+)?",
+    re.IGNORECASE,
+)
 
 
 def export_trim_review_premiere_project(
@@ -46,6 +49,7 @@ def export_trim_review_premiere_project(
     keep_track_index: int = 0,
     drop_track_index: int = 1,
     split_tracks: bool = True,
+    hero_level_track_indexes: dict[str, int] | None = None,
 ) -> tuple[Path, list[str]]:
     return export_trim_review_premiere_projects(
         source_project_path=source_project_path,
@@ -54,6 +58,7 @@ def export_trim_review_premiere_project(
         keep_track_index=keep_track_index,
         drop_track_index=drop_track_index,
         split_tracks=split_tracks,
+        hero_level_track_indexes=hero_level_track_indexes,
     )
 
 
@@ -65,6 +70,7 @@ def export_trim_review_premiere_projects(
     keep_track_index: int = 0,
     drop_track_index: int = 1,
     split_tracks: bool = True,
+    hero_level_track_indexes: dict[str, int] | None = None,
 ) -> tuple[Path, list[str]]:
     if not review_results:
         raise PremiereProjectError("No trim-review results were provided for export.")
@@ -138,6 +144,7 @@ def export_trim_review_premiere_projects(
             keep_track_index=keep_track_index,
             drop_track_index=drop_track_index,
             split_tracks=split_tracks,
+            hero_level_track_indexes=hero_level_track_indexes,
         )
         all_warnings.extend(warnings)
 
@@ -158,12 +165,22 @@ def _apply_segment_split_to_sequence(
     keep_track_index: int,
     drop_track_index: int,
     split_tracks: bool,
+    hero_level_track_indexes: dict[str, int] | None,
 ) -> list[str]:
     warnings: list[str] = []
     decisions_by_key = {
         _decision_match_key(item.name, item.source_path, item.start, item.end): item
         for item in review_result.decisions
     }
+    if hero_level_track_indexes:
+        _ensure_video_track_count(
+            root,
+            sequence_node,
+            object_id_lookup=object_id_lookup,
+            object_uid_lookup=object_uid_lookup,
+            required_count=max(hero_level_track_indexes.values()) + 1,
+        )
+
     video_tracks = get_project_track_nodes(
         sequence_node,
         track_group_index=0,
@@ -174,6 +191,13 @@ def _apply_segment_split_to_sequence(
         raise PremiereProjectError("Cloned sequence does not contain video tracks.")
 
     track_nodes = {track_index: track_node for track_index, track_node in video_tracks}
+    can_split_hero_levels = bool(hero_level_track_indexes) and all(
+        track_index in track_nodes for track_index in (hero_level_track_indexes or {}).values()
+    )
+    if hero_level_track_indexes and not can_split_hero_levels:
+        warnings.append(
+            "Could not place hero levels on separate tracks; one or more requested tracks are missing."
+        )
     can_split = split_tracks and keep_track_index in track_nodes and drop_track_index in track_nodes
     if split_tracks and not can_split:
         warnings.append(
@@ -202,7 +226,7 @@ def _apply_segment_split_to_sequence(
                 project_path=project_path,
             )
             decision = decisions_by_key.get(_decision_match_key(name, source_path, start, end))
-            if decision is None or not decision.segments:
+            if decision is None:
                 continue
             matched_clips += 1
 
@@ -212,9 +236,13 @@ def _apply_segment_split_to_sequence(
             if track_item_ref in list(source_container):
                 source_container.remove(track_item_ref)
 
+            # An empty segment list intentionally removes this source clip from a
+            # filtered review sequence (for example HIGH-only or DROP-only).
             for segment in decision.segments:
                 target_track_index = track_index
-                if can_split:
+                if can_split_hero_levels and hero_level_track_indexes:
+                    target_track_index = hero_level_track_indexes[_hero_level_key(segment)]
+                elif can_split:
                     target_track_index = keep_track_index if segment.decision == "keep" else drop_track_index
                 target_track = track_nodes[target_track_index]
                 new_item_node, new_ref = _create_segment_track_item(
@@ -244,6 +272,83 @@ def _apply_segment_split_to_sequence(
     if created_segments == 0:
         warnings.append("No KEEP/DROP segments were written into the review sequence.")
     return warnings
+
+
+def _ensure_video_track_count(
+    root: ET.Element,
+    sequence_node: ET.Element,
+    *,
+    object_id_lookup: dict[str, ET.Element],
+    object_uid_lookup: dict[str, ET.Element],
+    required_count: int,
+) -> None:
+    video_tracks = get_project_track_nodes(
+        sequence_node,
+        track_group_index=0,
+        object_id_lookup=object_id_lookup,
+        object_uid_lookup=object_uid_lookup,
+    )
+    if len(video_tracks) >= required_count:
+        return
+    if not video_tracks:
+        raise PremiereProjectError("Cannot create video tracks without a template track.")
+
+    group_ref_node = sequence_node.find("./TrackGroups/TrackGroup[@Index='0']/Second")
+    if group_ref_node is None or not group_ref_node.attrib.get("ObjectRef"):
+        raise PremiereProjectError("Video TrackGroup reference is missing.")
+    group_node = object_id_lookup.get(group_ref_node.attrib["ObjectRef"])
+    if group_node is None:
+        raise PremiereProjectError("Video TrackGroup object could not be resolved.")
+    tracks_container = group_node.find("./TrackGroup/Tracks")
+    if tracks_container is None:
+        raise PremiereProjectError("Video TrackGroup does not contain Tracks.")
+
+    template_track = video_tracks[-1][1]
+    existing_indexes = {index for index, _track in video_tracks}
+    for track_index in range(required_count):
+        if track_index in existing_indexes:
+            continue
+        new_track = copy.deepcopy(template_track)
+        new_track_uid = str(uuid4())
+        new_track.attrib["ObjectUID"] = new_track_uid
+        _clear_track_items(new_track)
+        for index_path in (
+            "./ClipTrack/ClipItems/Index",
+            "./ClipTrack/TransitionItems/Index",
+        ):
+            index_node = new_track.find(index_path)
+            if index_node is not None:
+                index_node.text = str(track_index)
+
+        track_ref = ET.Element("Track")
+        track_ref.attrib["Index"] = str(track_index)
+        track_ref.attrib["ObjectURef"] = new_track_uid
+        tracks_container.append(track_ref)
+        _insert_project_object_near_same_type(root, new_track)
+        object_uid_lookup[new_track_uid] = new_track
+        existing_indexes.add(track_index)
+
+
+def _clear_track_items(track_node: ET.Element) -> None:
+    for container_path in (
+        "./ClipTrack/ClipItems/TrackItems",
+        "./ClipTrack/TransitionItems/TrackItems",
+    ):
+        container = track_node.find(container_path)
+        if container is not None:
+            for child in list(container):
+                container.remove(child)
+
+
+def _hero_level_key(segment: TrimSegmentDecision) -> str:
+    if segment.decision == "drop":
+        return "drop"
+    level = segment.hero_match_level.casefold()
+    if level == "high":
+        return "high"
+    if level == "medium":
+        return "medium"
+    return "review"
 
 
 def _create_segment_track_item(
@@ -280,7 +385,7 @@ def _create_segment_track_item(
     clip_ref.attrib["ObjectRef"] = new_clip.attrib["ObjectID"]
 
     bare_name = _LABEL_PREFIX_PATTERN.sub("", decision.name).strip() or decision.name
-    label = "KEEP" if segment.decision == "keep" else "DROP"
+    label = _segment_label(segment)
     _set_child_text(new_subclip, "Name", f"[{label}] s{segment.segment_index} {bare_name}")
 
     clip_payload = new_clip.find("./Clip")
@@ -308,6 +413,16 @@ def _create_segment_track_item(
     track_item_ref = ET.Element("TrackItem")
     track_item_ref.attrib["ObjectRef"] = new_track_item.attrib["ObjectID"]
     return new_track_item, track_item_ref
+
+
+def _segment_label(segment: TrimSegmentDecision) -> str:
+    if segment.decision == "keep" and segment.hero_match_level == "high":
+        return "KEEP-HIGH"
+    if segment.decision == "keep" and segment.hero_match_level == "medium":
+        return "KEEP-MEDIUM"
+    if segment.decision == "keep" and segment.hero_match_level in {"uncertain", "review"}:
+        return "KEEP-REVIEW"
+    return "KEEP" if segment.decision == "keep" else "DROP"
 
 
 def _append_track_item_ref(track_node: ET.Element, track_item_ref: ET.Element) -> None:

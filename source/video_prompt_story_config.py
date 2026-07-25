@@ -70,7 +70,7 @@ class VideoPromptStoryConfig:
     seedance_json: bool = True
     seedance_json_only: bool = True
     seedance_director_file: Path = field(
-        default_factory=lambda: Path("services") / "Seedance_2.0_Director.md"
+        default_factory=lambda: Path("docs") / "Seedance_2.0_Director.md"
     )
     prefer_loving_kindness_tone: bool = True
 
@@ -172,7 +172,7 @@ class VideoPromptStoryConfig:
         seedance_director_file = (
             Path(str(seedance_director_file_raw))
             if seedance_director_file_raw is not None
-            else Path("services") / "Seedance_2.0_Director.md"
+            else Path("docs") / "Seedance_2.0_Director.md"
         )
 
         model_raw = merged.get("model")

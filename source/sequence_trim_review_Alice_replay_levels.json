@@ -1,0 +1,14 @@
+{
+  "mode": "report_replay",
+  "review_json_path": "<LOCAL_PATH>",
+  "project_path": "<LOCAL_PATH>",
+  "output_project_path": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "sequence_name": "Alica_26_e04_HERO_LEVELS",
+  "track_indexes": {
+    "high": 0,
+    "medium": 1,
+    "review": 2,
+    "drop": 3
+  }
+}

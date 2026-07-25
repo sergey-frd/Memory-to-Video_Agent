@@ -108,5 +108,5 @@ Naming pattern: `<image_stem>_<style_slug>.png`, e.g. `IMG-001_rembrandt.png`. `
 - `api/chatgpt_desktop_v2.py` - desktop automation for the existing ChatGPT window.
 - `api/gemini_desktop.py` - Gemini desktop adapter.
 - `api/grok_web.py` - Grok web adapter (image mode).
-- `BATCH_RUN_HISTORY.md` - non-repeating example commands per launcher.
+- `docs/BATCH_RUN_HISTORY.md` - non-repeating example commands per launcher.
 - `styles/art_styles_Prompt_list.txt` - source style prompt bank.

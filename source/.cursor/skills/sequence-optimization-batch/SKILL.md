@@ -119,4 +119,4 @@ This produces `<sequence>_manual_order.json`, `<sequence>_manual_order_music.txt
 - `utils/sequence_optimizer*.py`, `utils/premiere_xml.py`, `utils/premiere_project.py` - optimizer internals.
 - `utils/premiere_transition_script.py`, `utils/premiere_transform_script.py` - JSX generators.
 - `styles/List of Video transform effects.txt` - Transform effect inventory.
-- `USER_GUIDE.md` -> "Sequence Optimization Batch" / "Rebuild Reports..." - full prose.
+- `docs/USER_GUIDE_EN.md` -> "Sequence Optimization Batch" / "Rebuild Reports..." - full prose.

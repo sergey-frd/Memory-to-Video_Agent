@@ -637,7 +637,7 @@ def story_draft_to_video_prompt_config(
         "seedance_json": seedance_json,
         "seedance_json_only": seedance_json_only,
         "seedance_director_file": str(
-            seedance_director_file or (Path("services") / "Seedance_2.0_Director.md")
+            seedance_director_file or (Path("docs") / "Seedance_2.0_Director.md")
         ),
     }
     return payload

@@ -22,21 +22,26 @@ Public repository:
 
 - https://github.com/sergey-frd/Memory-to-Video_Agent
 
-This release wave (**2026.07.22.01**) adds Sequence Trim Review:
+This release wave (**2026.07.25.01**) adds hero-aware Sequence Trim Review and consolidated documentation:
 
 - Heuristic + semantic KEEP/DROP segmentation inside each Premiere clip
 - Compact keep for stills (~1.5–3s) and short video islands (~2–8s)
 - Review `.prproj` with KEEP on V1 and DROP on V2
+- Hero Definition plus HIGH/MEDIUM/REVIEW/DROP matching and report replay
+- Canonical documentation consolidated under `docs/`
 - Entry points: `main_sequence_trim_review.py`, `run_sequence_trim_review.bat`, skill `sequence-trim-review`
 
 Also carries earlier waves already on the public repo (video story dynamic rules, portrait batch tooling, publication workflow).
 
 ## Operator docs
 
-- [`USER_GUIDE.md`](USER_GUIDE.md) / [`Руководство_пользователя.md`](Руководство_пользователя.md)
-- [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md)
-- [`PUBLISHING.md`](PUBLISHING.md)
-- [`BATCH_RUN_HISTORY.md`](BATCH_RUN_HISTORY.md)
+- [`docs/README.md`](docs/README.md) — documentation index
+- [`docs/USER_GUIDE_EN.md`](docs/USER_GUIDE_EN.md) / [`docs/USER_GUIDE_RU.md`](docs/USER_GUIDE_RU.md)
+- [`docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md`](docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md) — parameter → program → batch → result
+- [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md)
+- [`docs/PUBLISHING.md`](docs/PUBLISHING.md)
+- [`docs/BATCH_RUN_HISTORY.md`](docs/BATCH_RUN_HISTORY.md)
+- [`CHANGELOG.md`](CHANGELOG.md) — what's new
 
 ## Publish command
 

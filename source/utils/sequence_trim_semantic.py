@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import time
 from pathlib import Path
+from typing import Callable
 
 from api.openai_trim_semantic import choose_keep_window_with_openai
 from models.sequence_trim_review import SequenceTrimReviewResult, TrimClipDecision
@@ -35,6 +37,8 @@ def classify_sequence_trim_review_semantic(
     model: str | None = None,
     frames_dir: Path | None = None,
     compact_keep: CompactKeepSettings | None = None,
+    request_timeout_seconds: float = 180.0,
+    progress: Callable[[str], None] | None = None,
 ) -> SequenceTrimReviewResult:
     if not clips:
         raise ValueError("No clips available for semantic trim review classification.")
@@ -63,8 +67,13 @@ def classify_sequence_trim_review_semantic(
 
     decisions: list[TrimClipDecision] = []
     warnings: list[str] = []
-    for item in scored:
+    _emit(
+        progress,
+        f"Semantic engine: {len(scored)} clips; model={model or 'default'}; frames per video={frames_per_clip}.",
+    )
+    for clip_number, item in enumerate(scored, start=1):
         clip: PremiereSequenceClip = item["clip"]  # type: ignore[assignment]
+        clip_prefix = f"[{clip_number}/{len(scored)}] {clip.name}"
         keep_alloc = float(allocations[clip.clipitem_id])
         duration_seconds = float(item["duration_seconds"])
         base_reason = str(item["reason"])
@@ -77,6 +86,7 @@ def classify_sequence_trim_review_semantic(
         if keep_alloc <= 0.05:
             reason = f"forced/no keep budget; {base_reason}"
             keep_seconds = 0.0
+            _emit(progress, f"{clip_prefix}: no KEEP budget; semantic request skipped.")
         elif is_still_image_clip(clip):
             keep_seconds = min(duration_seconds, max(floor, min(cap, keep_alloc)))
             keep_start = max(0.0, (duration_seconds - keep_seconds) * 0.5)
@@ -84,9 +94,11 @@ def classify_sequence_trim_review_semantic(
                 f"compact still hold {keep_seconds:.1f}s "
                 f"(range {floor:.1f}-{cap:.1f}s); {base_reason}"
             )
+            _emit(progress, f"{clip_prefix}: still image; compact KEEP={keep_seconds:.1f}s, API skipped.")
         elif keep_alloc >= duration_seconds - 0.05 and not compact.enabled:
             reason = f"full-clip keep; {base_reason}"
             keep_seconds = duration_seconds
+            _emit(progress, f"{clip_prefix}: full clip KEEP; semantic request skipped.")
         else:
             source_path = Path(clip.source_path)
             if not source_path.exists():
@@ -94,16 +106,29 @@ def classify_sequence_trim_review_semantic(
                 keep_seconds = min(duration_seconds, max(floor, min(cap, keep_alloc)))
                 keep_start = None
                 reason = f"semantic fallback (missing media); compact {keep_seconds:.1f}s; {base_reason}"
+                _emit(progress, f"{clip_prefix}: media missing; using compact fallback.")
             else:
                 try:
                     timestamps = choose_sample_timestamps(duration_seconds, frames_per_clip)
                     clip_frames_dir = work_dir / _safe_stem(clip.name)
+                    _emit(
+                        progress,
+                        f"{clip_prefix}: extracting {len(timestamps)} frames from {duration_seconds:.1f}s.",
+                    )
                     frames = extract_video_frames(
                         source_path,
                         output_dir=clip_frames_dir,
                         timestamps_sec=timestamps,
                         prefix=_safe_stem(clip.name),
                     )
+                    _emit(
+                        progress,
+                        (
+                            f"{clip_prefix}: OpenAI semantic request sent ({len(frames)} frames); "
+                            f"waiting up to {request_timeout_seconds:.0f}s..."
+                        ),
+                    )
+                    request_started = time.monotonic()
                     semantic = choose_keep_window_with_openai(
                         frame_paths=frames,
                         clip_name=clip.name,
@@ -114,6 +139,14 @@ def classify_sequence_trim_review_semantic(
                         media_kind="video",
                         context_notes=context_notes,
                         model=model,
+                        request_timeout_seconds=request_timeout_seconds,
+                    )
+                    _emit(
+                        progress,
+                        (
+                            f"{clip_prefix}: OpenAI response received in "
+                            f"{time.monotonic() - request_started:.1f}s."
+                        ),
                     )
                     keep_start = float(semantic["keep_start_sec"])
                     keep_seconds = float(semantic["keep_duration_sec"])
@@ -124,6 +157,7 @@ def classify_sequence_trim_review_semantic(
                     keep_seconds = min(duration_seconds, max(floor, min(cap, keep_alloc)))
                     keep_start = None
                     reason = f"semantic fallback; compact {keep_seconds:.1f}s; {base_reason}"
+                    _emit(progress, f"{clip_prefix}: semantic error; using compact fallback: {exc}")
 
         segments = _carve_keep_drop_segments(
             clip,
@@ -163,6 +197,13 @@ def classify_sequence_trim_review_semantic(
                 segments=segments,
             )
         )
+        _emit(
+            progress,
+            (
+                f"{clip_prefix}: done; decision={summary}; "
+                f"KEEP={keep_total:.1f}s, DROP={drop_total:.1f}s."
+            ),
+        )
 
     total_source_seconds = sum(item.duration_seconds for item in decisions)
     keep_seconds_total = sum(item.keep_seconds for item in decisions)
@@ -201,3 +242,8 @@ def _safe_stem(value: str) -> str:
     stem = Path(value).stem
     cleaned = "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in stem)
     return cleaned.strip("_") or "clip"
+
+
+def _emit(progress: Callable[[str], None] | None, message: str) -> None:
+    if progress is not None:
+        progress(message)

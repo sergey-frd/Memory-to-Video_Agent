@@ -140,7 +140,7 @@ class VideoPromptComposerConfig:
     seedance_json: bool = False
     seedance_json_only: bool = False
     seedance_director_file: Path = field(
-        default_factory=lambda: Path("services") / "Seedance_2.0_Director.md"
+        default_factory=lambda: Path("docs") / "Seedance_2.0_Director.md"
     )
 
     def __post_init__(self) -> None:
@@ -163,7 +163,7 @@ class VideoPromptComposerConfig:
         seedance_director_file = (
             Path(str(seedance_director_file_raw))
             if seedance_director_file_raw is not None
-            else Path("services") / "Seedance_2.0_Director.md"
+            else Path("docs") / "Seedance_2.0_Director.md"
         )
 
         model_raw = data.get("model")

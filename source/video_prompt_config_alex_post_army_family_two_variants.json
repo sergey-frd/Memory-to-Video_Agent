@@ -80,5 +80,5 @@
   "output_dir": "<LOCAL_PATH>",
   "seedance_json": true,
   "seedance_json_only": true,
-  "seedance_director_file": "services\\Seedance_2.0_Director.md"
+  "seedance_director_file": "docs\\Seedance_2.0_Director.md"
 }

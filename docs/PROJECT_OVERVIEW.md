@@ -2,19 +2,19 @@
 
 This document is generated from the source project and is intended for the external project-information repository.
 
-- Generated at: `2026-07-22T19:55:17+02:00`
+- Generated at: `2026-07-25T14:00:18+02:00`
 - Source project: `img-style-ag_1`
 
 ## Snapshot
 
-- Files scanned: `457`
-- Python files: `215`
-- Test files: `34`
-- Config JSON files: `39`
+- Files scanned: `475`
+- Python files: `226`
+- Test files: `39`
+- Config JSON files: `40`
 - Markdown docs: `27`
-- Entry points: `29`
-- API modules: `15`
-- Utils modules: `37`
+- Entry points: `30`
+- API modules: `17`
+- Utils modules: `40`
 - Model modules: `4`
 
 ## Entry Points
@@ -34,6 +34,7 @@ This document is generated from the source project and is intended for the exter
 - `main_grok_pipeline.py`
 - `main_grok_profile_check.py`
 - `main_grok_web.py`
+- `main_hero_definition.py`
 - `main_human_sequence_report.py`
 - `main_premiere_transform_script.py`
 - `main_premiere_transition_script.py`
@@ -59,6 +60,8 @@ This document is generated from the source project and is intended for the exter
 | `grok_runtime` | Запуск Grok для single-stage и batch сценариев. |
 | `delivery_lifecycle` | Синхронизация, очистка, перенос ошибок, доставка итогов. |
 | `sequence_optimization` | Парсинг sequence, оптимизация порядка, экспорт XML/PRPROJ и отчеты. |
+| `hero_definition` | Создание проверяемого визуального определения героя из эталонных изображений и human-detail текста. |
+| `sequence_trim_review` | KEEP/DROP-анализ Premiere sequence через heuristic, semantic, hero и report_replay. |
 
 ## Change Types
 

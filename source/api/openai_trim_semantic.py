@@ -27,10 +27,11 @@ def choose_keep_window_with_openai(
     media_kind: str = "video",
     context_notes: str = "",
     model: str | None = None,
+    request_timeout_seconds: float = 180.0,
 ) -> dict[str, object]:
     if not frame_paths:
         raise ValueError("frame_paths must not be empty.")
-    client = _get_client()
+    client = _get_client(timeout_seconds=request_timeout_seconds)
     content: list[dict[str, object]] = [
         {
             "type": "text",
@@ -125,7 +126,7 @@ def _build_prompt(
     )
 
 
-def _get_client() -> OpenAI:
+def _get_client(*, timeout_seconds: float = 180.0) -> OpenAI:
     if OpenAI is None:
         raise RuntimeError("Install openai>=1.0 to use semantic trim review.")
     # Local .env support without hard dependency.
@@ -137,7 +138,7 @@ def _get_client() -> OpenAI:
         pass
     if not os.getenv("OPENAI_API_KEY"):
         raise RuntimeError("OPENAI_API_KEY is not set.")
-    return OpenAI()
+    return OpenAI(timeout=max(10.0, float(timeout_seconds)))
 
 
 def _image_to_data_url(image_path: Path) -> str:

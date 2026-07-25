@@ -1,0 +1,11 @@
+{
+  "hero_name": "Алиса Фрейдман",
+  "hero_image_dir": "<LOCAL_PATH>",
+  "human_detail_txt": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "output_path": "<LOCAL_PATH>",
+  "model": "gpt-4.1",
+  "language": "ru",
+  "max_image_edge": 1024,
+  "image_extensions": [".jpg", ".jpeg", ".png", ".webp"]
+}

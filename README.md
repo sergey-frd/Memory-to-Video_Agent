@@ -4,28 +4,22 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.07.22.01`
-- Git tag: `v2026.07.22.01`
+- Publication version: `2026.07.25.01`
+- Git tag: `v2026.07.25.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-07-22T19:55:17+02:00`
+- Last synchronized: `2026-07-25T14:00:18+02:00`
 - Source project: `img-style-ag_1`
-- Python files: `215`
-- Test files: `34`
-- Entry points: `29`
+- Python files: `226`
+- Test files: `39`
+- Entry points: `30`
 
 ## Published Source Mirror
 
-- Mirrored source files: `449`
+- Mirrored source files: `467`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
-- `source/BATCH_RUN_HISTORY.md`
-- `source/MINI_LAPTOP_WATERCOLOR.md`
-- `source/PROJECT_STRUCTURE.html`
-- `source/PROJECT_STRUCTURE.md`
-- `source/PUBLISHING.md`
+- `source/CHANGELOG.md`
 - `source/README.md`
-- `source/USER_GUIDE.html`
-- `source/USER_GUIDE.md`
 - `source/VERSION`
 - `source/api`
 - `source/chatgpt_all_styles_config.json`
@@ -51,6 +45,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/config.json`
 - `source/config.py`
 - `source/config_Alex.json`
+- `source/config_Alice.json`
 - `source/config_BASE.json`
 - `source/config_Edik.json`
 - `source/config_Ivan.json`
@@ -84,6 +79,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/deploy_and_run.ps1`
 - `source/docs`
 - `source/env_baseline_chatgpt_watercolor.json`
+- `source/hero_definition_Alice.json`
 - `source/install_premiere_transition_panel.bat`
 - `source/login_chatgpt_debug_profile.bat`
 - `source/login_chatgpt_profile.bat`
@@ -104,6 +100,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/main_grok_pipeline.py`
 - `source/main_grok_profile_check.py`
 - `source/main_grok_web.py`
+- `source/main_hero_definition.py`
 - `source/main_human_sequence_report.py`
 - `source/main_premiere_transform_script.py`
 - `source/main_premiere_transition_script.py`
@@ -161,6 +158,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/run_grok_automation.bat`
 - `source/run_grok_automation_all.bat`
 - `source/run_grok_portrait_batch_existing.bat`
+- `source/run_hero_definition.bat`
 - `source/run_laptop_env_compare.bat`
 - `source/run_laptop_env_snapshot.bat`
 - `source/run_local_portrait_batch.bat`
@@ -178,6 +176,10 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/run_video_prompt_story_generate.bat`
 - `source/scripts`
 - `source/sequence_trim_review_01.json`
+- `source/sequence_trim_review_Alice_1.json`
+- `source/sequence_trim_review_Alice_HS_2.json`
+- `source/sequence_trim_review_Alice_heuristic_semantic.json`
+- `source/sequence_trim_review_Alice_replay_levels.json`
 - `source/sequence_trim_review_template.json`
 - `source/services`
 - `source/setup_project.ps1`
@@ -210,21 +212,28 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/video_prompt_story_config_sf_rita_romantic.json`
 - `source/video_prompt_story_config_sveta_fun.json`
 - `source/video_prompt_story_config_sveta_lyrical.json`
-- `source/Руководство_пользователя.html`
-- `source/Руководство_пользователя.md`
 
 ## Published Documents
 
+- `docs/BATCH_RUN_HISTORY.md`
 - `docs/CHANGE_IMPACT.md`
+- `docs/MINI_LAPTOP_WATERCOLOR.md`
+- `docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md`
 - `docs/PROJECT_OVERVIEW.md`
+- `docs/PROJECT_STRUCTURE.html`
 - `docs/PROJECT_STRUCTURE.md`
+- `docs/PUBLISHING.md`
+- `docs/README.md`
+- `docs/Seedance_2.0_Director.md`
+- `docs/USER_GUIDE_EN.html`
 - `docs/USER_GUIDE_EN.md`
+- `docs/USER_GUIDE_RU.html`
 - `docs/USER_GUIDE_RU.md`
 
 ## Repository Safety Files
 
 - `.gitignore`
-- `PUBLISHING.md`
+- `CHANGELOG.md`
 - `VERSION`
 
 ## Machine-Readable Data

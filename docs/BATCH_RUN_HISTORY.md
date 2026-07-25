@@ -45,12 +45,15 @@
 | B027 | `run_chatgpt_style_batch_existing.bat` | Все 21 стиля base-банка по `input/` через `chatgpt_all_styles_config.json`; результаты в `output\chatgpt_all_styles` | `run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --skip-existing --continue-on-error` |
 | B028 | `run_chatgpt_portrait_batch_existing.bat` | То же «все стили», но через основной desktop-launcher (не laptop style-batch) | `.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_all_styles_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer` |
 | B029 | `run_sequence_trim_review.bat` | Premiere Sequence Trim Review: heuristic + semantic KEEP/DROP сегменты, compact keep | `.\run_sequence_trim_review.bat .\sequence_trim_review_01.json` |
+| B030 | `run_hero_definition.bat` | Создать `hero_def.json` из эталонных фотографий и `human_detail_txt` | `.\run_hero_definition.bat .\hero_definition_Alice.json` |
+| B031 | `run_sequence_trim_review.bat` | Hero-aware HIGH/MEDIUM/REVIEW/DROP анализ по `hero_def.json` | `.\run_sequence_trim_review.bat .\sequence_trim_review_Alice_1.json` |
+| B032 | `run_sequence_trim_review.bat` | Повторный экспорт одной sequence с V1 HIGH, V2 MEDIUM, V3 REVIEW, V4 DROP без OpenAI | `.\run_sequence_trim_review.bat .\sequence_trim_review_Alice_replay_levels.json` |
 
-## GitHub publication note (2026-07-22)
+## GitHub publication note (2026-07-25)
 
 Dev history: https://github.com/sergey-frd/img-style-ag_1 (`git push origin main`).
 
-Public Internet bundle: https://github.com/sergey-frd/Memory-to-Video_Agent at version **`2026.07.22.01`** (tag `v2026.07.22.01`). Headline: Sequence Trim Review.
+Public Internet bundle: https://github.com/sergey-frd/Memory-to-Video_Agent at version **`2026.07.25.01`** (tag `v2026.07.25.01`). Headline: hero-aware Sequence Trim Review and documentation consolidation.
 
 ## Рабочая команда для текущей задачи
 

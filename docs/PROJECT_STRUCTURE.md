@@ -89,7 +89,7 @@
 | Config & Paths | `config.py`, `config.json`, `config_BASE.json`, `config_*.json` | Описание флагов, validation, canonical paths | `GenerationConfig`, `Settings` |
 | Image & Scene Analysis | `utils/image_analysis.py`, `api/openai_scene.py`, `models/scene_analysis.py`, `main_scene.py` | Visual metadata и scene payload | `*_scene_analysis.json`, summaries |
 | Prompt Synthesis | `utils/prompt_builder.py`, `utils/grok_prompt_json.py`, `api/openai_prompt_synthesizer.py`, `api/openai_motion_selector.py`, `utils/camera_movements.py` | Video/background/final-frame/music prompts, Grok multiscene JSON, motion selection | `*_v_prompt_*.txt`, `*_v_prompt_*.json`, `*_bg_prompt.txt`, `*_assoc_bg_prompt.txt`, `*_final_frame_prompt_*.txt`, `*_m_prompt.txt` |
-| Multi-Scene Composer | `main_video_prompt_composer.py`, `video_prompt_config.py`, `api/openai_video_prompt_composer.py`, `utils/video_prompt_composer.py`, `services/Seedance_2.0_Director.md` | Один EN/RU prompt, Seedance EN/RU JSON, scenario variants | `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt`, `Gen_Video_Seedance_<VariantId>_<ts>.json`, `Gen_Video_Seedance_RU_<VariantId>_<ts>.json` |
+| Multi-Scene Composer | `main_video_prompt_composer.py`, `video_prompt_config.py`, `api/openai_video_prompt_composer.py`, `utils/video_prompt_composer.py`, `docs/Seedance_2.0_Director.md` | Один EN/RU prompt, Seedance EN/RU JSON, scenario variants | `Gen_Video_<ts>.txt`, `Gen_Video_RU_<ts>.txt`, `Gen_Video_Seedance_<VariantId>_<ts>.json`, `Gen_Video_Seedance_RU_<VariantId>_<ts>.json` |
 | Main Generation | `main.py` | Склеивает analysis, scene, motion, prompt generation, optional final frames | stage-артефакты в `output/` |
 | API Final Frames | `main_desktop_pipeline.py` | Многокадровый pipeline, manifest, non-video sync | `*_api_pipeline_manifest.json`, final-frame outputs |
 | Grok Runtime | `api/grok_web.py`, `main_grok_web.py` | Background image/video generation для одной prompt-пары через web-UI Playwright; `GrokWebConfig.duration_seconds` управляет выбором кнопки длительности | `*_bg_image_16x9.png`, `*_video_*.mp4` |
@@ -485,12 +485,18 @@ python .\main_project_publication.py --target-dir <path-to-local-Memory-to-Video
 Managed bundle:
 
 - `README.md`
+- `CHANGELOG.md`
 - `.gitignore`
-- `PUBLISHING.md`
 - `source/**`
+- `docs/README.md`
+- `docs/BATCH_RUN_HISTORY.md`
+- `docs/MINI_LAPTOP_WATERCOLOR.md`
+- `docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md`
+- `docs/PUBLISHING.md`
 - `docs/PROJECT_OVERVIEW.md`
 - `docs/CHANGE_IMPACT.md`
 - `docs/PROJECT_STRUCTURE.md`
+- `docs/Seedance_2.0_Director.md`
 - `docs/USER_GUIDE_EN.md`
 - `docs/USER_GUIDE_RU.md`
 - `data/project_snapshot.json`

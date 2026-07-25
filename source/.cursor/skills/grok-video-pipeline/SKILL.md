@@ -91,4 +91,4 @@ Acceptable Grok values: `6`, `10`, `15` seconds. If the UI ships with a new valu
 - `api/grok_video_runner.py` - `AgentRunner` adapter for the API path.
 - `scripts/xai_ping.py` - cheap `XAI_API_KEY` sanity check.
 - `.env.template` - shape of the required environment variables.
-- `USER_GUIDE.md` / `docs/USER_GUIDE_RU.md` - long-form operator guide.
+- `docs/USER_GUIDE_EN.md` / `docs/USER_GUIDE_RU.md` - long-form operator guide.

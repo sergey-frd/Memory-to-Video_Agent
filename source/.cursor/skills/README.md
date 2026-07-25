@@ -2,7 +2,7 @@
 
 Project-scope Cursor Agent Skills for the Memory-to-Video_Agent workspace. Each subdirectory contains a `SKILL.md` that teaches the agent how to perform a specific recurring task in this project.
 
-Skills here load automatically when the workspace is open. They are derived from the project documentation (`USER_GUIDE.md`, `docs/`, `BATCH_RUN_HISTORY.md`, `PROJECT_STRUCTURE.md`, `README.md`) and the source code under `api/`, `utils/`, `main_*.py`.
+Skills here load automatically when the workspace is open. They are derived from the canonical project documentation in `docs/`, the root `README.md` / `CHANGELOG.md`, and the source code under `api/`, `utils/`, `main_*.py`.
 
 ## Available skills
 

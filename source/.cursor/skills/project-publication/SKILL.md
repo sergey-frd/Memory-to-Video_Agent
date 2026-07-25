@@ -23,7 +23,7 @@ The push tool will refuse to operate against the wrong remote (`--expected-remot
 ```
 - [ ] A local clone of Memory-to-Video_Agent.git on disk, on the `main` branch, clean working tree.
 - [ ] `VERSION` in the source project is bumped to the new publication version (e.g. `2026.05.25.01`).
-- [ ] Source-project docs (`README.md`, `USER_GUIDE.md`, `PROJECT_STRUCTURE.md`, `BATCH_RUN_HISTORY.md`, `docs/*`) reflect the changes you're about to publish.
+- [ ] Source-project docs (`README.md`, `CHANGELOG.md`, `docs/*`) reflect the changes you're about to publish.
 - [ ] No uncommitted changes inside the publication repo clone (the tool stages only managed files, but it's still cleaner to start clean).
 - [ ] You have push rights on the GitHub repo if you intend to use --push.
 ```
@@ -85,8 +85,8 @@ From the source root, the tool selects:
 - All `config*.json`, `chatgpt_*_config.json`, `project_sequence_batch_*.json`, `video_prompt_*.json/.py`.
 - `requirements.txt`, `pytest.ini`, `setup_project.ps1`, `deploy_and_run.ps1`.
 - `project_structure_registry.json`.
-- The top-level `README.md`, `USER_GUIDE.md`, `PROJECT_STRUCTURE.md`, `BATCH_RUN_HISTORY.md`, `PUBLISHING.md`.
-- `docs/` (PROJECT_OVERVIEW, PROJECT_STRUCTURE, USER_GUIDE_EN, USER_GUIDE_RU, CHANGE_IMPACT).
+- The top-level `README.md` and `CHANGELOG.md`.
+- Canonical `docs/` files plus generated PROJECT_OVERVIEW and CHANGE_IMPACT.
 - `data/project_snapshot.json`, `data/publication_manifest.json`.
 
 Stale files inside the publication repo that are NOT in the managed set get removed - that's how the publication keeps in sync.
@@ -119,5 +119,5 @@ Pushed: <bool>
 - `main_project_publication.py` - stage/refresh entry point.
 - `main_project_publication_push.py` - full stage/commit/tag/push entry point.
 - `run_project_publication_stage.bat`, `run_project_publication_push.bat` - launchers.
-- `PUBLISHING.md` - prose checklist for the operator.
+- `docs/PUBLISHING.md` - prose checklist for the operator.
 - `VERSION` - drives the publication version and tag name.

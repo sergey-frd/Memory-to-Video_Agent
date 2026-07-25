@@ -14,7 +14,7 @@ The project keeps generation knobs in `GenerationConfig` (`config.py`). Every ne
 - [ ] Type and default: bool/int/str, sensible safe default
 - [ ] Scope: does it conflict with framing-mode flags (only one of those can be enabled)?
 - [ ] CLI override needed? (true for most production flags)
-- [ ] User-facing? If yes, it MUST be documented in USER_GUIDE.md and docs/USER_GUIDE_RU.md
+- [ ] User-facing? If yes, it MUST be documented in `docs/USER_GUIDE_EN.md` and `docs/USER_GUIDE_RU.md`
 ```
 
 ## End-to-end checklist
@@ -31,7 +31,7 @@ Walk through these files in order:
 - [ ] main.py / main_full_pipeline.py / main_full_pipeline_api.py: add argparse flag, forward to `override()` (only the entry points that need it)
 - [ ] *.bat launchers: only edit if you need a hardcoded value for that launcher
 - [ ] utils/prompt_builder.py / api/grok_*.py / wherever the flag is read: implement the actual behavior
-- [ ] USER_GUIDE.md: new subsection under "New Generation Flags" with default, semantics, examples
+- [ ] `docs/USER_GUIDE_EN.md`: new subsection under "New Generation Flags" with default, semantics, examples
 - [ ] docs/USER_GUIDE_RU.md and docs/USER_GUIDE_EN.md: mirror the doc update
 - [ ] test/test_config_cli_defaults.py: verify default + CLI override path
 - [ ] test/test_full_pipeline.py or test/test_api_pipeline.py: verify behavior end-to-end if it affects the pipeline
@@ -97,7 +97,7 @@ Also update the error message string so it lists the new flag.
 
 ## Documentation pattern
 
-Add a section in `USER_GUIDE.md` -> "New Generation Flags" matching the existing style:
+Add a section in `docs/USER_GUIDE_EN.md` -> "New Generation Flags" matching the existing style:
 
 ```markdown
 ### `my_new_flag`
@@ -139,4 +139,4 @@ It prints the canonical set of files that should be touched for a `generation_fl
 - `config.py` - `GenerationConfig`, `Settings`, `ConfigValidationError`.
 - `docs/CHANGE_IMPACT.md` - canonical impact rules per change type.
 - `main_change_impact.py` - impact analyzer entry point.
-- `USER_GUIDE.md` -> "New Generation Flags" - doc style guide.
+- `docs/USER_GUIDE_EN.md` -> "New Generation Flags" - doc style guide.

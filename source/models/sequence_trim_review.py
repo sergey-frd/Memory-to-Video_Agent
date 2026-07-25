@@ -17,6 +17,7 @@ class TrimSegmentDecision:
     duration_seconds: float
     reason: str
     confidence: float
+    hero_match_level: str = ""  # high | medium | absent | uncertain | ""
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -42,10 +43,13 @@ class TrimClipDecision:
     confidence: float
     decision: str  # keep | drop | mixed
     segments: list[TrimSegmentDecision] = field(default_factory=list)
+    hero_match_level: str = ""
+    hero_frame_matches: list[dict[str, object]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, object]:
         payload = asdict(self)
         payload["segments"] = [segment.to_dict() for segment in self.segments]
+        payload["hero_frame_matches"] = [dict(item) for item in self.hero_frame_matches]
         return payload
 
 
@@ -62,6 +66,7 @@ class SequenceTrimReviewResult:
     keep_seconds: float
     drop_seconds: float
     context_notes: str
+    engine_metadata: dict[str, object] = field(default_factory=dict)
     open_questions: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     decisions: list[TrimClipDecision] = field(default_factory=list)
@@ -79,6 +84,7 @@ class SequenceTrimReviewResult:
             "keep_seconds": self.keep_seconds,
             "drop_seconds": self.drop_seconds,
             "context_notes": self.context_notes,
+            "engine_metadata": dict(self.engine_metadata),
             "open_questions": list(self.open_questions),
             "warnings": list(self.warnings),
             "decisions": [item.to_dict() for item in self.decisions],

@@ -54,9 +54,19 @@ PUBLISHED_SOURCE_SUFFIXES = {
 TEXT_READ_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251")
 
 DOC_TARGETS = {
-    "PROJECT_STRUCTURE.md": "docs/PROJECT_STRUCTURE.md",
-    "USER_GUIDE.md": "docs/USER_GUIDE_EN.md",
-    "Руководство_пользователя.md": "docs/USER_GUIDE_RU.md",
+    "CHANGELOG.md": "CHANGELOG.md",
+    "docs/README.md": "docs/README.md",
+    "docs/PROJECT_STRUCTURE.md": "docs/PROJECT_STRUCTURE.md",
+    "docs/PROJECT_STRUCTURE.html": "docs/PROJECT_STRUCTURE.html",
+    "docs/USER_GUIDE_EN.md": "docs/USER_GUIDE_EN.md",
+    "docs/USER_GUIDE_EN.html": "docs/USER_GUIDE_EN.html",
+    "docs/USER_GUIDE_RU.md": "docs/USER_GUIDE_RU.md",
+    "docs/USER_GUIDE_RU.html": "docs/USER_GUIDE_RU.html",
+    "docs/PUBLISHING.md": "docs/PUBLISHING.md",
+    "docs/BATCH_RUN_HISTORY.md": "docs/BATCH_RUN_HISTORY.md",
+    "docs/MINI_LAPTOP_WATERCOLOR.md": "docs/MINI_LAPTOP_WATERCOLOR.md",
+    "docs/Seedance_2.0_Director.md": "docs/Seedance_2.0_Director.md",
+    "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md": "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md",
 }
 PUBLICATION_VERSION_RE = re.compile(r"^(?P<date>\d{4}\.\d{2}\.\d{2})\.(?P<index>\d{2})$")
 WINDOWS_QUOTED_PATH_RE = re.compile(r'"[A-Za-z]:\\[^"\n]+"')
@@ -102,10 +112,16 @@ class PublicationVersionInfo:
     git_tag: str
 
 
-def _iter_project_files(source_root: Path):
+def _iter_project_files(source_root: Path, excluded_roots: tuple[Path, ...] = ()):
+    excluded = {path.resolve() for path in excluded_roots}
     for current_root, dirnames, filenames in os.walk(source_root, topdown=True, onerror=lambda _error: None):
-        dirnames[:] = sorted(dirname for dirname in dirnames if not _is_excluded_dir_name(dirname))
         current_path = Path(current_root)
+        dirnames[:] = sorted(
+            dirname
+            for dirname in dirnames
+            if not _is_excluded_dir_name(dirname)
+            and (current_path / dirname).resolve() not in excluded
+        )
         for filename in sorted(filenames):
             if _is_excluded_file_name(filename):
                 continue
@@ -131,8 +147,8 @@ def _is_publishable_source_file(source_path: Path, source_root: Path) -> bool:
     return source_path.suffix.lower() in PUBLISHED_SOURCE_SUFFIXES
 
 
-def _iter_published_source_targets(source_root: Path):
-    for source_path in _iter_project_files(source_root):
+def _iter_published_source_targets(source_root: Path, excluded_roots: tuple[Path, ...] = ()):
+    for source_path in _iter_project_files(source_root, excluded_roots):
         if not _is_publishable_source_file(source_path, source_root):
             continue
         target_relpath = Path("source") / source_path.relative_to(source_root)
@@ -158,8 +174,9 @@ def _project_snapshot(
     publication_version: str,
     git_tag: str,
     publication_signature: str,
+    excluded_roots: tuple[Path, ...] = (),
 ) -> dict[str, object]:
-    files = list(_iter_project_files(source_root))
+    files = list(_iter_project_files(source_root, excluded_roots))
     relative_files = [path.relative_to(source_root).as_posix() for path in files]
     top_level = [path for path in files if path.parent == source_root]
     py_files = [path for path in relative_files if path.endswith(".py")]
@@ -461,50 +478,13 @@ def _publication_gitignore() -> str:
             "!.gitignore",
             "!VERSION",
             "!README.md",
-            "!PUBLISHING.md",
+            "!CHANGELOG.md",
             "!source/",
             "!source/**",
             "!docs/",
             "!docs/**",
             "!data/",
             "!data/**",
-            "",
-        ]
-    )
-
-
-def _publication_push_guide() -> str:
-    return "\n".join(
-        [
-            "# Publishing Workflow",
-            "",
-            "This repository is intended to contain only the managed publication bundle exported from the source project.",
-            "The current bundle includes a full safe source mirror under `source/`, excluding secrets and runtime-only folders.",
-            "Each successful guarded publication commit can also receive a matching Git tag derived from the generated `VERSION` file.",
-            "",
-            "## Safe Update Flow",
-            "",
-            "1. Refresh the bundle into this local clone.",
-            "2. Stage only the managed files from `data/publication_manifest.json`.",
-            "3. Review `git diff --staged` and the root `VERSION` file.",
-            "4. Commit and push only after the staged diff looks correct.",
-            "5. Keep the generated Git tag aligned with the publication version.",
-            "",
-            "## Commands",
-            "",
-            "```powershell",
-            "python .\\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Video_Agent-clone> --stage",
-            "python .\\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Video_Agent-clone> --commit-message \"Update project publication\" --push",
-            "```",
-            "",
-            "## Safety Rules",
-            "",
-            "- Do not push the working project root directly.",
-            "- Do not copy `.env`, `input`, `output`, browser profiles, or temporary directories into this repository.",
-            "- Publish only the managed `source/` mirror plus generated docs/data; runtime folders and secret files stay excluded.",
-            "- The publication sync blocks secret-like content and sanitizes local absolute paths.",
-            "- `VERSION`, `README.md`, and `data/project_snapshot.json` should agree on the current publication version.",
-            "- `.gitignore` in this repository is generated to keep the repo limited to the managed publication files.",
             "",
         ]
     )
@@ -550,7 +530,8 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
         target_path.write_text(public_text, encoding="utf-8")
         written_files.append(target_path.relative_to(target_dir).as_posix())
 
-    for source_path, target_relpath in _iter_published_source_targets(source_root):
+    excluded_roots = (target_dir,)
+    for source_path, target_relpath in _iter_published_source_targets(source_root, excluded_roots):
         target_path = target_dir / target_relpath
         target_path.parent.mkdir(parents=True, exist_ok=True)
         public_text = _sanitize_public_text(_read_text_with_fallbacks(source_path))
@@ -569,12 +550,12 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
         publication_version=version_info.version,
         git_tag=version_info.git_tag,
         publication_signature=publication_signature,
+        excluded_roots=excluded_roots,
     )
 
     generated_docs = {
         "docs/PROJECT_OVERVIEW.md": _overview_markdown(snapshot, registry),
         "docs/CHANGE_IMPACT.md": _change_impact_markdown(registry),
-        "PUBLISHING.md": _publication_push_guide(),
         ".gitignore": _publication_gitignore(),
         "VERSION": version_info.version + "\n",
     }

@@ -710,6 +710,33 @@ Example config fields:
 }
 ```
 
+## Parameter / Program / Batch Reference
+
+The complete row-by-row mapping for the hero and Premiere workflows is maintained in `docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md`. For every JSON/CLI parameter it records the default, purpose, Python consumer, batch launcher, config family, and output.
+
+The central data-flow rule is:
+
+- `human_detail_txt` feeds personalized hero/music reporting in `main_project_sequence_batch.py`;
+- `human_detail_txt` plus `hero_image_dir` produces `hero_def.json` through `main_hero_definition.py`;
+- `hero_def.json` feeds visual identity matching in `main_sequence_trim_review.py`;
+- a saved trim-review JSON feeds `report_replay` without additional OpenAI calls.
+
+## Hero Definition
+
+Create a reusable visual identity profile before running hero-aware sequence trimming:
+
+```bat
+.\run_hero_definition.bat .\hero_definition_Alice.json
+```
+
+```powershell
+python .\main_hero_definition.py --config .\hero_definition_Alice.json
+```
+
+The config points to `hero_image_dir`, `human_detail_txt`, and `reports_dir`. The command compares all supported reference images with OpenAI vision and writes `hero_def.json` by default. The output records source file hashes, stable visual features, appearance variations, and separate rules for high-confidence vs medium-confidence identity matches. Clothing, background, companions, activities, and unrelated biography are explicitly excluded as identity evidence.
+
+`OPENAI_API_KEY` is required. Use `model` to select the vision model and `max_image_edge` to control the uploaded reference-image size. Review `hero_def.json` before using it for KEEP/DROP classification.
+
 ## Sequence Trim Review
 
 Use this when the source sequence is long raw footage and you need recommendations for what to keep vs drop **inside each clip**, not only a full-clip reorder.
@@ -733,13 +760,47 @@ Engines:
 
 - `heuristic` — length/position budget rules
 - `semantic` — frame sampling + OpenAI vision (`OPENAI_API_KEY`, `semantic_model`)
+- `hero` — compares sampled frames with `hero_def.json`, keeps hero appearances with configurable context, and marks review clips as `[KEEP-HIGH]`, `[KEEP-MEDIUM]`, or `[KEEP-REVIEW]`
+
+All engines print timestamped progress and append it to `reports_dir/sequence_trim_review_progress.log`. The semantic engine reports every clip, frame extraction, OpenAI request, response time, and fallback. Use `semantic_request_timeout_seconds` to limit one request (180 seconds by default).
+
+Hero-aware KEEP/DROP:
+
+1. Generate and review `hero_def.json` with `run_hero_definition.bat`.
+2. Set `"engines": ["hero"]` and `"hero_definition_path": "<LOCAL_PATH>"`.
+3. Use `hero_frame_interval_seconds` to control sampling density.
+4. `hero_pre_roll_seconds` and `hero_post_roll_seconds` preserve context around every detected appearance (10 seconds by default).
+5. `hero_keep_medium_matches: true` keeps plausible matches for manual review; set it to `false` for strict HIGH-only selection.
+6. `hero_keep_clip_on_analysis_error: true` prevents API/extraction failures from being silently placed in DROP.
+7. Progress is printed before frame extraction and every OpenAI request, and is appended to `reports_dir/sequence_trim_review_progress.log`.
+8. `hero_resume_from_cache: true` stores every completed clip under `reports_dir/hero_match_cache`; after `Ctrl+C`, run the same command again to resume.
+9. `hero_request_timeout_seconds` limits how long one OpenAI request may wait (180 seconds by default).
+
+The hero report stores every sampled-frame decision with `high`, `medium`, `absent`, or `uncertain` confidence. The hero engine is presence-based and does not apply the generic duration budget.
+
+### Replay hero report into four tracks
+
+Use `mode: "report_replay"` to rebuild the Premiere review project from an existing per-engine JSON report without extracting frames or calling OpenAI again:
+
+```powershell
+python .\main_sequence_trim_review.py --config .\sequence_trim_review_Alice_replay_levels.json
+```
+
+Required config field: `review_json_path`. `sequence_name` sets the output sequence name, while `track_indexes` assigns the four levels to video tracks. The output project contains one sequence with four timeline-aligned tracks:
+
+- V1 HIGH — `[KEEP-HIGH]` segments;
+- V2 MEDIUM — `[KEEP-MEDIUM]` segments;
+- V3 REVIEW — `[KEEP-REVIEW]` segments;
+- V4 DROP — `[DROP]` segments.
+
+Timeline gaps are preserved so all levels can be compared at the same source positions inside one sequence. The replay summary explicitly records `"openai_requests": 0`.
 
 Compact keep (`compact_keep: true`):
 
 - still/photo holds aim for about **1.5–3.0s**
 - video keep islands aim for about **2.0–8.0s** so the moment is readable without inflating total runtime
 
-Key config fields: `engines`, `context_notes`, `compact_keep`, `photo_keep_*`, `video_keep_*`, `semantic_frames_per_clip`, `new_sequence_name_heuristic`, `new_sequence_name_semantic`.
+Key config fields: `engines`, `context_notes`, `compact_keep`, `photo_keep_*`, `video_keep_*`, `semantic_frames_per_clip`, `new_sequence_name_heuristic`, `new_sequence_name_semantic`, `hero_definition_path`, `new_sequence_name_hero`, and `hero_*`.
 
 Requires two video tracks in the source sequence so DROP can land on V2. Empty Premiere tracks often omit `TrackItems`; the exporter creates that container automatically.
 Use `include_visual_media` when the source sequence contains photos and videos on the same visual track. Use `enable_auto_durations` to let the optimizer adjust timeline durations. Use `transition_mode: "apply"` together with `enable_auto_transitions` and `enable_visual_transitions` when the exported `.prproj` should receive transitions for mixed visual pairs, not only pure mp4 pairs. Automatic transition selection now uses a broad safe template pool: dissolve/fade, dip, wipe/iris, slide/push/zoom, and light/stylized transitions. `Morph Cut` is intentionally excluded from automatic application because Premiere can fail with `Can't apply to a single clip`; keep it for manual use only after checking handles and clip conditions. Use `enable_auto_transforms` and `generate_premiere_transform_script` to create a companion `<sequence>_apply_transforms.jsx` file for still-image Transform effects such as `Grow`, `Shrink`, `Move`, and fallback `Transform`. `Offset` is intentionally manual-only because it needs careful composition tuning in Premiere. Transform choice is content- and neighbor-aware: portraits tend toward `Grow`, groups and wide/context frames toward `Shrink`, action frames toward `Move`, and adjacent similar frames are varied to avoid repeated zooms.
@@ -1120,7 +1181,7 @@ Variant rule:
 
 Seedance notes:
 
-- Requirements are loaded from `services\Seedance_2.0_Director.md`.
+- Requirements are loaded from `docs\Seedance_2.0_Director.md`.
 - The English Seedance JSON output is a strict one-item array: `[{"lang":"en","prompt":"..."}]`.
 - The paired Russian control JSON output is a strict one-item array: `[{"lang":"ru","prompt":"..."}]`.
 - The generated prompt is validated for `Shot N:` labels, `Total:` footer, aspect ratio, required `@imageN` tags, and 2000-character limit.
@@ -1218,9 +1279,10 @@ Cursor skill: `.cursor/skills/video-prompt-story/SKILL.md`
 
 ## Documentation Sync Rule
 
-Whenever workflow, file locations, naming, cleanup rules, or report outputs change, update all guide files together:
+Canonical project documentation lives in `docs/`. Whenever workflow, file locations, naming, cleanup rules, or report outputs change, update together:
 
-- `USER_GUIDE.md`
-- `USER_GUIDE.html`
-- `Руководство_пользователя.md`
-- `Руководство_пользователя.html`
+- `docs/USER_GUIDE_EN.md`
+- `docs/USER_GUIDE_RU.md`
+- the relevant reference document in `docs/`
+
+Keep only `README.md` and `CHANGELOG.md` as root-level documentation entry points.

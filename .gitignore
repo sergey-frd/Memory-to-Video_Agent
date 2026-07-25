@@ -3,7 +3,7 @@
 !.gitignore
 !VERSION
 !README.md
-!PUBLISHING.md
+!CHANGELOG.md
 !source/
 !source/**
 !docs/

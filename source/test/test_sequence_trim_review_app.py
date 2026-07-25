@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
+from models.sequence_trim_review import SequenceTrimReviewResult, TrimClipDecision, TrimSegmentDecision
 from models.video_sequence import PremiereSequenceClip
 from utils.premiere_project import (
     PREMIERE_TICKS_PER_SECOND,
@@ -18,6 +19,7 @@ from utils.premiere_project import (
     resolve_project_track_item_name,
 )
 from utils.sequence_trim_classifier import classify_sequence_trim_review
+from utils.premiere_trim_review_export import export_trim_review_premiere_projects
 from utils.sequence_trim_review import run_sequence_trim_review_from_config
 
 
@@ -169,6 +171,105 @@ def test_run_sequence_trim_review_from_config_writes_segmented_tracks() -> None:
     report_text = txt_path.read_text(encoding="utf-8")
     assert "Per-clip segment plan" in report_text
     assert "KEEP" in report_text and "DROP" in report_text
+
+
+def test_export_hero_levels_to_four_tracks_in_one_sequence() -> None:
+    root = Path("test_runtime") / f"trim_filtered_{uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    project_path = root / "raw.prproj"
+    _write_two_track_project(project_path)
+    _sequence_name, clips = parse_premiere_project_sequence_visual_clips(project_path, "RawSequence")
+    decisions: list[TrimClipDecision] = []
+    for index, clip in enumerate(clips):
+        level = ("high", "medium", "absent")[index]
+        segment_decision = "drop" if level == "absent" else "keep"
+        segments = [
+            TrimSegmentDecision(
+                segment_index=1,
+                decision=segment_decision,
+                local_start=0,
+                local_end=clip.duration,
+                timeline_start=clip.start,
+                timeline_end=clip.end,
+                source_in=clip.in_point,
+                source_out=clip.out_point,
+                duration=clip.duration,
+                duration_seconds=clip.duration / PREMIERE_TICKS_PER_SECOND,
+                reason=f"hero {level}",
+                confidence=0.95,
+                hero_match_level=level,
+            )
+        ]
+        decisions.append(
+            TrimClipDecision(
+                order_index=clip.order_index,
+                clipitem_id=clip.clipitem_id,
+                name=clip.name,
+                source_path=clip.source_path,
+                track_index=clip.track_index,
+                start=clip.start,
+                end=clip.end,
+                duration=clip.duration,
+                duration_seconds=clip.duration / PREMIERE_TICKS_PER_SECOND,
+                source_in=clip.in_point,
+                source_out=clip.out_point,
+                keep_seconds=segments[0].duration_seconds if segment_decision == "keep" else 0,
+                drop_seconds=segments[0].duration_seconds if segment_decision == "drop" else 0,
+                score=0.95,
+                reason="hero level",
+                confidence=0.95,
+                decision=segment_decision,
+                segments=segments,
+                hero_match_level=level,
+            )
+        )
+    result = SequenceTrimReviewResult(
+        source_project_path=str(project_path),
+        source_sequence_name="RawSequence",
+        new_sequence_name="FourTracks",
+        engine="hero_report_replay_tracks_v1",
+        target_keep_seconds=0,
+        min_keep_seconds=0,
+        max_keep_seconds=100,
+        total_source_seconds=70,
+        keep_seconds=50,
+        drop_seconds=20,
+        context_notes="",
+        decisions=decisions,
+    )
+    output_path = root / "filtered.prproj"
+    export_trim_review_premiere_projects(
+        source_project_path=project_path,
+        review_results=[result],
+        output_project_path=output_path,
+        split_tracks=False,
+        hero_level_track_indexes={"high": 0, "medium": 1, "review": 2, "drop": 3},
+    )
+
+    project_root = load_premiere_project_root(output_path)
+    id_lookup = build_project_object_id_lookup(project_root)
+    uid_lookup = build_project_object_uid_lookup(project_root)
+    sequence_node = find_project_sequence_node(project_root, "FourTracks")
+    assert sequence_node is not None
+    names_by_track = {
+        track_index: [
+            resolve_project_track_item_name(id_lookup[ref.attrib["ObjectRef"]], id_lookup)
+            for ref in iter_project_track_item_refs(track_node)
+            if ref.attrib.get("ObjectRef") in id_lookup
+        ]
+        for track_index, track_node in get_project_track_nodes(
+            sequence_node,
+            track_group_index=0,
+            object_id_lookup=id_lookup,
+            object_uid_lookup=uid_lookup,
+        )
+    }
+    assert names_by_track == {
+        0: ["[KEEP-HIGH] s1 clip_a.mp4"],
+        1: ["[KEEP-MEDIUM] s1 clip_b_birthday.mp4"],
+        2: [],
+        3: ["[DROP] s1 clip_c_trash.mp4"],
+    }
 
 
 def _write_two_track_project(project_path: Path) -> None:

@@ -17,7 +17,9 @@ from utils.project_publication_push import (
 def _write_required_docs(root: Path) -> None:
     for source_name in DOC_TARGETS:
         title = Path(source_name).stem
-        (root / source_name).write_text(f"# {title}\n", encoding="utf-8")
+        source_path = root / source_name
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.write_text(f"# {title}\n", encoding="utf-8")
 
 
 def _fake_openai_project_key() -> str:
@@ -42,7 +44,7 @@ def _make_source_project(root: Path) -> None:
         json.dumps(
             {
                 "project": "sample",
-                "canonical_docs": ["PROJECT_STRUCTURE.md", "USER_GUIDE.md"],
+                "canonical_docs": ["docs/PROJECT_STRUCTURE.md", "docs/USER_GUIDE_EN.md"],
                 "core_invariants": ["inv"],
                 "subsystems": [],
                 "change_types": [],
@@ -95,12 +97,13 @@ def test_prepare_publication_push_stages_managed_files_and_removes_stale_outputs
     )
 
     assert (repo_dir / ".gitignore").exists()
-    assert (repo_dir / "PUBLISHING.md").exists()
+    assert not (repo_dir / "PUBLISHING.md").exists()
+    assert (repo_dir / "docs" / "PUBLISHING.md").exists()
     assert "old.txt" in result.removed_stale_files
     assert ".gitignore" in result.managed_files
-    assert "PUBLISHING.md" in result.managed_files
+    assert "docs/PUBLISHING.md" in result.managed_files
     assert ".gitignore" in staged_payload["relpaths"]
-    assert "PUBLISHING.md" in staged_payload["relpaths"]
+    assert "docs/PUBLISHING.md" in staged_payload["relpaths"]
     assert "README.md" in staged_payload["relpaths"]
     assert "source/main.py" in staged_payload["relpaths"]
     assert "source/api/sample.py" in staged_payload["relpaths"]

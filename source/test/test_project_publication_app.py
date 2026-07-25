@@ -10,7 +10,9 @@ from utils.project_publication import DOC_TARGETS, PublicationResult, write_publ
 def _write_required_docs(root: Path) -> None:
     for source_name in DOC_TARGETS:
         title = Path(source_name).stem
-        (root / source_name).write_text(f"# {title}\n", encoding="utf-8")
+        source_path = root / source_name
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.write_text(f"# {title}\n", encoding="utf-8")
 
 
 def _fake_openai_project_key() -> str:
@@ -51,7 +53,7 @@ def test_write_publication_bundle_creates_full_safe_source_mirror() -> None:
         json.dumps(
             {
                 "project": "sample",
-                "canonical_docs": ["PROJECT_STRUCTURE.md"],
+                "canonical_docs": ["docs/PROJECT_STRUCTURE.md"],
                 "core_invariants": ["inv"],
                 "subsystems": [{"id": "config", "purpose": "cfg", "files": ["config.py"], "tests": []}],
                 "change_types": [
@@ -77,7 +79,10 @@ def test_write_publication_bundle_creates_full_safe_source_mirror() -> None:
     assert (target / "README.md").exists()
     assert (target / "VERSION").exists()
     assert (target / ".gitignore").exists()
-    assert (target / "PUBLISHING.md").exists()
+    assert not (target / "PUBLISHING.md").exists()
+    gitignore_text = (target / ".gitignore").read_text(encoding="utf-8")
+    assert "!CHANGELOG.md" in gitignore_text
+    assert "!PUBLISHING.md" not in gitignore_text
     assert (target / "source" / "main.py").exists()
     assert (target / "source" / "config.py").exists()
     assert (target / "source" / "config.json").exists()
@@ -95,6 +100,7 @@ def test_write_publication_bundle_creates_full_safe_source_mirror() -> None:
     assert not (target / "source" / "Gemini_Generated_Image_test.jpg").exists()
     assert not (target / "source" / "utils" / "__pycache__" / "skip.pyc").exists()
     assert not (target / "source" / "project_publication" / "should_skip.txt").exists()
+    assert all((target / target_relpath).exists() for target_relpath in DOC_TARGETS.values())
     assert (target / "docs" / "PROJECT_STRUCTURE.md").exists()
     assert (target / "docs" / "USER_GUIDE_EN.md").exists()
     assert (target / "docs" / "USER_GUIDE_RU.md").exists()
@@ -150,7 +156,7 @@ def test_write_publication_bundle_skips_stale_workspace_data_snapshots() -> None
         json.dumps(
             {
                 "project": "sample",
-                "canonical_docs": ["PROJECT_STRUCTURE.md"],
+                "canonical_docs": ["docs/PROJECT_STRUCTURE.md"],
                 "core_invariants": [],
                 "subsystems": [],
                 "change_types": [],
@@ -183,16 +189,20 @@ def test_write_publication_bundle_rejects_secret_like_content() -> None:
     (root / "main.py").write_text("print('hi')\n", encoding="utf-8")
     (root / "config.py").write_text("VALUE = 1\n", encoding="utf-8")
     (root / "config.json").write_text('{"key": "value"}\n', encoding="utf-8")
-    (root / "PROJECT_STRUCTURE.md").write_text(f"token {_fake_openai_project_key()}\n", encoding="utf-8")
+    structure_path = root / "docs" / "PROJECT_STRUCTURE.md"
+    structure_path.parent.mkdir(parents=True, exist_ok=True)
+    structure_path.write_text(f"token {_fake_openai_project_key()}\n", encoding="utf-8")
     for source_name in DOC_TARGETS:
-        if source_name == "PROJECT_STRUCTURE.md":
+        if source_name == "docs/PROJECT_STRUCTURE.md":
             continue
-        (root / source_name).write_text(f"# {Path(source_name).stem}\n", encoding="utf-8")
+        source_path = root / source_name
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.write_text(f"# {Path(source_name).stem}\n", encoding="utf-8")
     (root / "project_structure_registry.json").write_text(
         json.dumps(
             {
                 "project": "sample",
-                "canonical_docs": ["PROJECT_STRUCTURE.md"],
+                "canonical_docs": ["docs/PROJECT_STRUCTURE.md"],
                 "core_invariants": [],
                 "subsystems": [],
                 "change_types": [],
@@ -226,7 +236,7 @@ def test_write_publication_bundle_sanitizes_paths_inside_source_files() -> None:
         json.dumps(
             {
                 "project": "sample",
-                "canonical_docs": ["PROJECT_STRUCTURE.md"],
+                "canonical_docs": ["docs/PROJECT_STRUCTURE.md"],
                 "core_invariants": [],
                 "subsystems": [],
                 "change_types": [],

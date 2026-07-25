@@ -50,6 +50,7 @@ def test_load_video_prompt_composer_config_supports_jsonc_and_defaults() -> None
     assert config.seedance_json is True
     assert config.seedance_json_only is True
     assert config.output_dir == root / "custom_output"
+    assert config.seedance_director_file == Path("docs") / "Seedance_2.0_Director.md"
     assert config.request.aspect_ratio == "16:9"
     assert config.request.max_prompt_chars == 2000
     assert [variant.variant_id for variant in config.request.scenario_variants] == ["Variant_1"]

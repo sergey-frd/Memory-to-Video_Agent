@@ -463,6 +463,15 @@ CLI-параметры:
 
 Эта компактная схема нужна, когда надо быстро понять, какой `.bat` запускает какую Python-программу и откуда берутся основные параметры.
 
+Полная построчная матрица **Parameter → Program → Batch → Config → Result** находится в `docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md`. Она обязательна для сопровождения: при добавлении параметра нужно указать Python consumer, batch-файл, default, конфиг и выходной артефакт.
+
+Особенно важно различать два потока данных о герое:
+
+- `human_detail_txt` используется в `main_project_sequence_batch.py` при `generate_personalized_report=true` для персонализированного отчёта, рекомендаций по образу героя и музыке;
+- `human_detail_txt` вместе с `hero_image_dir` передаётся в `main_hero_definition.py`, который создаёт `hero_def.json`;
+- `hero_def.json` используется в `main_sequence_trim_review.py` с `"engines": ["hero"]` для разбора грязного видео на HIGH, MEDIUM, REVIEW и DROP;
+- готовый hero trim JSON можно повторно экспортировать через `"mode": "report_replay"` без новых OpenAI-запросов.
+
 ```mermaid
 flowchart LR
   B1["run_full_grok_pipeline*.bat"] --> P1["main_full_pipeline.py"]
@@ -471,6 +480,8 @@ flowchart LR
   B3 --> P3["main_project_sequence_batch.py"]
   B4["run_project_publication*.bat"] --> P4["main_project_publication_push.py"]
   B5["run_chatgpt_portrait_batch_existing.bat / run_gemini_portrait_batch_existing.bat / run_grok_portrait_batch_existing.bat"] --> P6["main_chatgpt_portrait_batch.py"]
+  B6["run_hero_definition.bat"] --> P7["main_hero_definition.py"]
+  B7["run_sequence_trim_review.bat"] --> P8["main_sequence_trim_review.py"]
 
   A1["CLI flags"] --> P1
   A2["CLI flags"] --> P2
@@ -479,6 +490,10 @@ flowchart LR
   G1 --> P1
   G1 --> P2
   C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_all_styles_config.json\nchatgpt_watercolor_scene_expansion_config.json"] --> P6
+  C6["hero_definition_*.json\nhero_image_dir + human_detail_txt"] --> P7
+  P7 --> H1["hero_def.json"]
+  H1 --> P8
+  C7["sequence_trim_review_*.json"] --> P8
 
   C3["project_sequence_batch_*.json"] --> P3
   P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
@@ -491,6 +506,7 @@ flowchart LR
   P5 --> O3["reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)"]
   P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
   P6 --> O5["portrait / image-edit results:\noutput/chatgpt_*/*.png\noutput/gemini_*/*.png\noutput/grok_*/*.png"]
+  P8 --> O6["hero trim reports + review .prproj:\nHIGH / MEDIUM / REVIEW / DROP\nreport_replay without OpenAI"]
 ```
 
 Левая часть схемы показывает запуск и источники параметров, а правая часть показывает, какие отчеты и результатные артефакты появляются на выходе.
@@ -657,6 +673,18 @@ python .\main_project_sequence_batch.py --config .\project_sequence_batch_igor_2
 }
 ```
 
+## Определение героя
+
+Перед hero-aware разбором грязного видеоматериала создайте `hero_def.json`:
+
+```bat
+.\run_hero_definition.bat .\hero_definition_Alice.json
+```
+
+Программа `main_hero_definition.py` объединяет эталонные изображения из `hero_image_dir` и текст `human_detail_txt`. Полученный визуальный профиль используется для поиска того же человека в кадрах, но не заменяет текстовый профиль в персонализированном музыкальном отчёте.
+
+Полная таблица параметров, программ и batch-файлов: `docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md`.
+
 ## Sequence Trim Review
 
 Нужен, когда sequence — длинный сырец и надо рекомендовать, **что оставить / что выбросить внутри каждого клипа**.
@@ -669,7 +697,7 @@ python .\main_project_sequence_batch.py --config .\project_sequence_batch_igor_2
 python .\main_sequence_trim_review.py --config .\sequence_trim_review_template.json
 ```
 
-Результат:
+Результат generic-режима:
 
 - один review `.prproj` с двумя sequence: `*_trim_heuristic` и `*_trim_semantic`
 - каждый исходный клип разрезан на сегменты `[KEEP]` / `[DROP]`
@@ -680,6 +708,24 @@ python .\main_sequence_trim_review.py --config .\sequence_trim_review_template.j
 
 - `heuristic` — бюджет по длине/позиции
 - `semantic` — кадры + OpenAI vision (`OPENAI_API_KEY`)
+- `hero` — сравнение кадров с `hero_def.json`, уровни `[KEEP-HIGH]`, `[KEEP-MEDIUM]`, `[KEEP-REVIEW]`, `[DROP]`
+
+Для hero-режима укажите:
+
+```json
+{
+  "engines": ["hero"],
+  "hero_definition_path": "<LOCAL_PATH>"
+}
+```
+
+Готовый per-engine JSON можно повторно экспортировать без OpenAI:
+
+```bat
+.\run_sequence_trim_review.bat .\sequence_trim_review_Alice_replay_levels.json
+```
+
+Режим `"mode": "report_replay"` создаёт одну sequence с четырьмя синхронными video tracks: V1 HIGH, V2 MEDIUM, V3 REVIEW, V4 DROP. Машинным источником служит `review_json_path`; TXT остаётся человекочитаемым отчётом.
 
 Compact keep (`compact_keep: true`):
 
@@ -1065,7 +1111,7 @@ run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_202603
 
 Особенности Seedance:
 
-- Требования загружаются из `services\Seedance_2.0_Director.md`.
+- Требования загружаются из `docs\Seedance_2.0_Director.md`.
 - Английский Seedance JSON имеет строгий формат из одного элемента: `[{"lang":"en","prompt":"..."}]`.
 - Парный русский контрольный Seedance JSON имеет строгий формат из одного элемента: `[{"lang":"ru","prompt":"..."}]`.
 - Сгенерированный prompt дополнительно валидируется по `Shot N:`, footer `Total:`, aspect ratio, обязательным `@imageN` и лимиту в 2000 символов.
@@ -1146,9 +1192,10 @@ Cursor skill: `.cursor/skills/video-prompt-story/SKILL.md`
 
 ## Правило синхронизации документации
 
-При любом изменении workflow, путей, схемы именования, cleanup-правил или набора отчетов нужно одновременно обновлять все файлы руководства:
+Каноническая документация проекта находится в `docs/`. При любом изменении workflow, путей, схемы именования, cleanup-правил или набора отчетов нужно одновременно обновлять:
 
-- `USER_GUIDE.md`
-- `USER_GUIDE.html`
-- `Руководство_пользователя.md`
-- `Руководство_пользователя.html`
+- `docs/USER_GUIDE_EN.md`;
+- `docs/USER_GUIDE_RU.md`;
+- соответствующий справочный документ в `docs/`.
+
+В корне остаются только точки входа `README.md` и `CHANGELOG.md`.
