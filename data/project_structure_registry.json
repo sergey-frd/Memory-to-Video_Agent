@@ -16,7 +16,8 @@
     "docs/BATCH_RUN_HISTORY.md",
     "docs/MINI_LAPTOP_WATERCOLOR.md",
     "docs/Seedance_2.0_Director.md",
-    "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md"
+    "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md",
+    "docs/portrait_styles_tables.md"
   ],
   "core_invariants": [
     "GenerationConfig в config.py является единой точкой правды для generation-флагов.",
@@ -146,11 +147,16 @@
         "utils/premiere_transform_script.py",
         "utils/current_sequence_reports.py",
         "utils/human_profile_sequence_report.py",
+        "utils/project_sequence_music_recommendation.py",
         "utils/fcp_translation_results.py",
-        "utils/project_sequence_batch.py"
+        "utils/project_sequence_batch.py",
+        "main_sequence_music_first.py",
+        "sequence_music_recommendation_*.json",
+        "run_sequence_music_recommendation.bat"
       ],
       "tests": [
-        "test/test_sequence_optimizer_app.py"
+        "test/test_sequence_optimizer_app.py",
+        "test/test_project_sequence_music_recommendation.py"
       ],
       "must_review_when_changed": [
         "main_project_sequence_batch.py",
@@ -180,10 +186,12 @@
     },
     {
       "id": "sequence_trim_review",
-      "purpose": "KEEP/DROP-анализ Premiere sequence через heuristic, semantic, hero и report_replay.",
+      "purpose": "KEEP/DROP-анализ Premiere sequence через heuristic, semantic, hero, report_replay, ручное применение KEEP JSON, импорт списка медиа и import-and-keep за один проход.",
       "files": [
         "main_sequence_trim_review.py",
         "models/sequence_trim_review.py",
+        "models/sequence_keep_apply.py",
+        "models/sequence_media_import.py",
         "api/openai_trim_semantic.py",
         "api/openai_hero_match.py",
         "utils/sequence_trim_classifier.py",
@@ -191,20 +199,37 @@
         "utils/sequence_trim_hero.py",
         "utils/sequence_trim_review.py",
         "utils/sequence_trim_report_replay.py",
+        "utils/sequence_keep_apply.py",
+        "utils/sequence_media_import.py",
         "utils/premiere_trim_review_export.py",
+        "utils/premiere_keep_apply_export.py",
+        "utils/premiere_media_import_export.py",
+        "utils/sequence_import_and_keep.py",
         "sequence_trim_review_template.json",
-        "run_sequence_trim_review.bat"
+        "sequence_keep_apply_template.json",
+        "sequence_media_import_template.json",
+        "sequence_import_and_keep_template.json",
+        "run_sequence_trim_review.bat",
+        "run_sequence_keep_apply.bat",
+        "run_sequence_media_import.bat",
+        "run_sequence_import_and_keep.bat"
       ],
       "tests": [
         "test/test_sequence_trim_review_app.py",
         "test/test_sequence_trim_semantic_progress.py",
         "test/test_sequence_trim_hero.py",
         "test/test_sequence_trim_report_replay.py",
+        "test/test_sequence_keep_apply.py",
+        "test/test_sequence_media_import.py",
+        "test/test_sequence_import_and_keep.py",
         "test/test_parameter_documentation.py"
       ],
       "must_review_when_changed": [
         "hero_definition_*.json",
         "sequence_trim_review_*.json",
+        "sequence_keep_apply_*.json",
+        "sequence_media_import_*.json",
+        "sequence_import_and_keep_*.json",
         "docs/USER_GUIDE_EN.md",
         "docs/USER_GUIDE_RU.md",
         "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md"

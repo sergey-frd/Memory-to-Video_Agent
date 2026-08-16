@@ -37,14 +37,14 @@ python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Vi
 
 Never `git push origin main` from the publication clone, and never push the dev workspace root to `publication`.
 
-## GitHub sync status (2026-07-22)
+## GitHub sync status (2026-08-16)
 
-Publication **`2026.07.22.01`** targets the Internet:
+Publication **`2026.08.16.01`** targets the Internet:
 
 - Repository: https://github.com/sergey-frd/Memory-to-Video_Agent
 - Dev remote: https://github.com/sergey-frd/img-style-ag_1
-- Tag: `v2026.07.22.01`
+- Tag: `v2026.08.16.01`
 
-Headline feature: Sequence Trim Review (heuristic + semantic KEEP/DROP, compact keep).
+Headline feature: Premiere import / keep-apply / import-and-keep plus expanded portrait style banks.
 
 Do **not** read version from nested `source/data/project_snapshot.json`; that stale copy is no longer published. Older tags are historical snapshots only; `main` and the latest tag reflect the current bundle.

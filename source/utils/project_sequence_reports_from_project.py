@@ -120,6 +120,7 @@ def write_project_sequence_music_first_bundle(
     scene_model: str | None = None,
     settings: Settings | None = None,
     analyzer: SceneAnalyzer | None = None,
+    progress_reporter: Callable[[str], None] | None = None,
 ) -> tuple[Path, Path, Path | None, Path | None]:
     result, payload = build_project_sequence_music_first_payload(
         project_path=project_path,
@@ -131,6 +132,7 @@ def write_project_sequence_music_first_bundle(
         scene_model=scene_model,
         settings=settings,
         analyzer=analyzer,
+        progress_reporter=progress_reporter,
     )
 
     output_json.parent.mkdir(parents=True, exist_ok=True)
@@ -171,10 +173,12 @@ def build_project_sequence_music_first_payload(
     scene_model: str | None = None,
     settings: Settings | None = None,
     analyzer: SceneAnalyzer | None = None,
+    progress_reporter: Callable[[str], None] | None = None,
 ) -> tuple[SequenceOptimizationResult, dict[str, object]]:
     settings = settings or Settings()
     settings.ensure_output()
     scene_analyzer = analyzer or _default_scene_analyzer
+    progress = progress_reporter or (lambda _message: None)
 
     selected_sequence_name, clips = parse_premiere_project_sequence_visual_clips(project_path, sequence_name)
     analysis_clips, selection_strategy = _select_analysis_clips(
@@ -185,6 +189,9 @@ def build_project_sequence_music_first_payload(
     )
     sample_dir = output_dir / f"{project_path.stem}_{_slugify_filename(selected_sequence_name)}_sample_frames"
     sample_dir.mkdir(parents=True, exist_ok=True)
+    progress(
+        f"Found {len(clips)} visual clips; selected {len(analysis_clips)} for scene analysis."
+    )
 
     analyzed_records: list[AnalyzedSequenceClipRecord] = []
     candidates: list[SequenceCandidate] = []
@@ -213,11 +220,13 @@ def build_project_sequence_music_first_payload(
         )
 
     for analyzed_index, clip in enumerate(analysis_clips, start=1):
+        progress(f"[{analyzed_index}/{len(analysis_clips)}] Preparing: {clip.name}")
         source_path = Path(clip.source_path) if clip.source_path else None
         if source_path is None or not source_path.exists():
             warnings.append(
                 f"Skipped clip {clip.order_index} ({clip.name}) because the source media file was not found: {clip.source_path or '<missing>'}."
             )
+            progress(f"[{analyzed_index}/{len(analysis_clips)}] Skipped: source media not found.")
             continue
 
         try:
@@ -229,15 +238,19 @@ def build_project_sequence_music_first_payload(
             warnings.append(
                 f"Skipped clip {clip.order_index} ({clip.name}) because frame extraction failed: {exc}"
             )
+            progress(f"[{analyzed_index}/{len(analysis_clips)}] Skipped: frame extraction failed.")
             continue
 
         try:
+            progress(f"[{analyzed_index}/{len(analysis_clips)}] Sending frame for scene analysis.")
             analysis = scene_analyzer(analysis_frame_path, scene_model)
         except Exception as exc:
             warnings.append(
                 f"Skipped clip {clip.order_index} ({clip.name}) because scene analysis failed: {exc}"
             )
+            progress(f"[{analyzed_index}/{len(analysis_clips)}] Skipped: scene analysis failed.")
             continue
+        progress(f"[{analyzed_index}/{len(analysis_clips)}] Scene analysis completed.")
 
         candidate = _build_sequence_candidate_from_scene_analysis(
             clip=clip,

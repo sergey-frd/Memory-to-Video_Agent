@@ -140,6 +140,26 @@ _GENERIC_SERIES_TOKENS = {
     "main",
 }
 
+_CLASSICAL_COMPOSER_PRIORITY = (
+    "Johann Sebastian Bach",
+    "Wolfgang Amadeus Mozart",
+    "Ludwig van Beethoven",
+    "Pyotr Ilyich Tchaikovsky",
+    "Antonio Vivaldi",
+    "Frédéric Chopin",
+    "Franz Schubert",
+    "George Frideric Handel",
+    "Johannes Brahms",
+    "Sergei Rachmaninoff",
+    "Felix Mendelssohn",
+    "Johann Strauss II",
+    "Giuseppe Verdi",
+    "Giacomo Puccini",
+)
+_CLASSICAL_COMPOSER_PRIORITY_INDEX = {
+    artist: index for index, artist in enumerate(_CLASSICAL_COMPOSER_PRIORITY)
+}
+
 _SOUNDTRACK_REFERENCES = {
     "non_classical": [
         SoundtrackReference(
@@ -377,6 +397,60 @@ _SOUNDTRACK_REFERENCES = {
             artist="Léo Delibes",
             note="подходит для праздничной элегантности, семейной красоты кадра и светлого течения без тяжёлого пафоса.",
             tags=("family", "celebration", "graceful", "elegant", "warm"),
+        ),
+        SoundtrackReference(
+            title="Clarinet Concerto in A major, K. 622: II. Adagio",
+            artist="Wolfgang Amadeus Mozart",
+            note="подходит для светлой, благородной и очень человечной лирики без избыточной тяжести.",
+            tags=("gentle", "elegant", "intimate", "warm", "graceful"),
+        ),
+        SoundtrackReference(
+            title="Impromptu in G-flat major, Op. 90 No. 3",
+            artist="Franz Schubert",
+            note="даёт мягкое непрерывное течение, тёплую задумчивость и спокойную семейную лирику.",
+            tags=("warm", "gentle", "reflective", "intimate", "flow"),
+        ),
+        SoundtrackReference(
+            title="Water Music: Air",
+            artist="George Frideric Handel",
+            note="работает для светлой церемониальной красоты, плавного движения и праздничного достоинства.",
+            tags=("graceful", "celebration", "light", "uplift", "flow"),
+        ),
+        SoundtrackReference(
+            title="Waltz in A-flat major, Op. 39 No. 15",
+            artist="Johannes Brahms",
+            note="подходит для короткого тёплого семейного эпизода, нежности и мягкого домашнего ритма.",
+            tags=("warm", "gentle", "family", "intimate", "graceful"),
+        ),
+        SoundtrackReference(
+            title="Vocalise, Op. 34 No. 14",
+            artist="Sergei Rachmaninoff",
+            note="лучше раскрывает глубокую лирическую память, эмоциональную близость и плавное нарастание.",
+            tags=("reflective", "romantic", "intimate", "rise", "warm"),
+        ),
+        SoundtrackReference(
+            title="Songs Without Words: Spring Song, Op. 62 No. 6",
+            artist="Felix Mendelssohn",
+            note="даёт лёгкость, ясное движение и светлую семейную интонацию без тяжёлого пафоса.",
+            tags=("light", "gentle", "family", "motion", "bright"),
+        ),
+        SoundtrackReference(
+            title="The Blue Danube",
+            artist="Johann Strauss II",
+            note="подходит для праздничного движения, танцевальной пластики и красивого группового кадра.",
+            tags=("celebration", "graceful", "motion", "dance", "bright"),
+        ),
+        SoundtrackReference(
+            title="La Traviata: Prelude to Act I",
+            artist="Giuseppe Verdi",
+            note="работает для элегантной, тонкой и слегка ностальгической драматургии с человеческой теплотой.",
+            tags=("elegant", "reflective", "romantic", "warm", "intimate"),
+        ),
+        SoundtrackReference(
+            title="Gianni Schicchi: O mio babbino caro",
+            artist="Giacomo Puccini",
+            note="подходит для искренней семейной нежности, светлой эмоциональной вершины и близкого портрета.",
+            tags=("warm", "intimate", "romantic", "family", "rise"),
         ),
     ],
     "jazz": [
@@ -1859,6 +1933,15 @@ def _get_soundtrack_pool(category_key: str, story_mode: str, profile_tags: set[s
     category_lookup = {_soundtrack_key(option): option for option in category_items}
     pool_keys = _SOUNDTRACK_HARD_POOLS.get(category_key, {}).get(family, ())
     selected = [category_lookup[key] for key in pool_keys if key in category_lookup]
+    if category_key == "classical":
+        selected_keys = {_soundtrack_key(option) for option in selected}
+        priority_options = [
+            option
+            for option in category_items
+            if option.artist in _CLASSICAL_COMPOSER_PRIORITY_INDEX
+            and _soundtrack_key(option) not in selected_keys
+        ]
+        selected.extend(priority_options)
     return selected or category_items
 
 
@@ -1952,7 +2035,7 @@ def _select_soundtrack_references(
     profile_tags: set[str],
     story_mode: str,
 ) -> list[SoundtrackReference]:
-    weighted: list[tuple[int, int, int, SoundtrackReference]] = []
+    weighted: list[tuple[int, int, int, int, int, SoundtrackReference]] = []
     mode_rule = _SOUNDTRACK_MODE_RULES.get(story_mode, _SOUNDTRACK_MODE_RULES["generic_human_story"])
     preferred_tags = mode_rule["prefer"]
     avoided_tags = mode_rule["avoid"]
@@ -1963,16 +2046,22 @@ def _select_soundtrack_references(
     }
     for pool_index, option in enumerate(candidate_pool):
         score, preferred_count = _score_soundtrack_option(option, profile_tags, story_mode)
+        priority_group, priority_rank = _classical_composer_priority(category_key, option)
         weighted.append(
             (
+                priority_group,
                 score,
                 preferred_count,
+                priority_rank,
                 -pool_index,
                 option,
             )
         )
     weighted.sort(reverse=True)
-    selected = [option for _score, _preferred, _neg_index, option in weighted[:5]]
+    selected = [
+        option
+        for _priority, _score, _preferred, _priority_rank, _neg_index, option in weighted[:5]
+    ]
     if len(selected) >= 5:
         return selected
 
@@ -1985,26 +2074,41 @@ def _select_soundtrack_references(
     if not fallback_pool:
         return selected
 
-    fallback_weighted: list[tuple[int, int, int, SoundtrackReference]] = []
+    fallback_weighted: list[tuple[int, int, int, int, int, SoundtrackReference]] = []
     for option in fallback_pool:
         option_tags = set(option.tags)
         score = len(option_tags & profile_tags) * 2
         score += len(option_tags & preferred_tags) * 3
         score -= len(option_tags & avoided_tags) * 3
+        priority_group, priority_rank = _classical_composer_priority(category_key, option)
         fallback_weighted.append(
             (
+                priority_group,
                 score,
                 len(option_tags & preferred_tags),
+                priority_rank,
                 -category_lookup.get(_soundtrack_key(option), 0),
                 option,
             )
         )
     fallback_weighted.sort(reverse=True)
-    for _score, _preferred, _neg_index, option in fallback_weighted:
+    for _priority, _score, _preferred, _priority_rank, _neg_index, option in fallback_weighted:
         selected.append(option)
         if len(selected) == 5:
             break
     return selected
+
+
+def _classical_composer_priority(
+    category_key: str,
+    option: SoundtrackReference,
+) -> tuple[int, int]:
+    if category_key != "classical":
+        return 0, 0
+    priority_index = _CLASSICAL_COMPOSER_PRIORITY_INDEX.get(option.artist)
+    if priority_index is None:
+        return 0, -len(_CLASSICAL_COMPOSER_PRIORITY)
+    return 1, -priority_index
 
 
 def _score_soundtrack_option(

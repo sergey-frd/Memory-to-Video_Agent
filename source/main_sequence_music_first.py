@@ -10,6 +10,9 @@ from utils.project_sequence_reports_from_project import (
     derive_project_sequence_music_first_bundle_paths,
     write_project_sequence_music_first_bundle,
 )
+from utils.project_sequence_music_recommendation import (
+    run_project_sequence_music_recommendation_from_config,
+)
 
 
 def _configure_stdio() -> None:
@@ -33,8 +36,17 @@ def parse_args() -> argparse.Namespace:
             "without requiring a prior optimization JSON."
         )
     )
-    parser.add_argument("--prproj", type=Path, required=True, help="Path to the Premiere project (.prproj).")
-    parser.add_argument("--sequence-name", type=str, required=True, help="Premiere sequence name to inspect.")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help=(
+            "Configuration that links project config, sequence config, hero_def.json, and reports_dir "
+            "for a personalized music recommendation."
+        ),
+    )
+    parser.add_argument("--prproj", type=Path, default=None, help="Path to the Premiere project (.prproj).")
+    parser.add_argument("--sequence-name", type=str, default=None, help="Premiere sequence name to inspect.")
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -90,6 +102,22 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     _configure_stdio()
     args = parse_args()
+    if args.config is not None:
+        result = run_project_sequence_music_recommendation_from_config(
+            args.config,
+            progress_reporter=print,
+        )
+        print(f"Project-sequence JSON saved to: {result.output_json}")
+        print(f"Music-first recommendation report saved to: {result.output_music_txt}")
+        print(f"Personalized music recommendation report saved to: {result.output_personalized_music_txt}")
+        if result.output_structure_txt is not None:
+            print(f"Recommended sequence/order report saved to: {result.output_structure_txt}")
+        if result.output_transition_txt is not None:
+            print(f"Transition recommendations report saved to: {result.output_transition_txt}")
+        return
+    if args.prproj is None or not args.sequence_name:
+        raise SystemExit("Use --config or provide both --prproj and --sequence-name.")
+
     settings = Settings()
     settings.ensure_output()
 
@@ -120,6 +148,7 @@ def main() -> None:
         max_analyzed_clips=args.max_analyzed_clips,
         scene_model=args.scene_model,
         settings=settings,
+        progress_reporter=print,
     )
 
     print(f"Project-sequence JSON saved to: {written_json}")

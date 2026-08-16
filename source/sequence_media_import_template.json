@@ -1,0 +1,21 @@
+{
+  "mode": "import_media",
+  "import_path": "<LOCAL_PATH>",
+  "project_path": "<LOCAL_PATH>",
+  "sequence_name": "<Sequence>",
+  "create_sequence_if_missing": true,
+  "root_directory": "<LOCAL_PATH>",
+  "files": [
+    "<Media.mp4>",
+    "<Photo.jpg>",
+    {
+      "file": "<DuplicateName.png>",
+      "relative_path": "output\\<style>\\<DuplicateName.png>"
+    }
+  ],
+  "template_project_path": "",
+  "still_duration_seconds": 5,
+  "output_project_path": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "write_project": true
+}

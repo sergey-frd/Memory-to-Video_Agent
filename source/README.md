@@ -13,8 +13,8 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 
 ## Current version
 
-- Workspace `VERSION`: **`2026.07.22.01`** ([`VERSION`](VERSION))
-- Latest intended publication tag: **`v2026.07.22.01`**
+- Workspace `VERSION`: **`2026.08.16.01`** ([`VERSION`](VERSION))
+- Latest intended publication tag: **`v2026.08.16.01`**
 
 ## Published on GitHub (Internet)
 
@@ -22,16 +22,16 @@ Public repository:
 
 - https://github.com/sergey-frd/Memory-to-Video_Agent
 
-This release wave (**2026.07.25.01**) adds hero-aware Sequence Trim Review and consolidated documentation:
+This release wave (**2026.08.16.01**) adds Premiere import / keep-apply and expanded portrait style banks:
 
-- Heuristic + semantic KEEP/DROP segmentation inside each Premiere clip
-- Compact keep for stills (~1.5–3s) and short video islands (~2–8s)
-- Review `.prproj` with KEEP on V1 and DROP on V2
-- Hero Definition plus HIGH/MEDIUM/REVIEW/DROP matching and report replay
-- Canonical documentation consolidated under `docs/`
-- Entry points: `main_sequence_trim_review.py`, `run_sequence_trim_review.bat`, skill `sequence-trim-review`
+- Manual KEEP JSON apply (`apply_keep_ranges`) with ripple-compact and linked audio trim
+- Media import into a sequence (`import_media`) with per-file MasterClip / streams
+- Import then keep in one pass (`import_and_keep`)
+- Music-first recommendation launcher `run_sequence_music_recommendation.bat`
+- Portrait banks: `ILYA_REPIN`, selected artists, Russian artists, and the name/slug table in [`docs/portrait_styles_tables.md`](docs/portrait_styles_tables.md)
+- Entry points: `run_sequence_keep_apply.bat`, `run_sequence_media_import.bat`, `run_sequence_import_and_keep.bat`, `run_sequence_music_recommendation.bat`, skill `sequence-trim-review`
 
-Also carries earlier waves already on the public repo (video story dynamic rules, portrait batch tooling, publication workflow).
+Also carries earlier waves already on the public repo (hero-aware Sequence Trim Review, documentation consolidation, video story rules).
 
 ## Operator docs
 
@@ -41,6 +41,7 @@ Also carries earlier waves already on the public repo (video story dynamic rules
 - [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md)
 - [`docs/PUBLISHING.md`](docs/PUBLISHING.md)
 - [`docs/BATCH_RUN_HISTORY.md`](docs/BATCH_RUN_HISTORY.md)
+- [`docs/portrait_styles_tables.md`](docs/portrait_styles_tables.md) — portrait `name` / `slug` table
 - [`CHANGELOG.md`](CHANGELOG.md) — what's new
 
 ## Publish command

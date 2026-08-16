@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import main_sequence_reports
 import utils.current_sequence_reports as current_reports_module
+import utils.sequence_structure_report as sequence_report_module
 
 from models.video_sequence import (
     ClipAssetBundle,
@@ -19,6 +20,28 @@ from utils.current_sequence_reports import (
     write_current_sequence_report_bundle,
 )
 from utils.sequence_structure_report import build_sequence_music_report
+
+
+def test_classical_recommendations_prioritize_canonical_composers() -> None:
+    selected = sequence_report_module._select_soundtrack_references(
+        "classical",
+        {"warm", "family", "intimate", "elegant"},
+        "adult_family_portrait",
+    )
+
+    priority_composers = set(sequence_report_module._CLASSICAL_COMPOSER_PRIORITY)
+    assert len(selected) == 5
+    assert all(option.artist in priority_composers for option in selected)
+    assert any(option.artist == "Johann Sebastian Bach" for option in selected)
+
+
+def test_classical_catalog_contains_requested_priority_composers() -> None:
+    catalog_artists = {
+        option.artist
+        for option in sequence_report_module._SOUNDTRACK_REFERENCES["classical"]
+    }
+
+    assert set(sequence_report_module._CLASSICAL_COMPOSER_PRIORITY) <= catalog_artists
 
 
 def _make_entry(

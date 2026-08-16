@@ -1,0 +1,10 @@
+{
+  "mode": "import_and_keep",
+  "import_path": "<LOCAL_PATH>",
+  "keep_ranges_path": "<LOCAL_PATH>",
+  "import_output_project_path": "<LOCAL_PATH>",
+  "output_project_path": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "ripple_compact": true,
+  "write_project": true
+}

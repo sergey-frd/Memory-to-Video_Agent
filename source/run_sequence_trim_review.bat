@@ -8,6 +8,8 @@ set "CONFIG_PATH=%~1"
 if "%CONFIG_PATH%"=="" (
     echo Usage: run_sequence_trim_review.bat path\to\sequence_trim_review_config.json
     echo Template: sequence_trim_review_template.json
+    echo Keep-apply: run_sequence_keep_apply.bat sequence_keep_apply_yotam26_2_min.json
+    echo Keep-apply template: sequence_keep_apply_template.json
     exit /b 1
 )
 

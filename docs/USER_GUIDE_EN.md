@@ -172,6 +172,59 @@ Related files:
 - `api/grok_video_runner.py` - adapter that implements the same `AgentRunner` interface as `GrokWebSessionRunner` so the rest of the pipeline does not change.
 - `scripts/xai_ping.py` - cheap chat-mode test for `XAI_API_KEY`.
 
+### `run_sequence_trim_review.bat`
+
+Purpose:
+- split a Premiere sequence into KEEP/DROP segments (`heuristic`, `semantic`, or `hero`);
+- replay a saved hero report onto four tracks without OpenAI;
+- apply a manual KEEP JSON when the config uses `"mode": "apply_keep_ranges"`;
+- import files and immediately keep-trim them when the config uses `"mode": "import_and_keep"`.
+
+Examples:
+
+```bat
+.\run_sequence_trim_review.bat .\sequence_trim_review_01.json
+.\run_sequence_trim_review.bat .\sequence_trim_review_Alice_1.json
+.\run_sequence_trim_review.bat .\sequence_trim_review_Alice_replay_levels.json
+.\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json
+```
+
+### `run_sequence_keep_apply.bat`
+
+Purpose:
+- copy a Premiere `.prproj` and keep only the source ranges listed in a KEEP JSON;
+- leave unlisted clips, bins, and sequence names unchanged;
+- trim linked audio with the listed video and ripple the following clips.
+
+This is the dedicated launcher for `"mode": "apply_keep_ranges"`. The same config also works with `run_sequence_trim_review.bat`.
+
+Examples:
+
+```bat
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min.json
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
+```
+
+Template: `sequence_keep_apply_template.json`. Working Yotam config: `sequence_keep_apply_yotam26_2_min.json`. KEEP windows come from `keep_ranges_path` or inline `clips`.
+
+### `run_sequence_import_and_keep.bat`
+
+Purpose:
+- import listed files onto a sequence and immediately trim them with a KEEP JSON in one pass;
+- keep the intermediate `*_import.prproj` and write the final trimmed `*_keep.prproj`;
+- ignore `project_path` from the KEEP JSON and always apply keep to the import result.
+
+This is the dedicated launcher for `"mode": "import_and_keep"`. The same config also works with `run_sequence_trim_review.bat`.
+
+Examples:
+
+```bat
+.\run_sequence_import_and_keep.bat .\sequence_import_and_keep_template.json
+.\run_sequence_import_and_keep.bat <LOCAL_PATH>
+```
+
+Template: `sequence_import_and_keep_template.json`. Point `import_path` and `keep_ranges_path` at the two job JSON files.
+
 ## ChatGPT, Gemini, And Grok Artistic Portrait Batch
 
 This workflow generates finished artistic portraits from every supported image in `input`.
@@ -243,6 +296,14 @@ Watercolor + scene expansion command:
 .\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_watercolor_scene_expansion_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
 ```
 
+Ilya Repin-inspired Russian realist psychological portrait only:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_ilya_repin_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+The `ILYA_REPIN` style is also included in the complete `chatgpt_portrait_base_config.json` and `chatgpt_all_styles_config.json` banks. The special config writes results to `output\chatgpt_ilya_repin`.
+
 Short working set command:
 
 ```bat
@@ -282,7 +343,7 @@ Persistent portrait delivery to a user project:
 .\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --continue-on-error
 ```
 
-The portrait style config still controls styles and the project-side output folder. The delivery config is separate and controls the persistent mirror root through `final_output_dir`; the service/style subfolders from project `output` are preserved below it.
+The portrait style config still controls styles and the project-side output folder. The delivery config is separate and controls the persistent mirror root through `final_output_dir`; the service/style subfolders from project `output` are preserved below it. The same project config may also contain `hero_image_dir`, `human_detail_txt`, and `reports_dir`; these metadata paths do not alter PNG delivery and allow one `config_Alice.json` to be shared safely across project workflows.
 
 Manual focus fallback:
 - keep an already verified ChatGPT window open in Chrome;
@@ -483,6 +544,9 @@ All current `GenerationConfig` fields:
 - `final_videos_dir` — default `final_project/videos`; final delivery folder for generated `mp4` files and background images.
 - `final_output_dir` — default `final_project/output`; final delivery root for portrait/image-edit PNG copies produced by ChatGPT, Gemini, Grok, API, or local portrait batch flows when `--delivery-config-file` is provided. Project `output/...` subfolders are mirrored below this root.
 - `regeneration_assets_dir` — default `final_project/regeneration_assets`; delivery folder for prompts, manifests, and non-video stage artifacts.
+- `hero_image_dir` — optional project metadata path to hero reference images.
+- `human_detail_txt` — optional project metadata path to the human-written hero profile.
+- `reports_dir` — optional shared project reports directory.
 - `continue_after_failure` — default `false`; continue with the next image after moving a failed stage into `error`.
 - `write_description` — default `true`; write the stage description / analysis text file.
 - `generate_final_frames` — default `false`; generate final-frame images through the image API.
@@ -524,6 +588,9 @@ flowchart LR
   B3 --> P3["main_project_sequence_batch.py"]
   B4["run_project_publication*.bat"] --> P4["main_project_publication_push.py"]
   B5["run_chatgpt_portrait_batch_existing.bat / run_gemini_portrait_batch_existing.bat / run_grok_portrait_batch_existing.bat"] --> P6["main_chatgpt_portrait_batch.py"]
+  B6["run_hero_definition.bat"] --> P7["main_hero_definition.py"]
+  B7["run_sequence_trim_review.bat"] --> P8["main_sequence_trim_review.py"]
+  B8["run_sequence_keep_apply.bat"] --> P8
 
   A1["CLI flags"] --> P1
   A2["CLI flags"] --> P2
@@ -532,6 +599,10 @@ flowchart LR
   G1 --> P1
   G1 --> P2
   C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_all_styles_config.json\nchatgpt_watercolor_scene_expansion_config.json"] --> P6
+  C6["hero_definition_*.json"] --> P7
+  P7 --> H1["hero_def.json"]
+  H1 --> P8
+  C7["sequence_trim_review_*.json\nsequence_keep_apply_*.json"] --> P8
 
   C3["project_sequence_batch_*.json"] --> P3
   P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
@@ -544,6 +615,7 @@ flowchart LR
   P5 --> O3["reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)"]
   P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
   P6 --> O5["portrait / image-edit results:\noutput/chatgpt_*/*.png\noutput/gemini_*/*.png\noutput/grok_*/*.png"]
+  P8 --> O6["trim review / keep-apply:\nreview .prproj\ntrimmed keep .prproj\nJSON/TXT reports"]
 ```
 
 The left side of the diagram shows launch wrappers and parameter sources, and the right side shows the reports and result artifacts produced by each route.
@@ -652,11 +724,12 @@ For unfinished stages that already have a ready `*_v_prompt_*.txt`, you can safe
 After video generation is finished, the normal process is:
 
 1. Build Premiere sequences manually from the generated `mp4` files.
-2. Run the sequence optimization batch to create new `_oNN` sequences from approved `_eNN` sequences.
-3. Review the optimized result in Premiere.
-4. If needed, manually change clip order again after optimization.
-5. Rebuild the reports from the current manual order.
-6. Keep the final optimized project beside the source Premiere project and keep the reports in `reports`.
+2. If a raw sequence already has a KEEP JSON, run `run_sequence_keep_apply.bat` to write a trimmed project copy before optimization.
+3. Run the sequence optimization batch to create new `_oNN` sequences from approved `_eNN` sequences.
+4. Review the optimized result in Premiere.
+5. If needed, manually change clip order again after optimization.
+6. Rebuild the reports from the current manual order.
+7. Keep the final optimized project beside the source Premiere project and keep the reports in `reports`.
 
 Important location rule:
 
@@ -678,6 +751,10 @@ The optimizer can now work not only with `mp4` clips, but also with visual timel
 ## Sequence Optimization Batch
 
 Run the batch optimizer with a JSON config:
+
+```bat
+.\run_project_sequence_batch.bat .\project_sequence_batch_igor_26_1A.json
+```
 
 ```powershell
 python .\main_project_sequence_batch.py --config .\project_sequence_batch_igor_26_1A.json
@@ -719,7 +796,8 @@ The central data-flow rule is:
 - `human_detail_txt` feeds personalized hero/music reporting in `main_project_sequence_batch.py`;
 - `human_detail_txt` plus `hero_image_dir` produces `hero_def.json` through `main_hero_definition.py`;
 - `hero_def.json` feeds visual identity matching in `main_sequence_trim_review.py`;
-- a saved trim-review JSON feeds `report_replay` without additional OpenAI calls.
+- a saved trim-review JSON feeds `report_replay` without additional OpenAI calls;
+- a manual keep-range JSON feeds `apply_keep_ranges` and writes a trimmed copy of the Premiere project.
 
 ## Hero Definition
 
@@ -782,6 +860,10 @@ The hero report stores every sampled-frame decision with `high`, `medium`, `abse
 
 Use `mode: "report_replay"` to rebuild the Premiere review project from an existing per-engine JSON report without extracting frames or calling OpenAI again:
 
+```bat
+.\run_sequence_trim_review.bat .\sequence_trim_review_Alice_replay_levels.json
+```
+
 ```powershell
 python .\main_sequence_trim_review.py --config .\sequence_trim_review_Alice_replay_levels.json
 ```
@@ -794,6 +876,125 @@ Required config field: `review_json_path`. `sequence_name` sets the output seque
 - V4 DROP — `[DROP]` segments.
 
 Timeline gaps are preserved so all levels can be compared at the same source positions inside one sequence. The replay summary explicitly records `"openai_requests": 0`.
+
+### Apply a manual keep-range JSON
+
+Use `mode: "apply_keep_ranges"` when the keep windows are already known as **source timecode** of the media file (`in`/`out`), not as a position on the timeline. The program copies the whole Premiere project and removes unused pieces of the listed files. Unlisted clips, bins, and sequence names stay. Linked audio is trimmed with the video. `ripple_compact: true` closes the gaps. The source `.prproj` is not modified. The optional `prin_path` is stored in the report only and is not parsed.
+
+Preferred launcher:
+
+```bat
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min.json
+```
+
+The same config also works through the shared trim-review launcher:
+
+```bat
+.\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json
+```
+
+Start from the template for a new project:
+
+```bat
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
+```
+
+Direct Python call:
+
+```powershell
+python .\main_sequence_trim_review.py --config .\sequence_keep_apply_yotam26_2_min.json
+```
+
+Working Yotam config (`sequence_keep_apply_yotam26_2_min.json`):
+
+```json
+{
+  "mode": "apply_keep_ranges",
+  "project_path": "<LOCAL_PATH>",
+  "prin_path": "<LOCAL_PATH>",
+  "keep_ranges_path": "<LOCAL_PATH>",
+  "source_sequence_name": "Yotam26_2_min_v1",
+  "output_project_path": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "ripple_compact": true,
+  "write_project": true
+}
+```
+
+KEEP JSON can be the old `clips` / `keep` list, or the newer self-describing format with `project_path`, `sequence_name`, and `operations`:
+
+```json
+{
+  "project_path": "<LOCAL_PATH>",
+  "sequence_name": "Yotam26_2_min_vtr_2",
+  "operations": [
+    {
+      "file": "IMG_5104_3.mp4",
+      "keep_ranges": [
+        {"in": "00:00:00.350", "out": "00:00:02.300"},
+        {"in": "00:00:10.000", "out": "00:00:12.000"}
+      ]
+    }
+  ]
+}
+```
+
+The wrapper config may omit `project_path` and `sequence_name` when the KEEP JSON already has them. Wrapper fields win if both are set. Several `keep_ranges` become several timeline clips. A range outside the current In/Out is restored from the original media file. Stills can use `"duration"` instead of `keep_ranges`. If the named `.prproj` has no visual clips, keep-apply uses a sibling `*_import.prproj`.
+
+Second Yotam pass:
+
+```bat
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min_vtr_2.json
+```
+
+The operations JSON can also be passed directly:
+
+```bat
+.\run_sequence_keep_apply.bat <LOCAL_PATH>
+```
+
+### Import listed files from a root directory
+
+Use `mode: "import_media"` with `files` (exact name under `root_directory`, optional `relative_path`) or `items` (`order` + absolute `source_path`, no name search). An empty `sequence_name` uses the first sequence other than `lib`. The source `.prproj` is not modified. If the sequence does not exist and `create_sequence_if_missing` is true, it is created. If the source project has no timeline clips, clip templates are taken from `template_project_path` or a sibling `.prproj`. Each imported file gets its own `MasterClip` and its own `VideoStream`/`AudioStream`, so timeline thumbnails do not repeat the template clip.
+
+```bat
+.\run_sequence_media_import.bat .\sequence_media_import_yotam26_part2.json
+```
+
+```bat
+.\run_sequence_media_import.bat <LOCAL_PATH>
+```
+
+Yotam example (`11_Yotam_minimal_part2_import.json`):
+
+```json
+{
+  "project_path": "<LOCAL_PATH>",
+  "sequence_name": "Yotam26_20_v01",
+  "create_sequence_if_missing": true,
+  "root_directory": "<LOCAL_PATH>",
+  "files": ["IMG_4531.MP4", "IMG_4588_4.mp4", "IMG_4793.jpg"]
+}
+```
+
+### Import and keep in one pass
+
+Use `mode: "import_and_keep"` to import files and then apply a KEEP JSON in one pass. The KEEP JSON `project_path` is ignored; keep always runs on the intermediate `*_import.prproj`. The source project is not modified.
+
+```bat
+.\run_sequence_import_and_keep.bat <LOCAL_PATH>
+```
+
+Open the final `Yotam26_1min_keep_v01.prproj`. The untrimmed import copy stays beside it as `*_import.prproj`.
+
+Files already in the project reuse the existing media object. New files are imported from the first match under the root directory. Stills use `still_duration_seconds` (5 by default). Videos use the probed file duration.
+
+After a successful run:
+
+1. Open the new project, for the Yotam example `Yotam26_2_min_keep.prproj`, not the source file.
+2. Sequence names stay the same; listed videos are shorter; photos and unlisted clips stay.
+3. Reports land in `reports_dir` as `<project>_keep_apply.json`, `<project>_keep_apply.txt`, and `sequence_keep_apply_progress.log`.
+4. The launcher prints `Keep apply completed successfully.`
 
 Compact keep (`compact_keep: true`):
 
@@ -958,6 +1159,24 @@ Important rule:
 - the human text should adjust hero portrait, wording tone, and music preferences;
 - professions, biography facts, diet, education, and other non-visible details should not be turned into direct video facts unless they are visible in the sequence.
 
+### Personalized music from project + sequence + hero_def
+
+`main_sequence_music_first.py --config` combines the project config, sequence config, and `hero_def.json`. The ready Alice launch is:
+
+```powershell
+.\run_sequence_music_recommendation.bat
+```
+
+Or:
+
+```powershell
+python -u .\main_sequence_music_first.py --config .\sequence_music_recommendation_Alice.json
+```
+
+It writes a video-only report, a personalized music report, and the analyzed sequence JSON into the configured `reports_dir`. `reports_dir` must be a directory; `hero_definition_path` identifies the `hero_def.json` file. The run verifies that `human_detail_txt` still matches the SHA256 recorded in the hero definition.
+
+Within the world-classical category, canonical composers are prioritized: Bach, Mozart, Beethoven, Tchaikovsky, Vivaldi, Chopin, Schubert, Handel, Brahms, Rachmaninoff, Mendelssohn, Johann Strauss II, Verdi, and Puccini. The specific work is still selected by its fit with the video's theme, mood, and rhythm.
+
 ## Cleanup Of Old And Temporary Files
 
 Preview cleanup only:
@@ -1086,7 +1305,30 @@ Grok portrait batch using the same JSON config format and the Grok automation pr
 .\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error
 ```
 
+Premiere Sequence Trim Review:
+
+```bat
+.\run_sequence_trim_review.bat .\sequence_trim_review_01.json
+.\run_sequence_trim_review.bat .\sequence_trim_review_Alice_1.json
+.\run_sequence_trim_review.bat .\sequence_trim_review_Alice_replay_levels.json
+```
+
+Apply a manual KEEP JSON to a Premiere project copy:
+
+```bat
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min.json
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min_vtr_2.json
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
+.\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json
+.\run_sequence_media_import.bat .\sequence_media_import_yotam26_part2.json
+.\run_sequence_import_and_keep.bat <LOCAL_PATH>
+```
+
 Premiere sequence optimization batch:
+
+```bat
+.\run_project_sequence_batch.bat .\project_sequence_batch_igor_26_1A.json
+```
 
 ```powershell
 python .\main_project_sequence_batch.py --config .\project_sequence_batch_igor_26_1A.json
@@ -1124,6 +1366,7 @@ run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_202603
 - If something goes wrong with Grok result saving, temporarily enable `--save-grok-debug-artifacts`.
 - If a stage failed, first check `error\output\<stage_id>\<stage_id>_error.txt`.
 - Open final optimized `.prproj` files from the same folder as the source `project_path`; `reports\temp_projects` only holds the temporary batch working copy.
+- To apply a finished KEEP JSON, run `.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min.json` and open the new `*_keep.prproj`, not the source project.
 - If you changed an optimized sequence manually, rebuild reports with `main_sequence_reports.py`.
 - Before deleting old artifacts, run cleanup in dry-run mode first and preferably keep an archive copy.
 - For ChatGPT portrait batches, keep only one automation run active and always use `--skip-existing` when resuming after a UI failure.
@@ -1283,6 +1526,6 @@ Canonical project documentation lives in `docs/`. Whenever workflow, file locati
 
 - `docs/USER_GUIDE_EN.md`
 - `docs/USER_GUIDE_RU.md`
-- the relevant reference document in `docs/`
+- the relevant reference document in `docs/` (for portrait banks also `docs/portrait_styles_tables.md`)
 
 Keep only `README.md` and `CHANGELOG.md` as root-level documentation entry points.

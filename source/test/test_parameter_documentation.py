@@ -9,6 +9,10 @@ CONFIG_PATHS = (
     Path("hero_definition_Alice.json"),
     Path("sequence_trim_review_template.json"),
     Path("sequence_trim_review_Alice_replay_levels.json"),
+    Path("sequence_keep_apply_template.json"),
+    Path("sequence_media_import_template.json"),
+    Path("sequence_import_and_keep_template.json"),
+    Path("sequence_music_recommendation_Alice.json"),
     Path("project_sequence_batch_template.json"),
 )
 ROOT_DOCUMENTS = {"README.md", "CHANGELOG.md"}
@@ -22,6 +26,7 @@ CANONICAL_DOCS = (
     Path("docs/MINI_LAPTOP_WATERCOLOR.md"),
     Path("docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md"),
     Path("docs/Seedance_2.0_Director.md"),
+    Path("docs/portrait_styles_tables.md"),
 )
 
 
@@ -43,11 +48,15 @@ def test_parameter_matrix_names_every_entry_program_and_batch() -> None:
         "run_hero_definition.bat",
         "main_sequence_trim_review.py",
         "run_sequence_trim_review.bat",
+        "run_sequence_keep_apply.bat",
+        "run_sequence_media_import.bat",
+        "run_sequence_import_and_keep.bat",
         "main_project_sequence_batch.py",
         "run_project_sequence_batch.bat",
         "main_human_sequence_report.py",
         "main_sequence_reports.py",
         "main_sequence_music_first.py",
+        "run_sequence_music_recommendation.bat",
     )
     assert all(f"`{name}`" in matrix for name in required_names)
 

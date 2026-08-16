@@ -5,8 +5,10 @@
 1. создание визуального определения героя;
 2. KEEP/DROP-анализ исходной sequence;
 3. повторный экспорт из готового отчёта без OpenAI;
-4. оптимизацию sequence;
-5. персонализированные и музыкальные отчёты.
+4. применение ручного KEEP JSON к копии Premiere-проекта;
+5. импорт списка файлов из корневой папки в sequence;
+6. оптимизацию sequence;
+7. персонализированные и музыкальные отчёты.
 
 ## Главное различие между описаниями героя
 
@@ -27,7 +29,19 @@ flowchart LR
 
 - `human_detail_txt` содержит биографический и характерологический контекст. В `main_project_sequence_batch.py` он используется при `generate_personalized_report=true` для корректировки образа героя и музыкальных рекомендаций.
 - `hero_def.json` создаётся из `human_detail_txt` и эталонных изображений. В `main_sequence_trim_review.py` он используется движком `hero` для визуального поиска героя в грязном видеоматериале.
-- Музыкальный отчёт сейчас не читает `hero_def.json` напрямую. KEEP/DROP-анализ не должен использовать невидимые биографические факты как доказательство личности.
+- Музыкальный отчёт использует `hero_def.json` для проверки источника и SHA256 human-detail текста, но не использует визуальные признаки как музыкальные предпочтения. KEEP/DROP-анализ не должен использовать невидимые биографические факты как доказательство личности.
+
+### Общие project metadata в `config_*.json`
+
+Эти пути разрешены в `GenerationConfig`, поэтому один project config можно использовать одновременно для generation, portrait delivery, Hero Definition и музыкальных отчётов:
+
+| Параметр | Default | Назначение | Программы / batch |
+|---|---|---|---|
+| `hero_image_dir` | `null` | Каталог эталонных изображений героя | `main_hero_definition.py`, project metadata |
+| `human_detail_txt` | `null` | Текстовое описание героя | Hero Definition, personalized music report |
+| `reports_dir` | `null` | Общий каталог project reports | music/report workflows |
+
+При `--delivery-config-file config_Alice.json` portrait batch использует `final_output_dir`; дополнительные project metadata сохраняются и больше не считаются неизвестными ключами.
 
 ## Карта запуска
 
@@ -36,10 +50,13 @@ flowchart LR
 | Создать визуальное описание героя | `main_hero_definition.py` | `run_hero_definition.bat` | `hero_definition_*.json` | `hero_def.json` |
 | Разбить sequence на KEEP/DROP | `main_sequence_trim_review.py` | `run_sequence_trim_review.bat` | `sequence_trim_review_*.json` | review `.prproj` + JSON/TXT |
 | Переэкспортировать уровни без OpenAI | `main_sequence_trim_review.py`, режим `report_replay` | `run_sequence_trim_review.bat` | `sequence_trim_review_*_replay_levels.json` | одна sequence, V1–V4 |
+| Оставить только указанные куски медиа | `main_sequence_trim_review.py`, режим `apply_keep_ranges` | `run_sequence_keep_apply.bat`; тот же JSON принимает `run_sequence_trim_review.bat` | `sequence_keep_apply_*.json` + KEEP JSON | новый `.prproj` без лишних кусков |
+| Импортировать список файлов в sequence | `main_sequence_trim_review.py`, режим `import_media` | `run_sequence_media_import.bat` | `sequence_media_import_*.json` + import JSON | новый `.prproj` с файлами на sequence |
+| Импортировать файлы и сразу обрезать KEEP | `main_sequence_trim_review.py`, режим `import_and_keep` | `run_sequence_import_and_keep.bat` | `sequence_import_and_keep_*.json` + import JSON + KEEP JSON | `*_import.prproj` и укороченный `*_keep.prproj` |
 | Оптимизировать sequence и построить bundle отчётов | `main_project_sequence_batch.py` | `run_project_sequence_batch.bat`; проектные `run_project_sequence_batch_*.bat` | `project_sequence_batch_*.json` | оптимизированный `.prproj`, отчёты, JSX |
 | Построить персонализированный отчёт отдельно | `main_human_sequence_report.py` | нет, прямой Python-запуск | CLI | `*_human_profile_report.txt` |
 | Перестроить отчёты после ручного монтажа | `main_sequence_reports.py` | нет, прямой Python-запуск | CLI | current-order JSON, music/structure/transition TXT |
-| Построить music-first отчёт напрямую из Premiere | `main_sequence_music_first.py` | нет, прямой Python-запуск | CLI | JSON + music TXT, опционально structure/transition |
+| Построить music-first отчёт напрямую из Premiere | `main_sequence_music_first.py` | `run_sequence_music_recommendation.bat` или прямой Python-запуск | CLI / `sequence_music_recommendation_*.json` | JSON + video-only/personalized music TXT |
 
 ## 1. Hero Definition
 
@@ -66,7 +83,8 @@ run_hero_definition.bat hero_definition_Alice.json
 Пример запуска:
 
 ```bat
-run_sequence_trim_review.bat sequence_trim_review_Alice_1.json
+.\run_sequence_trim_review.bat .\sequence_trim_review_01.json
+.\run_sequence_trim_review.bat .\sequence_trim_review_Alice_1.json
 ```
 
 | Параметр | Обязательность / default | Назначение | Программа | Batch |
@@ -132,7 +150,7 @@ run_sequence_trim_review.bat sequence_trim_review_Alice_1.json
 Пример запуска:
 
 ```bat
-run_sequence_trim_review.bat sequence_trim_review_Alice_replay_levels.json
+.\run_sequence_trim_review.bat .\sequence_trim_review_Alice_replay_levels.json
 ```
 
 | Параметр | Обязательность / default | Назначение | Программа | Batch |
@@ -148,7 +166,116 @@ run_sequence_trim_review.bat sequence_trim_review_Alice_replay_levels.json
 | `track_indexes.review` | `2` = V3 | Track уровня REVIEW | `utils/premiere_trim_review_export.py` | `run_sequence_trim_review.bat` |
 | `track_indexes.drop` | `3` = V4 | Track уровня DROP | `utils/premiere_trim_review_export.py` | `run_sequence_trim_review.bat` |
 
-## 4. Project Sequence Batch
+## 4. Apply Keep Ranges
+
+Примеры запуска:
+
+```bat
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min.json
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min_vtr_2.json
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
+.\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json
+```
+
+```powershell
+python .\main_sequence_trim_review.py --config .\sequence_keep_apply_yotam26_2_min.json
+```
+
+Исходный `.prproj` не меняется. Новый проект сохраняет bins, sequence names и все неперечисленные клипы. Для файлов из KEEP JSON на timeline остаются только указанные source-диапазоны; связанное аудио режется так же. `.prin` в конфиге только справочный и не парсится.
+
+| Параметр | Обязательность / default | Назначение | Программа | Batch |
+|---|---|---|---|---|
+| `mode` | обязательное значение `apply_keep_ranges` | Переключает CLI на применение ручного KEEP JSON | `main_sequence_trim_review.py` | `run_sequence_keep_apply.bat`, `run_sequence_trim_review.bat` |
+| `project_path` | обязательный | Исходный Premiere `.prproj` | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `prin_path` | необязательный | Справочный путь к `.prin`; не читается | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `keep_ranges_path` | обязательный, если нет `operations`/`clips` | JSON со списком файлов и KEEP-диапазонов; может сам содержать `project_path` и `sequence_name` | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `operations` | обязательный в новом KEEP JSON, если нет `clips` | Список файлов и `keep_ranges`; тот же смысл, что `clips` | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `operations[].file` | обязательный | Имя медиафайла на timeline | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `operations[].keep_ranges` | обязательный для видео, если нет `duration` | Source-диапазоны файла; можно несколько островов | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `operations[].duration` | для фото вместо `keep_ranges` | Новая длительность клипа от текущего InPoint | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `operations[].keep_ranges[].in` | обязательный | Начало KEEP в source-timecode | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `operations[].keep_ranges[].out` | обязательный | Конец KEEP в source-timecode | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `clips` | обязательный, если нет `keep_ranges_path`/`operations` | Старый inline-список файлов и KEEP-диапазонов | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `sequence_name` | из KEEP JSON или все sequence | Предпочтительное имя sequence; алиас `source_sequence_name` | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
+| `source_sequence_name` | все именованные sequence | Старое имя того же поля | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
+| `output_project_path` | `<project>_keep.prproj` | Новый проект рядом с исходным | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
+| `reports_dir` | `<project_dir>/keep_apply_reports` | JSON/TXT отчёт и progress log | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `ripple_compact` | `true` | Сдвинуть следующие клипы влево после удаления кусков | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
+| `write_project` | `true` | Записывать итоговый `.prproj` | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+
+KEEP JSON использует source-время медиафайла, не позицию на timeline. Новый формат может сам указать Adobe-проект и sequence; wrapper-конфиг тогда задаёт только `keep_ranges_path` и `output_project_path`. Поля wrapper имеют приоритет над KEEP JSON.
+
+```json
+{
+  "project_path": "<LOCAL_PATH>",
+  "sequence_name": "Yotam26_2_min_vtr_2",
+  "operations": [
+    {
+      "file": "IMG_5104_3.mp4",
+      "keep_ranges": [
+        {"in": "00:00:00.350", "out": "00:00:02.300"},
+        {"in": "00:00:10.000", "out": "00:00:12.000"}
+      ]
+    }
+  ]
+}
+```
+
+Старый формат `clips` / `keep` по-прежнему принимается. Несколько `keep_ranges` дают несколько клипов на timeline. Диапазон вне текущего In/Out восстанавливается из исходного медиафайла.
+
+## 5. Media Import
+
+Примеры запуска:
+
+```bat
+.\run_sequence_media_import.bat .\sequence_media_import_yotam26_part2.json
+.\run_sequence_media_import.bat .\sequence_media_import_template.json
+.\run_sequence_media_import.bat <LOCAL_PATH>
+```
+
+Программа ищет имена из `files` внутри `root_directory` только по полному имени файла с расширением. Prefix/substring и выбор «первого похожего» запрещены: если файла нет или одно имя встречается больше одного раза, импорт останавливается и сообщает все пути. Исходный `.prproj` не меняется. Если sequence нет и `create_sequence_if_missing=true`, она создаётся клонированием существующей (`lib`, если есть). Уже импортированное медиа переиспользуется; новые файлы копируются в проект как новые Media, отдельный `MasterClip` и отдельные `VideoStream`/`AudioStream` на каждый файл. Если в исходном проекте нет клипов на timeline, шаблон клипа берётся из `template_project_path` или из соседнего `.prproj` в той же папке.
+
+| Параметр | Обязательность / default | Назначение | Программа | Batch |
+|---|---|---|---|---|
+| `mode` | `import_media` или авто по `files`+`root_directory` | Переключает CLI на импорт медиа | `main_sequence_trim_review.py` | `run_sequence_media_import.bat` |
+| `import_path` | необязательный | Отдельный import JSON; из него берутся проект, sequence, root и files | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
+| `project_path` | обязательный, если нет в import JSON | Исходный Premiere `.prproj` | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
+| `sequence_name` | обязательный | Sequence, куда класть файлы | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
+| `create_sequence_if_missing` | `true` | Создать sequence, если её нет | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
+| `root_directory` | обязательный, если нет `items[].source_path` | Корень поиска файлов из списка | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
+| `files` | обязательный, если нет `items` | Точное имя или объект `{file, relative_path}`; 0 или >1 совпадений без пути — стоп | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
+| `files[].relative_path` | для дублей | Путь от `root_directory`; basename должен совпасть с `file` | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
+| `items` | альтернатива `files` | Список `{order, source_path}` с абсолютными путями | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
+| `items[].order` | обязательный в новом формате | Порядок клипов на sequence | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
+| `items[].source_path` | обязательный в новом формате | Абсолютный путь к файлу; поиск по имени не выполняется | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
+| `still_duration_seconds` | `5` | Длительность импортированных фото | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
+| `template_project_path` | необязательный | `.prproj` с клипами-шаблонами, если исходный проект пустой | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
+| `output_project_path` | `<project>_import.prproj` | Новый проект рядом с исходным | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
+| `reports_dir` | `<project_dir>/media_import_reports` | JSON/TXT отчёт и progress log | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
+| `write_project` | `true` | Записывать итоговый `.prproj` | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
+
+## 5.1. Import and Keep
+
+Один проход: сначала `import_media`, затем `apply_keep_ranges` по получившемуся проекту. `project_path` из KEEP JSON игнорируется — keep всегда идёт от промежуточного `*_import.prproj`. Исходный `.prproj` не меняется.
+
+```bat
+.\run_sequence_import_and_keep.bat .\sequence_import_and_keep_template.json
+.\run_sequence_import_and_keep.bat <LOCAL_PATH>
+.\run_sequence_trim_review.bat <LOCAL_PATH>
+```
+
+| Параметр | Обязательность / default | Назначение | Программа | Batch |
+|---|---|---|---|---|
+| `mode` | `import_and_keep` или авто при паре import+keep | Переключает CLI на импорт и keep в одном проходе | `main_sequence_trim_review.py` | `run_sequence_import_and_keep.bat` |
+| `import_path` | обязательный, если нет inline `items`/`files` | Import JSON (`16_*.json`) | `utils/sequence_import_and_keep.py` | `run_sequence_import_and_keep.bat` |
+| `keep_ranges_path` | обязательный, если нет inline `operations` | KEEP JSON (`17_*.json`) | `utils/sequence_import_and_keep.py` | `run_sequence_import_and_keep.bat` |
+| `import_output_project_path` | `<project>_import.prproj` | Промежуточный проект после импорта | `utils/sequence_import_and_keep.py` | `run_sequence_import_and_keep.bat` |
+| `output_project_path` | из KEEP JSON или `<project>_keep.prproj` | Итоговый укороченный проект | `utils/sequence_import_and_keep.py` | `run_sequence_import_and_keep.bat` |
+| `reports_dir` | `<project_dir>/import_keep_reports` | Сводный отчёт и step JSON | `utils/sequence_import_and_keep.py` | `run_sequence_import_and_keep.bat` |
+| `ripple_compact` | `true` | Сдвигать клипы после keep | `utils/sequence_keep_apply.py` | `run_sequence_import_and_keep.bat` |
+| `write_project` | `true` | Записывать итоговый keep `.prproj` | `utils/sequence_import_and_keep.py` | `run_sequence_import_and_keep.bat` |
+
+## 6. Project Sequence Batch
 
 Пример запуска:
 
@@ -193,7 +320,7 @@ run_project_sequence_batch.bat project_sequence_batch_Alice.json
 | `sequence_jobs[].source_sequence_name` | обязательный | Исходная sequence конкретного job | `utils/project_sequence_batch.py` | те же |
 | `sequence_jobs[].new_sequence_name` | `<source>__optimized` | Имя оптимизированной sequence | `utils/project_sequence_batch.py` | те же |
 
-## 5. Прямые CLI-программы отчётов
+## 7. Прямые CLI-программы отчётов
 
 Эти программы пока не имеют `.bat`; в колонке Batch это указано явно.
 
@@ -223,8 +350,9 @@ run_project_sequence_batch.bat project_sequence_batch_Alice.json
 
 | Параметр CLI | Обязательность / default | Назначение | Программа | Batch |
 |---|---|---|---|---|
-| `--prproj` | обязательный | Premiere-проект | `main_sequence_music_first.py` | нет |
-| `--sequence-name` | обязательный | Анализируемая sequence | `main_sequence_music_first.py` | нет |
+| `--config` | нет | Объединить project config, sequence config и `hero_def.json` | `main_sequence_music_first.py` | `run_sequence_music_recommendation.bat` |
+| `--prproj` | обязателен без `--config` | Premiere-проект | `main_sequence_music_first.py` | нет |
+| `--sequence-name` | обязателен без `--config` | Анализируемая sequence | `main_sequence_music_first.py` | нет |
 | `--output-dir` | `Settings.output_dir` | Выходная папка | `main_sequence_music_first.py` | нет |
 | `--output-json` | auto | Scene/profile JSON | `main_sequence_music_first.py` | нет |
 | `--output-music-txt` | auto | Music-first TXT | `main_sequence_music_first.py` | нет |
@@ -234,6 +362,27 @@ run_project_sequence_batch.bat project_sequence_batch_Alice.json
 | `--max-analyzed-clips` | без ограничения | Верхний предел полного анализа | `main_sequence_music_first.py` | нет |
 | `--full-recommendations` | `false` | Добавить structure и transitions | `main_sequence_music_first.py` | нет |
 | `--scene-model` | default scene model | OpenAI model override | `main_sequence_music_first.py` | нет |
+
+### `sequence_music_recommendation_*.json`
+
+| Параметр JSON | Обязательность / default | Назначение | Программа | Batch |
+|---|---|---|---|---|
+| `project_config_path` | обязательный | Project config с `human_detail_txt` и `reports_dir` | `utils/project_sequence_music_recommendation.py` | `run_sequence_music_recommendation.bat` |
+| `sequence_config_path` | обязательный | Sequence config с Premiere project/sequence | то же | то же |
+| `hero_definition_path` | обязательный или из sequence config | Проверенный `hero_def.json` и SHA256 human-detail | то же | то же |
+| `reports_dir` | обязательный или из project config | Каталог JSON/TXT-отчётов; это не путь к `hero_def.json` | то же | то же |
+| `project_path` | optional consistency check | Явный Premiere `.prproj`; должен совпадать с sequence config | то же | то же |
+| `source_sequence_name` | optional consistency check | Явное имя sequence; должно совпадать с sequence config | то же | то же |
+| `human_detail_txt` | project config / `hero_def.json` | Явный override текста героя; все указанные источники должны совпасть | то же | то же |
+| `output_json` | auto | JSON анализа sequence и provenance персонализации | то же | то же |
+| `output_music_txt` | auto | Video-only music report | то же | то же |
+| `output_personalized_music_txt` | auto | Итоговый human-aware music report | то же | то же |
+| `output_structure_txt` | auto | Structure report при `full_recommendations=true` | то же | то же |
+| `output_transition_txt` | auto | Transition report при `full_recommendations=true` | то же | то же |
+| `max_sampled_clips` | `12` | Representative clips для быстрого music-only анализа | то же | то же |
+| `max_analyzed_clips` | `null` | Лимит анализа в full mode | то же | то же |
+| `full_recommendations` | `false` | Дополнительно создать structure и transitions | то же | то же |
+| `scene_model` | `gpt-4.1-mini` из environment/default | OpenAI vision-модель scene analysis | то же | то же |
 
 ## Правила сопровождения
 

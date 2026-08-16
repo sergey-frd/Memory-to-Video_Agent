@@ -7,7 +7,8 @@
 - [USER_GUIDE_RU.md](USER_GUIDE_RU.md) — руководство пользователя на русском.
 - [USER_GUIDE_EN.md](USER_GUIDE_EN.md) — English user guide.
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — архитектура и карта подсистем.
-- [PARAMETER_PROGRAM_BATCH_MATRIX_RU.md](PARAMETER_PROGRAM_BATCH_MATRIX_RU.md) — параметр → программа → batch → результат.
+- [PARAMETER_PROGRAM_BATCH_MATRIX_RU.md](PARAMETER_PROGRAM_BATCH_MATRIX_RU.md) — параметр → программа → batch → результат, включая `apply_keep_ranges`, `import_media`, `import_and_keep`.
+- [portrait_styles_tables.md](portrait_styles_tables.md) — таблица `name` / `slug` для полного portrait-банка.
 
 ## Эксплуатация
 

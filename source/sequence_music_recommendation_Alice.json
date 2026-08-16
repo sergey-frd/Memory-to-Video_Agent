@@ -1,0 +1,12 @@
+{
+  "project_config_path": "config_Alice.json",
+  "sequence_config_path": "sequence_trim_review_Alice_1.json",
+  "hero_definition_path": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "project_path": "<LOCAL_PATH>",
+  "source_sequence_name": "Alica_26_e04",
+  "max_sampled_clips": 12,
+  "max_analyzed_clips": null,
+  "full_recommendations": false,
+  "scene_model": "gpt-4.1-mini"
+}

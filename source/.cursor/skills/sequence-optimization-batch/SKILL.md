@@ -102,6 +102,20 @@ This produces `<sequence>_manual_order.json`, `<sequence>_manual_order_music.txt
 
 `main_sequence_music_first.py` is the lighter sibling when you only need the music recommendation.
 
+For a personalized report assembled from existing project, sequence, and hero configs:
+
+```bat
+.\run_sequence_music_recommendation.bat .\sequence_music_recommendation_Alice.json
+```
+
+The JSON references `project_config_path`, `sequence_config_path`, `hero_definition_path`, and a directory-valued `reports_dir`. The workflow writes both video-only and human-aware music reports and verifies the `human_detail_txt` SHA256 recorded in `hero_def.json`.
+
+To apply a finished KEEP JSON to a Premiere project copy before optimization, use the dedicated launcher from the Sequence Trim Review skill:
+
+```bat
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min.json
+```
+
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -116,6 +130,7 @@ This produces `<sequence>_manual_order.json`, `<sequence>_manual_order_music.txt
 - `main_project_sequence_batch.py` - batch entry point.
 - `main_sequence_reports.py` - manual-order rebuild entry point.
 - `main_sequence_music_first.py` - music-only report.
+- `utils/project_sequence_music_recommendation.py` - config resolution and personalized music orchestration.
 - `utils/sequence_optimizer*.py`, `utils/premiere_xml.py`, `utils/premiere_project.py` - optimizer internals.
 - `utils/premiere_transition_script.py`, `utils/premiere_transform_script.py` - JSX generators.
 - `styles/List of Video transform effects.txt` - Transform effect inventory.

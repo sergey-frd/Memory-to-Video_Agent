@@ -1,0 +1,8 @@
+{
+  "mode": "import_media",
+  "import_path": "<LOCAL_PATH>",
+  "output_project_path": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "still_duration_seconds": 5,
+  "write_project": true
+}

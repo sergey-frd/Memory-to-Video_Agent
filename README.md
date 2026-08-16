@@ -4,18 +4,18 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.07.25.01`
-- Git tag: `v2026.07.25.01`
+- Publication version: `2026.08.16.01`
+- Git tag: `v2026.08.16.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-07-25T14:00:18+02:00`
+- Last synchronized: `2026-08-16T03:49:52+02:00`
 - Source project: `img-style-ag_1`
-- Python files: `226`
-- Test files: `39`
+- Python files: `238`
+- Test files: `43`
 - Entry points: `30`
 
 ## Published Source Mirror
 
-- Mirrored source files: `467`
+- Mirrored source files: `494`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/CHANGELOG.md`
@@ -30,6 +30,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/chatgpt_camera_transform_config.json`
 - `source/chatgpt_camera_transform_config_0.json`
 - `source/chatgpt_colorize_config.json`
+- `source/chatgpt_ilya_repin_config.json`
 - `source/chatgpt_modern_color_restoration_config.json`
 - `source/chatgpt_pair_base_config.json`
 - `source/chatgpt_photo_portret_config.json`
@@ -39,6 +40,8 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/chatgpt_portrait_config.json`
 - `source/chatgpt_portrait_config_0.json`
 - `source/chatgpt_renoir_config.json`
+- `source/chatgpt_russian_artists_config.json`
+- `source/chatgpt_selected_artists_config.json`
 - `source/chatgpt_watercolor_config.json`
 - `source/chatgpt_watercolor_on_paper_config.json`
 - `source/chatgpt_watercolor_scene_expansion_config.json`
@@ -171,10 +174,21 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/run_project_sequence_batch_igor_26_1A.bat`
 - `source/run_project_sequence_batch_nicol_26_T2.bat`
 - `source/run_project_sequence_batch_vika_26_1A.bat`
+- `source/run_sequence_import_and_keep.bat`
+- `source/run_sequence_keep_apply.bat`
+- `source/run_sequence_media_import.bat`
+- `source/run_sequence_music_recommendation.bat`
 - `source/run_sequence_trim_review.bat`
 - `source/run_video_prompt_story_export.bat`
 - `source/run_video_prompt_story_generate.bat`
 - `source/scripts`
+- `source/sequence_import_and_keep_template.json`
+- `source/sequence_keep_apply_template.json`
+- `source/sequence_keep_apply_yotam26_2_min.json`
+- `source/sequence_keep_apply_yotam26_2_min_vtr_2.json`
+- `source/sequence_media_import_template.json`
+- `source/sequence_media_import_yotam26_part2.json`
+- `source/sequence_music_recommendation_Alice.json`
 - `source/sequence_trim_review_01.json`
 - `source/sequence_trim_review_Alice_1.json`
 - `source/sequence_trim_review_Alice_HS_2.json`

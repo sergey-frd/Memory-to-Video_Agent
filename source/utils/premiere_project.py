@@ -155,6 +155,21 @@ def find_project_sequence_node(root: ET.Element, sequence_name: str) -> ET.Eleme
     return None
 
 
+def list_named_project_sequence_names(root: ET.Element) -> list[str]:
+    names: list[str] = []
+    seen: set[str] = set()
+    for sequence_node in root.iter("Sequence"):
+        name = (sequence_node.findtext("./Name") or "").strip()
+        if not name:
+            continue
+        key = name.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        names.append(name)
+    return names
+
+
 def extract_stage_id_from_project_media_name(media_name: str) -> str | None:
     stem = Path(media_name).stem
     match = _STAGE_ITEM_PATTERN.match(stem)
@@ -281,6 +296,21 @@ def resolve_project_track_item_timeline(track_item_node: ET.Element) -> tuple[in
     start = _safe_int(track_item_node.findtext("./ClipTrackItem/TrackItem/Start"))
     end = _safe_int(track_item_node.findtext("./ClipTrackItem/TrackItem/End"))
     return start, end
+
+
+def resolve_project_track_item_source_bounds(
+    track_item_node: ET.Element,
+    object_id_lookup: dict[str, ET.Element],
+) -> tuple[int, int]:
+    clip_node = resolve_project_track_item_clip(track_item_node, object_id_lookup)
+    start, end = resolve_project_track_item_timeline(track_item_node)
+    if clip_node is None:
+        return 0, max(0, end - start)
+    in_point = _safe_int(clip_node.findtext("./Clip/InPoint"))
+    out_point = _safe_int(clip_node.findtext("./Clip/OutPoint"))
+    if out_point <= in_point:
+        return in_point, in_point + max(0, end - start)
+    return in_point, out_point
 
 
 def get_project_track_group_indexes(sequence_node: ET.Element) -> list[int]:

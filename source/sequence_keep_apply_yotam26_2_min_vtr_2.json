@@ -1,0 +1,8 @@
+{
+  "mode": "apply_keep_ranges",
+  "keep_ranges_path": "<LOCAL_PATH>",
+  "output_project_path": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "ripple_compact": true,
+  "write_project": true
+}

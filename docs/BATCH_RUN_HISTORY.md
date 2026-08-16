@@ -42,24 +42,54 @@
 | B024 | `run_video_prompt_story_generate.bat` | Сгенерировать reviewable HTML/JSON историю для multi-scene video prompt | `.\run_video_prompt_story_generate.bat` |
 | B025 | `run_video_prompt_story_export.bat` | Экспортировать composer JSON после правок HTML-истории | `.\run_video_prompt_story_export.bat <LOCAL_PATH>` |
 | B026 | `run_project_publication_push.bat` | Опубликовать полный bundle на GitHub (`Memory-to-Video_Agent`, tag `v2026.06.10.02`) | `.\run_project_publication_push.bat --source-root .` |
-| B027 | `run_chatgpt_style_batch_existing.bat` | Все 21 стиля base-банка по `input/` через `chatgpt_all_styles_config.json`; результаты в `output\chatgpt_all_styles` | `run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --skip-existing --continue-on-error` |
+| B027 | `run_chatgpt_style_batch_existing.bat` | Все 37 стилей base-банка по `input/` через `chatgpt_all_styles_config.json`; результаты в `output\chatgpt_all_styles` | `run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --skip-existing --continue-on-error` |
 | B028 | `run_chatgpt_portrait_batch_existing.bat` | То же «все стили», но через основной desktop-launcher (не laptop style-batch) | `.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_all_styles_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer` |
 | B029 | `run_sequence_trim_review.bat` | Premiere Sequence Trim Review: heuristic + semantic KEEP/DROP сегменты, compact keep | `.\run_sequence_trim_review.bat .\sequence_trim_review_01.json` |
 | B030 | `run_hero_definition.bat` | Создать `hero_def.json` из эталонных фотографий и `human_detail_txt` | `.\run_hero_definition.bat .\hero_definition_Alice.json` |
 | B031 | `run_sequence_trim_review.bat` | Hero-aware HIGH/MEDIUM/REVIEW/DROP анализ по `hero_def.json` | `.\run_sequence_trim_review.bat .\sequence_trim_review_Alice_1.json` |
 | B032 | `run_sequence_trim_review.bat` | Повторный экспорт одной sequence с V1 HIGH, V2 MEDIUM, V3 REVIEW, V4 DROP без OpenAI | `.\run_sequence_trim_review.bat .\sequence_trim_review_Alice_replay_levels.json` |
+| B033 | `run_sequence_music_recommendation.bat` | Video-only + персонализированный music report из project config, sequence config и `hero_def.json` | `.\run_sequence_music_recommendation.bat .\sequence_music_recommendation_Alice.json` |
+| B034 | `run_chatgpt_portrait_batch_existing.bat` | Только психологический русский реалистический портрет `ILYA_REPIN` | `.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_ilya_repin_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer` |
+| B035 | `run_chatgpt_portrait_batch_existing.bat` | Подмножество художников: Picasso Blue/Rose, Vermeer, Caravaggio, Rodin, Michelangelo, Matisse, Botticelli, Toulouse-Lautrec, Modigliani | `.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_selected_artists_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer` |
+| B036 | `run_chatgpt_portrait_batch_existing.bat` | Русские художники: Серов, Васнецов, Врубель, Левитан | `.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_russian_artists_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer` |
+| B037 | `run_sequence_trim_review.bat` | Применить ручной KEEP JSON к копии Premiere-проекта через общий trim-review launcher (`mode=apply_keep_ranges`) | `.\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json` |
+| B038 | `run_sequence_keep_apply.bat` | Отдельный launcher для `apply_keep_ranges`: Yotam 2-min KEEP JSON | `.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min.json` |
+| B039 | `run_sequence_keep_apply.bat` | Тот же режим по шаблону нового проекта | `.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json` |
+| B040 | `run_sequence_keep_apply.bat` | Второй проход Yotam: KEEP JSON с `project_path`, `sequence_name` и несколькими `keep_ranges` | `.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min_vtr_2.json` |
+| B041 | `run_sequence_media_import.bat` | Импорт списка файлов из корневой папки в Premiere sequence | `.\run_sequence_media_import.bat .\sequence_media_import_yotam26_part2.json` |
+| B042 | `run_sequence_import_and_keep.bat` | Импорт списка файлов и keep/очистка за один проход | `.\run_sequence_import_and_keep.bat <LOCAL_PATH>` |
 
-## GitHub publication note (2026-07-25)
+## GitHub publication note (2026-08-16)
 
 Dev history: https://github.com/sergey-frd/img-style-ag_1 (`git push origin main`).
 
-Public Internet bundle: https://github.com/sergey-frd/Memory-to-Video_Agent at version **`2026.07.25.01`** (tag `v2026.07.25.01`). Headline: hero-aware Sequence Trim Review and documentation consolidation.
+Public Internet bundle: https://github.com/sergey-frd/Memory-to-Video_Agent at version **`2026.08.16.01`** (tag `v2026.08.16.01`). Headline: Premiere import / keep-apply / import-and-keep plus expanded portrait style banks.
 
 ## Рабочая команда для текущей задачи
 
+Применить ручной KEEP JSON к копии Premiere-проекта Yotam:
+
 ```bat
-.\run_sequence_trim_review.bat .\sequence_trim_review_01.json
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min.json
 ```
+
+Тот же JSON через общий launcher:
+
+```bat
+.\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json
+```
+
+Новый проект по шаблону:
+
+```bat
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
+```
+
+Ожидаемый результат keep-apply:
+- исходный `Yotam26_2_min.prproj` не меняется;
+- новый проект: `<LOCAL_PATH>`;
+- отчёты: `<LOCAL_PATH>`;
+- в консоли: `Keep apply completed successfully.`
 
 Gemini equivalent with the same config format:
 

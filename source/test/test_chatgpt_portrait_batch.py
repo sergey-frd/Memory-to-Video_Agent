@@ -66,6 +66,107 @@ def test_load_portrait_config_accepts_result_timeout() -> None:
     assert config.result_timeout == 900.0
 
 
+def test_ilya_repin_style_is_available_in_banks_and_special_config() -> None:
+    base_config = load_portrait_config(Path("chatgpt_portrait_base_config.json"))
+    all_styles_config = load_portrait_config(Path("chatgpt_all_styles_config.json"))
+    special_config = load_portrait_config(Path("chatgpt_ilya_repin_config.json"))
+
+    base_style = next(style for style in base_config.styles if style.name.startswith("ILYA_REPIN"))
+    all_styles_style = next(style for style in all_styles_config.styles if style.name.startswith("ILYA_REPIN"))
+
+    assert base_style.slug == "irp"
+    assert all_styles_style.prompt == base_style.prompt
+    assert len(special_config.styles) == 1
+    assert special_config.styles[0].slug == "irp"
+    assert special_config.styles[0].prompt == base_style.prompt
+    assert special_config.output_dir == Path("output/chatgpt_ilya_repin")
+
+
+def test_portrait_styles_table_matches_full_json_banks() -> None:
+    base_config = load_portrait_config(Path("chatgpt_portrait_base_config.json"))
+    all_styles_config = load_portrait_config(Path("chatgpt_all_styles_config.json"))
+    table_text = Path("docs/portrait_styles_tables.md").read_text(encoding="utf-8-sig")
+
+    def table_rows(section: str, next_section: str | None) -> list[tuple[str, str]]:
+        content = table_text.split(section, 1)[1]
+        if next_section is not None:
+            content = content.split(next_section, 1)[0]
+        rows: list[tuple[str, str]] = []
+        for line in content.splitlines():
+            columns = [column.strip() for column in line.strip().strip("|").split("|")]
+            if len(columns) == 3 and columns[0].isdigit():
+                rows.append((columns[1].strip("`"), columns[2].strip("`")))
+        return rows
+
+    base_styles = [(style.name, style.slug, style.prompt) for style in base_config.styles]
+    all_styles = [(style.name, style.slug, style.prompt) for style in all_styles_config.styles]
+    expected_by_name = sorted(
+        ((name, slug) for name, slug, _prompt in base_styles),
+        key=lambda item: item[0].casefold(),
+    )
+    expected_by_slug = sorted((slug, name) for name, slug, _prompt in base_styles)
+
+    assert all_styles == base_styles
+    assert table_rows("## Сортировка по `name`", "## Сортировка по `slug`") == expected_by_name
+    assert table_rows("## Сортировка по `slug`", None) == expected_by_slug
+    assert f"Количество стилей: **{len(base_styles)}**." in table_text
+    assert len({slug for _name, slug, _prompt in base_styles}) == len(base_styles)
+    assert all(1 <= len(slug) <= 4 for _name, slug, _prompt in base_styles)
+
+
+def test_russian_artists_config_matches_base_bank_subset() -> None:
+    base_config = load_portrait_config(Path("chatgpt_portrait_base_config.json"))
+    russian_config = load_portrait_config(Path("chatgpt_russian_artists_config.json"))
+    base_by_slug = {style.slug: style for style in base_config.styles}
+    expected_slugs = ["srv", "vas", "vru", "lev"]
+
+    assert [style.slug for style in russian_config.styles] == expected_slugs
+    assert russian_config.output_dir == Path("output/chatgpt_russian_artists")
+    for style in russian_config.styles:
+        assert style.prompt == base_by_slug[style.slug].prompt
+        assert style.name == base_by_slug[style.slug].name
+
+
+def test_selected_artists_config_matches_base_bank_subset() -> None:
+    base_config = load_portrait_config(Path("chatgpt_portrait_base_config.json"))
+    selected_config = load_portrait_config(Path("chatgpt_selected_artists_config.json"))
+    base_by_slug = {style.slug: style for style in base_config.styles}
+    expected_slugs = ["pbl", "prs", "ver", "car", "rod", "mic", "mat", "bot", "tlt", "mod"]
+
+    assert [style.slug for style in selected_config.styles] == expected_slugs
+    assert selected_config.output_dir == Path("output/chatgpt_selected_artists")
+    for style in selected_config.styles:
+        assert style.prompt == base_by_slug[style.slug].prompt
+        assert style.name == base_by_slug[style.slug].name
+
+
+def test_new_artist_styles_have_short_unique_slugs() -> None:
+    config = load_portrait_config(Path("chatgpt_portrait_base_config.json"))
+    styles = {style.name: style for style in config.styles}
+    expected = {
+        "SANDRO_BOTTICELLI Florentine Renaissance portrait": ("bot", "SANDRO_BOTTICELLI:"),
+        "TOULOUSE_LAUTREC Belle Epoque poster portrait": ("tlt", "TOULOUSE_LAUTREC:"),
+        "AMEDEO_MODIGLIANI modernist elongated portrait": ("mod", "AMEDEO_MODIGLIANI:"),
+        "EDGAR_DEGAS intimate Impressionist portrait": ("deg", "EDGAR_DEGAS:"),
+        "PICASSO_BLUE Blue Period Picasso portrait": ("pbl", "PICASSO_BLUE:"),
+        "PICASSO_ROSE Rose Period Picasso portrait": ("prs", "PICASSO_ROSE:"),
+        "JOHANNES_VERMEER Dutch Golden Age interior portrait": ("ver", "JOHANNES_VERMEER:"),
+        "CARAVAGGIO dramatic Baroque chiaroscuro portrait": ("car", "CARAVAGGIO:"),
+        "AUGUSTE_RODIN sculptural portrait": ("rod", "AUGUSTE_RODIN:"),
+        "MICHELANGELO sculptural marble portrait": ("mic", "MICHELANGELO:"),
+        "HENRI_MATISSE Fauvist color portrait": ("mat", "HENRI_MATISSE:"),
+        "VALENTIN_SEROV Russian realist portrait": ("srv", "VALENTIN_SEROV:"),
+        "VIKTOR_VASNETSOV Russian epic folk portrait": ("vas", "VIKTOR_VASNETSOV:"),
+        "MIKHAIL_VRUBEL Symbolist crystalline portrait": ("vru", "MIKHAIL_VRUBEL:"),
+        "ISAAC_LEVITAN lyrical landscape portrait atmosphere": ("lev", "ISAAC_LEVITAN:"),
+    }
+
+    for name, (slug, prompt_marker) in expected.items():
+        assert styles[name].slug == slug
+        assert prompt_marker in styles[name].prompt
+        assert len(styles[name].slug) <= 4
+
+
 def test_resolve_result_timeout_prefers_cli_over_config() -> None:
     args = Namespace(result_timeout=123.0)
     config = PortraitBatchConfig(styles=[PortraitStyle(name="watercolor")], result_timeout=900.0)
@@ -397,7 +498,10 @@ def test_run_batch_copies_saved_portrait_into_user_final_output_dir() -> None:
     delivery_config_path = root / "delivery.json"
     delivery_config_path.write_text(
         '{\n'
-        '  "final_output_dir": "delivered/output"\n'
+        '  "final_output_dir": "delivered/output",\n'
+        '  "hero_image_dir": "project/hero",\n'
+        '  "human_detail_txt": "project/hero_detail.txt",\n'
+        '  "reports_dir": "project/reports"\n'
         '}',
         encoding="utf-8",
     )

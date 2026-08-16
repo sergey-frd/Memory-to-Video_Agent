@@ -26,6 +26,9 @@ def test_generation_config_defaults_match_requested_values() -> None:
     assert config.final_videos_dir == "final_project/videos"
     assert config.final_output_dir == "final_project/output"
     assert config.regeneration_assets_dir == "final_project/regeneration_assets"
+    assert config.hero_image_dir is None
+    assert config.human_detail_txt is None
+    assert config.reports_dir is None
     assert config.continue_after_failure is False
     assert config.prefer_face_closeups is False
     assert config.use_ai_optimal_framing is False
@@ -102,6 +105,15 @@ def test_load_generation_config_rejects_unknown_keys() -> None:
 
     with pytest.raises(ConfigValidationError, match="Unknown config key\\(s\\).*wrong_field"):
         load_generation_config(config_path)
+
+
+def test_load_generation_config_accepts_project_metadata_paths() -> None:
+    config = load_generation_config(Path("config_Alice.json"))
+
+    assert config.hero_image_dir is not None
+    assert config.human_detail_txt is not None
+    assert config.reports_dir is not None
+    assert config.final_output_dir.endswith("Dv_Alice\\2026\\output")
 
 
 def test_load_generation_config_rejects_conflicting_framing_flags() -> None:

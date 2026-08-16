@@ -5,7 +5,7 @@ description: Run the artistic portrait, pair-portrait, or image-edit batch throu
 
 # ChatGPT / Gemini / Grok Portrait Batch
 
-Generates stylized portraits (Rembrandt, Renaissance, Watercolor, Van Gogh, Klimt, Art Deco, Pop Art, Cubist, Chagall, etc.) plus service styles (`MODERN_COLOR`, `COLORIZE`, `FACE_ENLARGEMENT`, `SCENE_EXPANSION`) by sending each image in `input/` (or each numbered folder in `input_pair/`) through the user's existing ChatGPT/Gemini/Grok session, or through API/local backends.
+Generates stylized portraits (Rembrandt, Botticelli, Degas, Vermeer, Caravaggio, Picasso Blue/Rose, Matisse, Serov, Vasnetsov, Vrubel, Levitan, Rodin/Michelangelo sculpture, Toulouse-Lautrec, Modigliani, Renaissance, Watercolor, Van Gogh, Klimt, Art Deco, Pop Art, Cubist, Chagall, etc.) plus service styles (`MODERN_COLOR`, `COLORIZE`, `FACE_ENLARGEMENT`, `SCENE_EXPANSION`) by sending each image in `input/` (or each numbered folder in `input_pair/`) through the user's existing ChatGPT/Gemini/Grok session, or through API/local backends.
 
 ## Pick a backend
 
@@ -23,7 +23,7 @@ Generates stylized portraits (Rembrandt, Renaissance, Watercolor, Van Gogh, Klim
 
 ```
 - [ ] Source images: input/ for portraits, input_pair/<id>/ for pair portraits
-- [ ] A style config picked: chatgpt_portrait_config.json (short), chatgpt_portrait_base_config.json (full bank), chatgpt_all_styles_config.json (full bank batch into output/chatgpt_all_styles), chatgpt_pair_base_config.json (pair bank), or one of the special configs (watercolor_scene_expansion, picasso_graphic, etc.)
+- [ ] A style config picked: chatgpt_portrait_config.json (short), chatgpt_portrait_base_config.json (full bank), chatgpt_all_styles_config.json (full bank batch into output/chatgpt_all_styles), chatgpt_pair_base_config.json (pair bank), or one of the special configs (ilya_repin, watercolor_scene_expansion, picasso_graphic, etc.)
 - [ ] For desktop flows: ONE Chrome window with the target service open and signed in. ChatGPT must be the only ChatGPT window (the launcher enforces `--desktop-require-single-tab-window`).
 - [ ] Foreground safety: no Premiere Pro / Total Commander / random app on top of the target window when the batch starts.
 - [ ] For OpenAI API path: `.env` has OPENAI_API_KEY.
@@ -53,6 +53,24 @@ Watercolor + scene expansion only:
 
 ```bat
 .\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_watercolor_scene_expansion_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Ilya Repin-inspired Russian realist oil portrait only:
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_ilya_repin_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Selected artist subset (Picasso Blue/Rose, Vermeer, Caravaggio, Rodin, Michelangelo, Matisse, Botticelli, Toulouse-Lautrec, Modigliani):
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_selected_artists_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+```
+
+Russian artists subset (Serov, Vasnetsov, Vrubel, Levitan):
+
+```bat
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_russian_artists_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
 ```
 
 Pair portrait into a delivery project:
@@ -109,4 +127,5 @@ Naming pattern: `<image_stem>_<style_slug>.png`, e.g. `IMG-001_rembrandt.png`. `
 - `api/gemini_desktop.py` - Gemini desktop adapter.
 - `api/grok_web.py` - Grok web adapter (image mode).
 - `docs/BATCH_RUN_HISTORY.md` - non-repeating example commands per launcher.
+- `docs/portrait_styles_tables.md` - name/slug table for the full portrait bank.
 - `styles/art_styles_Prompt_list.txt` - source style prompt bank.

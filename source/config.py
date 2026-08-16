@@ -58,6 +58,9 @@ CONFIG_STR_FIELDS = {
     "final_videos_dir",
     "final_output_dir",
     "regeneration_assets_dir",
+    "hero_image_dir",
+    "human_detail_txt",
+    "reports_dir",
 }
 CONFIG_ENUM_FIELDS = {
     "motion_source",
@@ -170,6 +173,9 @@ class GenerationConfig:
     final_videos_dir: str = "final_project/videos"
     final_output_dir: str = "final_project/output"
     regeneration_assets_dir: str = "final_project/regeneration_assets"
+    hero_image_dir: str | None = None
+    human_detail_txt: str | None = None
+    reports_dir: str | None = None
     continue_after_failure: bool = False
     write_description: bool = True
     generate_final_frames: bool = False
@@ -240,6 +246,21 @@ class GenerationConfig:
             final_videos_dir=str(data.get("final_videos_dir", default.final_videos_dir)),
             final_output_dir=str(data.get("final_output_dir", default.final_output_dir)),
             regeneration_assets_dir=str(data.get("regeneration_assets_dir", default.regeneration_assets_dir)),
+            hero_image_dir=(
+                str(data["hero_image_dir"])
+                if data.get("hero_image_dir") is not None
+                else default.hero_image_dir
+            ),
+            human_detail_txt=(
+                str(data["human_detail_txt"])
+                if data.get("human_detail_txt") is not None
+                else default.human_detail_txt
+            ),
+            reports_dir=(
+                str(data["reports_dir"])
+                if data.get("reports_dir") is not None
+                else default.reports_dir
+            ),
             continue_after_failure=data.get("continue_after_failure", default.continue_after_failure),
             write_description=data.get("write_description", default.write_description),
             generate_final_frames=data.get("generate_final_frames", default.generate_final_frames),
@@ -292,6 +313,9 @@ class GenerationConfig:
             "final_videos_dir": self.final_videos_dir,
             "final_output_dir": self.final_output_dir,
             "regeneration_assets_dir": self.regeneration_assets_dir,
+            "hero_image_dir": self.hero_image_dir,
+            "human_detail_txt": self.human_detail_txt,
+            "reports_dir": self.reports_dir,
             "continue_after_failure": self.continue_after_failure,
             "write_description": self.write_description,
             "generate_final_frames": self.generate_final_frames,

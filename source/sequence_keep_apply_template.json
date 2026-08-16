@@ -1,0 +1,12 @@
+{
+  "mode": "apply_keep_ranges",
+  "project_path": "<LOCAL_PATH>",
+  "prin_path": "<LOCAL_PATH>",
+  "keep_ranges_path": "<LOCAL_PATH>",
+  "sequence_name": "<Sequence>",
+  "source_sequence_name": "<Sequence>",
+  "output_project_path": "<LOCAL_PATH>",
+  "reports_dir": "<LOCAL_PATH>",
+  "ripple_compact": true,
+  "write_project": true
+}
