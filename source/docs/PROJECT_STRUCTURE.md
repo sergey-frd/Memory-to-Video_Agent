@@ -98,7 +98,7 @@
 | Full Sequential Pipeline | `main_full_pipeline.py`, `main_full_pipeline_api.py` | Prompt generation + Grok-run для каждого изображения из `input/`; `main_full_pipeline_api.py` использует `GrokVideoAPISessionRunner` вместо браузера | delivered stage outputs, cleanup of `input/` and `output/` |
 | Delivery & Lifecycle | `utils/project_delivery.py`, `utils/artifact_cleanup.py`, `main_cleanup_artifacts.py` | Доставка, очистка, перенос ошибок, архивирование | `final_videos_dir`, `final_output_dir`, `regeneration_assets_dir`, `error/`, cleanup reports |
 | Sequence Optimization & Music | `main_sequence_optimizer.py`, `main_sequence_music_first.py`, `utils/sequence_optimizer.py`, `utils/project_sequence_music_recommendation.py`, `utils/human_profile_sequence_report.py`, `utils/premiere_xml.py`, `utils/premiere_project.py`, `models/video_sequence.py` | Рекомендованный порядок клипов, video-only и персонализированные музыкальные рекомендации | optimized JSON/TXT/XML/PRPROJ, `*_music_first.txt`, `*_personalized_music.txt` |
-| Sequence Trim Review | `main_sequence_trim_review.py`, `utils/sequence_trim_review.py`, `utils/sequence_trim_classifier.py`, `utils/sequence_trim_semantic.py`, `utils/premiere_trim_review_export.py`, `utils/sequence_keep_apply.py`, `utils/premiere_keep_apply_export.py`, `utils/sequence_media_import.py`, `utils/premiere_media_import_export.py`, `utils/sequence_import_and_keep.py`, `utils/video_frame_extract.py`, `api/openai_trim_semantic.py`, `models/sequence_trim_review.py`, `models/sequence_keep_apply.py`, `models/sequence_media_import.py` | Per-clip KEEP/DROP segments (heuristic + semantic), compact still/video keep, manual keep-range apply, media import into a sequence, import-and-keep in one pass | review `.prproj`, trimmed `.prproj`, import `.prproj`, bundle/JSON/TXT reports |
+| Sequence Trim Review | `main_sequence_trim_review.py`, `utils/sequence_trim_review.py`, `utils/sequence_trim_classifier.py`, `utils/sequence_trim_semantic.py`, `utils/premiere_trim_review_export.py`, `utils/sequence_keep_apply.py`, `utils/premiere_keep_apply_export.py`, `utils/sequence_media_import.py`, `utils/premiere_media_import_export.py`, `utils/sequence_import_and_keep.py`, `utils/video_frame_extract.py`, `api/openai_trim_semantic.py`, `models/sequence_trim_review.py`, `models/sequence_keep_apply.py`, `models/sequence_media_import.py` | Per-clip KEEP/DROP segments (heuristic + semantic), compact still/video keep, manual keep-range apply, keep onto a copied sequence in the same `.prproj`, media import into a sequence or a new sequence in the existing project, import-and-keep in one pass | review `.prproj`, trimmed `.prproj`, import `.prproj`, in-place new sequences, bundle/JSON/TXT reports |
 | Reports & Batch Orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/premiere_transition_script.py`, `utils/premiere_transform_script.py`, `utils/fcp_translation_results.py` | Reports, batch delivery, human-profile overlays, transition and transform scripts | reports, batch summaries, transition reports, Premiere JSX scripts |
 | Desktop/Web Automation | `main_desktop.py`, `api/chatgpt_desktop.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/chatgpt_web.py`, `api/grok_web.py` | Prompt-driven interaction with external UIs | submitted prompts, saved media |
 | Portrait/Image Batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `chatgpt_all_styles_config.json`, `chatgpt_pair_base_config.json`, `run_chatgpt_portrait_batch_existing.bat`, `run_chatgpt_pair_batch_existing.bat`, `run_gemini_portrait_batch_existing.bat`, `run_grok_portrait_batch_existing.bat` | Batch generation of artistic portraits, pair portraits, and image-edit tasks through ChatGPT, Gemini, Grok, OpenAI API, or local stylizer | `output/chatgpt_*`, `output/gemini_*`, `output/grok_*`, `output/pair`, optional `final_output_dir` copy, optional response text |
@@ -303,11 +303,27 @@ flowchart LR
 ```
 
 ```bat
+.\run_sequence_keep_apply.bat .\sequence_keep_to_new_sequence_template.json
+```
+
+```bat
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_macro_styles.json
+```
+
+```bat
 .\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json
 ```
 
 ```bat
 .\run_sequence_media_import.bat .\sequence_media_import_yotam26_part2.json
+```
+
+```bat
+.\run_sequence_media_import.bat .\sequence_media_import_to_new_sequence_template.json
+```
+
+```bat
+.\run_sequence_media_import.bat .\sequence_media_import_yotam26_macro_styles.json
 ```
 
 ```bat

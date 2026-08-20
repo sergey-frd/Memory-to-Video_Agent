@@ -22,16 +22,17 @@ from utils.video_frame_extract import resolve_ffmpeg_executable
 _DURATION_PATTERN = re.compile(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)")
 _DEFAULT_STILL_SECONDS = 5.0
 _DEFAULT_VIDEO_SECONDS = 5.0
+_IMPORT_MODES = {"import_media", "import_to_new_sequence"}
 
 
 def is_media_import_config(payload: object) -> bool:
     if not isinstance(payload, dict):
         return False
     mode = str(payload.get("mode") or "").strip().casefold()
-    if mode == "import_media":
+    if mode in _IMPORT_MODES:
         return True
     if isinstance(payload.get("items"), list) and any(
-        isinstance(item, dict) and str(item.get("source_path") or "").strip() for item in payload["items"]
+        isinstance(item, dict) and _item_source_path_text(item) for item in payload["items"]
     ):
         return True
     return bool(payload.get("root_directory")) and isinstance(payload.get("files"), list)
@@ -53,16 +54,30 @@ def run_sequence_media_import_from_config(config_path: Path) -> tuple[Path, Path
         if str(root_raw or "").strip()
         else None
     )
-    sequence_name = str(
-        payload.get("sequence_name")
-        or payload.get("source_sequence_name")
-        or job_payload.get("sequence_name")
-        or job_payload.get("source_sequence_name")
-        or ""
-    ).strip()
+    mode = str(payload.get("mode") or job_payload.get("mode") or "import_media").strip().casefold()
+    if mode not in _IMPORT_MODES:
+        has_output_sequence = bool(
+            str(payload.get("output_sequence_name") or job_payload.get("output_sequence_name") or "").strip()
+        )
+        mode = "import_to_new_sequence" if has_output_sequence else "import_media"
+    to_new_sequence = mode == "import_to_new_sequence"
+    sequence_name = _first_non_empty_text(
+        payload.get("output_sequence_name"),
+        payload.get("sequence_name"),
+        payload.get("source_sequence_name"),
+        job_payload.get("output_sequence_name"),
+        job_payload.get("sequence_name"),
+        job_payload.get("source_sequence_name"),
+    )
     requested_files = _load_requested_files(job_payload, payload)
     create_sequence = bool(
         payload.get("create_sequence_if_missing", job_payload.get("create_sequence_if_missing", True))
+    )
+    fail_if_sequence_exists = bool(
+        payload.get(
+            "fail_if_sequence_exists",
+            job_payload.get("fail_if_sequence_exists", to_new_sequence),
+        )
     )
     still_duration = float(payload.get("still_duration_seconds") or job_payload.get("still_duration_seconds") or _DEFAULT_STILL_SECONDS)
     write_project = bool(payload.get("write_project", True))
@@ -70,12 +85,13 @@ def run_sequence_media_import_from_config(config_path: Path) -> tuple[Path, Path
     template_project_path = Path(str(template_project_raw)) if template_project_raw else None
     reports_dir = Path(str(payload.get("reports_dir") or (project_path.parent / "media_import_reports")))
     reports_dir.mkdir(parents=True, exist_ok=True)
-    output_project_path = Path(
-        str(payload.get("output_project_path") or (project_path.parent / f"{project_path.stem}_import.prproj"))
-    )
+    default_output = str(project_path) if to_new_sequence else str(project_path.parent / f"{project_path.stem}_import.prproj")
+    output_project_path = Path(str(payload.get("output_project_path") or default_output))
 
     progress = _build_progress_reporter(reports_dir / "sequence_media_import_progress.log")
     if not sequence_name:
+        if to_new_sequence:
+            raise ValueError("import_to_new_sequence requires 'output_sequence_name'.")
         sequence_name = _default_sequence_name(project_path)
         progress(f"sequence_name was empty; using '{sequence_name}'.")
     progress(f"Media-import started. Config: {config_path}")
@@ -98,6 +114,7 @@ def run_sequence_media_import_from_config(config_path: Path) -> tuple[Path, Path
             sequence_name=sequence_name,
             source_paths=resolved_items,
             create_sequence_if_missing=create_sequence,
+            fail_if_sequence_exists=fail_if_sequence_exists,
             still_duration_seconds=still_duration,
             duration_resolver=probe_media_duration_seconds,
             template_project_path=template_project_path,
@@ -108,13 +125,18 @@ def run_sequence_media_import_from_config(config_path: Path) -> tuple[Path, Path
         progress("Project write skipped (write_project=false).")
 
     report_payload = {
-        "mode": "import_media",
+        "mode": mode,
         "source_project_path": str(project_path),
         "output_project_path": str(exported_project) if exported_project is not None else None,
+        "wrote_in_place": bool(
+            exported_project is not None and exported_project.resolve() == project_path.resolve()
+        ),
         "import_path": str(import_path) if import_path is not None else None,
         "root_directory": str(root_directory) if root_directory is not None else None,
         "sequence_name": sequence_name,
+        "output_sequence_name": sequence_name,
         "create_sequence_if_missing": create_sequence,
+        "fail_if_sequence_exists": fail_if_sequence_exists,
         "requested_files": [_request_to_report(item) for item in requested_files],
         "imported": [
             {
@@ -162,13 +184,15 @@ def resolve_import_files(
 
     resolved: list[Path] = []
     errors: list[str] = []
+    source_path_errors = 0
     for request in normalized:
         if request.source_path is not None:
-            path = request.source_path.expanduser()
-            if not path.is_file():
-                errors.append(f"{request.file_name}: source_path does not exist: {path}")
+            path, error = _resolve_declared_source_path(request)
+            if error:
+                source_path_errors += 1
+                errors.append(error)
             else:
-                resolved.append(path.resolve())
+                resolved.append(path)
             continue
         if request.relative_path:
             if root_directory is None:
@@ -210,12 +234,20 @@ def resolve_import_files(
             f"set relative_path to choose one:\n    {listed}"
         )
     if errors:
-        raise ImportFileLookupError(
-            "Media import stopped. Lookup uses the full filename with extension only "
-            "(no prefix/substring match). For duplicate names use "
-            '{"file": "...", "relative_path": "..."}.\n- ' + "\n- ".join(errors)
-        )
+        if source_path_errors == len(errors):
+            header = "Media import stopped. These source_path files were not found."
+        else:
+            header = (
+                "Media import stopped. Lookup uses the full filename with extension only "
+                "(no prefix/substring match). For duplicate names use "
+                '{"file": "...", "relative_path": "..."}.'
+            )
+        raise ImportFileLookupError(header + "\n- " + "\n- ".join(errors))
     return resolved
+
+
+def _item_source_path_text(item: dict) -> str:
+    return str(item.get("source_path") or item.get("source_path_hint") or "").strip()
 
 
 def _normalize_file_request(item: object, index: int) -> ImportFileRequest:
@@ -228,15 +260,16 @@ def _normalize_file_request(item: object, index: int) -> ImportFileRequest:
         return ImportFileRequest(file_name=name, order=index)
     if isinstance(item, dict):
         order = _optional_order(item.get("order"), index)
-        source_text = str(item.get("source_path") or "").strip()
+        source_text = _item_source_path_text(item)
         if source_text:
             source_path = Path(source_text).expanduser()
+            file_name = str(item.get("file") or item.get("filename") or item.get("source_name") or "").strip()
             return ImportFileRequest(
-                file_name=source_path.name,
+                file_name=file_name or source_path.name,
                 source_path=source_path,
                 order=order,
             )
-        file_name = str(item.get("file") or item.get("filename") or "").strip()
+        file_name = str(item.get("file") or item.get("filename") or item.get("source_name") or "").strip()
         relative_path = str(item.get("relative_path") or "").strip() or None
         if not file_name:
             raise ValueError(f"Import file #{index} is missing 'file' or 'source_path'.")
@@ -244,6 +277,62 @@ def _normalize_file_request(item: object, index: int) -> ImportFileRequest:
     raise ValueError(
         f"Import file #{index} must be a filename string or an object with 'file' or 'source_path'."
     )
+
+
+def _resolve_declared_source_path(request: ImportFileRequest) -> tuple[Path, str | None]:
+    if request.source_path is None:
+        return Path(), f"{request.file_name}: source_path is empty."
+    path = request.source_path.expanduser()
+    if path.is_file():
+        return path.resolve(), None
+    for candidate in _source_path_candidates(path):
+        if candidate.is_file():
+            return candidate.resolve(), None
+    return Path(), f"{request.file_name}: source_path does not exist: {path}"
+
+
+def _source_path_candidates(path: Path) -> list[Path]:
+    names = _alternate_source_filenames(path.name)
+    candidates: list[Path] = []
+    if path.parent.is_dir():
+        candidates.extend(path.parent / name for name in names if name != path.name)
+        return candidates
+    search_root = _nearest_existing_ancestor(path.parent)
+    if search_root is None:
+        return candidates
+    for name in [path.name, *names]:
+        matches = _unique_existing_paths(list(search_root.rglob(name)))
+        if len(matches) == 1:
+            candidates.append(matches[0])
+    return candidates
+
+
+def _alternate_source_filenames(file_name: str) -> list[str]:
+    names: list[str] = []
+    if "__" in file_name:
+        names.append(file_name.replace("__", "_"))
+    stem = Path(file_name).stem
+    suffix = Path(file_name).suffix
+    if "_" in stem and "__" not in file_name:
+        parts = stem.rsplit("_", 1)
+        if len(parts) == 2 and parts[0] and parts[1]:
+            names.append(f"{parts[0]}__{parts[1]}{suffix}")
+    unique: list[str] = []
+    for name in names:
+        if name != file_name and name not in unique:
+            unique.append(name)
+    return unique
+
+
+def _nearest_existing_ancestor(path: Path) -> Path | None:
+    current = path
+    for _ in range(4):
+        if current.exists() and current.is_dir():
+            return current
+        if current.parent == current:
+            return None
+        current = current.parent
+    return None
 
 
 def _optional_order(value: object, fallback: int) -> int:
@@ -338,6 +427,8 @@ def build_media_import_report(payload: dict[str, object]) -> str:
     ]
     if payload.get("output_project_path"):
         lines.append(f"Output project: {payload['output_project_path']}")
+    if payload.get("wrote_in_place"):
+        lines.append("Wrote in place: true")
     lines.extend(["", "Imported files:", "-" * 72])
     imported = payload.get("imported") or []
     if not imported:
@@ -364,10 +455,11 @@ def build_media_import_report(payload: dict[str, object]) -> str:
             "",
             "How to use in Premiere:",
             "-" * 72,
-            "1. Open the output .prproj. The original project file was not modified.",
+            "1. Open the output .prproj. import_media writes a copy; import_to_new_sequence writes the same project.",
             "2. Open the named sequence; listed files are appended in JSON order.",
             "3. Files already present in the project reuse the existing media object.",
             "4. New files come from exact filename lookup, relative_path, or absolute source_path.",
+            "5. Existing sequences stay unchanged when the import created a new sequence.",
             "",
         ]
     )
@@ -387,6 +479,14 @@ def _load_import_job(payload: dict[str, object], config_path: Path) -> tuple[dic
     if not isinstance(job_payload, dict):
         raise ValueError(f"Import JSON must be an object: {import_path}")
     return job_payload, import_path
+
+
+def _first_non_empty_text(*values: object) -> str:
+    for value in values:
+        text = str(value or "").strip()
+        if text:
+            return text
+    return ""
 
 
 def _load_requested_files(

@@ -36,7 +36,8 @@ def parse_args() -> argparse.Namespace:
             "Read a Premiere sequence, split clips into KEEP/DROP segments using budget, semantic, "
             "or hero-presence analysis, export a review .prproj, replay a saved report, or apply "
             "manual keep-range JSON to create a trimmed copy of the project, import listed "
-            "media files onto a sequence, or import and keep-trim in one pass."
+            "media files onto a sequence, import into a new sequence in the same project, "
+            "copy a source sequence and KEEP-trim the copy, or import and keep-trim in one pass."
         )
     )
     parser.add_argument("--config", type=Path, required=True, help="Path to trim-review JSON config.")
@@ -47,7 +48,14 @@ def main() -> None:
     _configure_stdio()
     args = parse_args()
     try:
-        payload = json.loads(args.config.read_text(encoding="utf-8"))
+        try:
+            payload = json.loads(args.config.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"Invalid JSON in {args.config}: {exc}. "
+                "Windows paths must use doubled backslashes, "
+                r'e.g. "<LOCAL_PATH>".'
+            ) from exc
         mode = str(payload.get("mode") or "").strip().casefold()
         if mode == "report_replay":
             json_path, txt_path, project_path = run_sequence_trim_report_replay_from_config(

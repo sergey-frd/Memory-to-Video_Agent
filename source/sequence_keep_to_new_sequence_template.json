@@ -1,0 +1,24 @@
+{
+  "mode": "keep_to_new_sequence",
+  "project_path": "<LOCAL_PATH>",
+  "source_sequence_name": "<IMPORT_sequence>",
+  "output_sequence_name": "<KEEP_sequence>",
+  "create_output_sequence_from_source": true,
+  "preserve_source_sequence": true,
+  "fail_if_output_sequence_exists": true,
+  "ripple_compact": true,
+  "write_project": true,
+  "operations": [
+    {
+      "order": 1,
+      "source_path": "<LOCAL_PATH>",
+      "duration": "00:00:0.800"
+    },
+    {
+      "order": 2,
+      "source_path": "<LOCAL_PATH>",
+      "duration": "00:00:1.100"
+    }
+  ],
+  "reports_dir": "<LOCAL_PATH>"
+}

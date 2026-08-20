@@ -167,6 +167,47 @@ def export_optimized_premiere_project_sequence_copy(
     return output_project_path
 
 
+def clone_named_sequence(
+    root: ET.Element,
+    *,
+    source_sequence_name: str,
+    new_sequence_name: str,
+    object_id_lookup: dict[str, ET.Element],
+    object_uid_lookup: dict[str, ET.Element],
+) -> ET.Element:
+    if not new_sequence_name.strip():
+        raise PremiereProjectError("New sequence name is empty.")
+    if find_project_sequence_node(root, new_sequence_name) is not None:
+        raise PremiereProjectError(f"Sequence '{new_sequence_name}' already exists in the project.")
+
+    source_sequence = find_project_sequence_node(root, source_sequence_name)
+    if source_sequence is None:
+        raise PremiereProjectError(f"Sequence '{source_sequence_name}' was not found in the project.")
+    source_masterclip = _find_sequence_masterclip(root, source_sequence_name)
+    if source_masterclip is None:
+        raise PremiereProjectError(f"MasterClip for sequence '{source_sequence_name}' was not found.")
+    source_project_item = _find_sequence_project_item(root, source_masterclip.attrib.get("ObjectUID", ""))
+    if source_project_item is None:
+        raise PremiereProjectError(f"ProjectItem for sequence '{source_sequence_name}' was not found.")
+
+    clone_state = _ProjectCloneState(
+        root=root,
+        object_id_lookup=object_id_lookup,
+        object_uid_lookup=object_uid_lookup,
+        selected_sequence_uid=source_sequence.attrib.get("ObjectUID", ""),
+        selected_masterclip_uid=source_masterclip.attrib.get("ObjectUID", ""),
+    )
+    cloned_sequence = clone_state.clone_object_by_uid(source_sequence.attrib["ObjectUID"])
+    cloned_masterclip = clone_state.clone_object_by_uid(source_masterclip.attrib["ObjectUID"])
+    cloned_project_item = clone_state.clone_object_by_uid(source_project_item.attrib["ObjectUID"])
+    _set_child_text(cloned_sequence, "Name", new_sequence_name)
+    _set_child_text(cloned_masterclip, "Name", new_sequence_name)
+    _set_child_text(_ensure_child(cloned_project_item, "ProjectItem"), "Name", new_sequence_name)
+    _set_project_item_grid_order(root, cloned_project_item)
+    _append_project_item_to_root(root, cloned_project_item.attrib["ObjectUID"])
+    return cloned_sequence
+
+
 def _reorder_project_sequence_tracks(
     root: ET.Element,
     sequence_node: ET.Element,

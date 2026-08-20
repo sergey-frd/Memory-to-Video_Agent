@@ -11,6 +11,7 @@ from models.sequence_keep_apply import KeepRange
 from utils.premiere_keep_apply_export import intersect_keep_ranges_ticks
 from utils.premiere_project import (
     PREMIERE_TICKS_PER_SECOND,
+    PremiereProjectError,
     build_project_object_id_lookup,
     build_project_object_uid_lookup,
     find_project_sequence_node,
@@ -23,6 +24,7 @@ from utils.premiere_project import (
     resolve_project_track_item_timeline,
 )
 from utils.sequence_keep_apply import (
+    is_keep_apply_config,
     load_media_keep_specs,
     parse_timecode_seconds,
     run_sequence_keep_apply_from_config,
@@ -100,6 +102,123 @@ def test_load_media_keep_specs_reads_still_duration() -> None:
     assert specs[0].duration_seconds == pytest.approx(1.5)
     assert specs[1].duration_seconds is None
     assert specs[1].ranges[0].end_seconds == pytest.approx(2.25)
+
+
+def test_load_media_keep_specs_accepts_source_path_hint_and_source_name() -> None:
+    specs = load_media_keep_specs(
+        {
+            "mode": "keep_to_new_sequence",
+            "operations": [
+                {
+                    "order": 1,
+                    "source_name": "SQ_960_1.mp4",
+                    "source_path_hint": r"<LOCAL_PATH>",
+                    "keep_ranges": [{"start": "00:00:01.000", "end": "00:00:08.500"}],
+                }
+            ],
+        }
+    )
+    assert specs[0].file_name == "SQ_960_1.mp4"
+    assert specs[0].source_path == r"<LOCAL_PATH>"
+    assert specs[0].ranges[0].start_seconds == pytest.approx(1.0)
+    assert specs[0].ranges[0].end_seconds == pytest.approx(8.5)
+
+
+def test_load_media_keep_specs_reads_source_path_duration() -> None:
+    specs = load_media_keep_specs(
+        {
+            "mode": "keep_to_new_sequence",
+            "operations": [
+                {
+                    "order": 1,
+                    "source_path": r"<LOCAL_PATH>",
+                    "duration": "00:00:0.800",
+                }
+            ],
+        }
+    )
+    assert specs[0].file_name == "260806_01__wcp.png"
+    assert specs[0].source_path == r"<LOCAL_PATH>"
+    assert specs[0].duration_seconds == pytest.approx(0.8)
+    assert is_keep_apply_config({"mode": "keep_to_new_sequence", "operations": []})
+
+
+def test_load_media_keep_specs_allows_duplicate_names_with_different_source_paths() -> None:
+    specs = load_media_keep_specs(
+        {
+            "operations": [
+                {
+                    "source_path": r"<LOCAL_PATH>",
+                    "duration": "00:00:0.800",
+                },
+                {
+                    "source_path": r"<LOCAL_PATH>",
+                    "duration": "00:00:0.550",
+                },
+            ]
+        }
+    )
+    assert [spec.file_name for spec in specs] == ["260806_01__wcp.png", "260806_01__wcp.png"]
+    assert specs[0].duration_seconds == pytest.approx(0.8)
+    assert specs[1].duration_seconds == pytest.approx(0.55)
+
+
+def test_load_media_keep_specs_rejects_duplicate_source_path() -> None:
+    with pytest.raises(ValueError, match="listed more than once"):
+        load_media_keep_specs(
+            {
+                "operations": [
+                    {"source_path": r"<LOCAL_PATH>", "duration": 0.8},
+                    {"source_path": r"<LOCAL_PATH>", "duration": 0.5},
+                ]
+            }
+        )
+
+
+def test_load_media_keep_specs_allows_duplicate_source_path_with_order() -> None:
+    specs = load_media_keep_specs(
+        {
+            "operations": [
+                {
+                    "order": 5,
+                    "source_path": r"<LOCAL_PATH>",
+                    "keep_ranges": [{"start": "00:00:01.000", "end": "00:00:08.500"}],
+                },
+                {
+                    "order": 6,
+                    "source_path": r"<LOCAL_PATH>",
+                    "keep_ranges": [{"start": "00:00:11.000", "end": "00:00:16.000"}],
+                },
+            ]
+        }
+    )
+    assert [spec.order for spec in specs] == [5, 6]
+    assert specs[0].ranges[0].end_seconds == pytest.approx(8.5)
+    assert specs[1].ranges[0].start_seconds == pytest.approx(11.0)
+
+
+def test_load_media_keep_specs_rejects_duplicate_order() -> None:
+    with pytest.raises(ValueError, match="order 1 is listed more than once"):
+        load_media_keep_specs(
+            {
+                "operations": [
+                    {"order": 1, "source_path": r"<LOCAL_PATH>", "duration": 0.8},
+                    {"order": 1, "source_path": r"<LOCAL_PATH>", "duration": 0.5},
+                ]
+            }
+        )
+
+
+def test_load_media_keep_specs_rejects_duplicate_file_name_without_source_path() -> None:
+    with pytest.raises(ValueError, match="listed more than once"):
+        load_media_keep_specs(
+            {
+                "operations": [
+                    {"file": "260806_01__wcp.png", "duration": 0.8},
+                    {"file": "260806_01__wcp.png", "duration": 0.5},
+                ]
+            }
+        )
 
 
 def test_load_media_keep_specs_rejects_overlap() -> None:
@@ -432,6 +551,154 @@ def test_run_sequence_keep_apply_accepts_operations_json_as_config() -> None:
     assert birthday[0]["out_s"] == pytest.approx(5.0)
 
 
+def test_run_sequence_keep_to_new_sequence_copies_and_preserves_source() -> None:
+    root = Path("test_runtime") / f"keep_new_seq_{uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    project_path = root / "ready.prproj"
+    _write_mixed_av_project(project_path)
+    source_before = _track_items(project_path, "RawSequence", track_group_index=0)
+    config_path = root / "keep_new.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "mode": "keep_to_new_sequence",
+                "project_path": str(project_path),
+                "source_sequence_name": "RawSequence",
+                "output_sequence_name": "KEEP_styles_v01",
+                "create_output_sequence_from_source": True,
+                "preserve_source_sequence": True,
+                "fail_if_output_sequence_exists": True,
+                "ripple_compact": True,
+                "write_project": True,
+                "operations": [
+                    {
+                        "order": 1,
+                        "source_path": r"<LOCAL_PATH>",
+                        "keep_ranges": [{"in": "00:00:02.000", "out": "00:00:05.000"}],
+                    }
+                ],
+                "reports_dir": str(root / "reports"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    json_path, _txt_path, exported = run_sequence_keep_apply_from_config(config_path)
+
+    assert exported == project_path
+    assert not (root / "ready_keep.prproj").exists()
+    source_after = _track_items(project_path, "RawSequence", track_group_index=0)
+    assert source_after == source_before
+    kept = _track_items(project_path, "KEEP_styles_v01", track_group_index=0)
+    by_name = {item["name"]: item for item in kept}
+    assert by_name["clip_a.mp4"]["duration_s"] == pytest.approx(10.0)
+    assert by_name["clip_b_birthday.mp4"]["start_s"] == pytest.approx(10.0)
+    assert by_name["clip_b_birthday.mp4"]["duration_s"] == pytest.approx(3.0)
+    assert by_name["clip_b_birthday.mp4"]["in_s"] == pytest.approx(2.0)
+    assert by_name["clip_c_trash.mp4"]["start_s"] == pytest.approx(13.0)
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert payload["mode"] == "keep_to_new_sequence"
+    assert payload["wrote_in_place"] is True
+    assert payload["output_sequence_name"] == "KEEP_styles_v01"
+
+    try:
+        run_sequence_keep_apply_from_config(config_path)
+    except PremiereProjectError as exc:
+        assert "KEEP_styles_v01" in str(exc)
+        assert "already exists" in str(exc)
+    else:
+        raise AssertionError("expected PremiereProjectError when output sequence exists")
+
+
+def test_run_sequence_keep_apply_matches_duplicate_names_by_source_path() -> None:
+    root = Path("test_runtime") / f"keep_dup_{uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    project_path = root / "ready.prproj"
+    first = r"<LOCAL_PATH>"
+    second = r"<LOCAL_PATH>"
+    _write_duplicate_name_stills_project(project_path, first_path=first, second_path=second)
+    config_path = root / "keep_dup.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "mode": "keep_to_new_sequence",
+                "project_path": str(project_path),
+                "source_sequence_name": "RawSequence",
+                "output_sequence_name": "KEEP_styles_v01",
+                "create_output_sequence_from_source": True,
+                "preserve_source_sequence": True,
+                "fail_if_output_sequence_exists": True,
+                "ripple_compact": True,
+                "write_project": True,
+                "operations": [
+                    {"order": 1, "source_path": first, "duration": "00:00:0.800"},
+                    {"order": 2, "source_path": second, "duration": "00:00:0.550"},
+                ],
+                "reports_dir": str(root / "reports"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    _json_path, _txt_path, exported = run_sequence_keep_apply_from_config(config_path)
+
+    assert exported == project_path
+    source_after = _track_items(project_path, "RawSequence", track_group_index=0)
+    assert [item["duration_s"] for item in source_after] == [pytest.approx(5.0), pytest.approx(5.0)]
+    kept = _track_items(project_path, "KEEP_styles_v01", track_group_index=0)
+    assert [item["name"] for item in kept] == ["260806_01__wcp.png", "260806_01__wcp.png"]
+    assert kept[0]["duration_s"] == pytest.approx(0.8)
+    assert kept[1]["start_s"] == pytest.approx(0.8)
+    assert kept[1]["duration_s"] == pytest.approx(0.55)
+
+
+def test_run_sequence_keep_apply_trims_same_path_instances_by_order() -> None:
+    root = Path("test_runtime") / f"keep_same_path_{uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    project_path = root / "ready.prproj"
+    shared = r"<LOCAL_PATH>"
+    _write_duplicate_name_stills_project(project_path, first_path=shared, second_path=shared)
+    config_path = root / "keep_same_path.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "mode": "keep_to_new_sequence",
+                "project_path": str(project_path),
+                "source_sequence_name": "RawSequence",
+                "output_sequence_name": "KEEP_styles_v01",
+                "create_output_sequence_from_source": True,
+                "preserve_source_sequence": True,
+                "fail_if_output_sequence_exists": True,
+                "ripple_compact": True,
+                "write_project": True,
+                "operations": [
+                    {"order": 1, "source_path": shared, "duration": "00:00:0.800"},
+                    {"order": 2, "source_path": shared, "duration": "00:00:1.100"},
+                ],
+                "reports_dir": str(root / "reports"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    json_path, _txt_path, exported = run_sequence_keep_apply_from_config(config_path)
+
+    assert exported == project_path
+    kept = _track_items(project_path, "KEEP_styles_v01", track_group_index=0)
+    assert len(kept) == 2
+    assert kept[0]["duration_s"] == pytest.approx(0.8)
+    assert kept[1]["start_s"] == pytest.approx(0.8)
+    assert kept[1]["duration_s"] == pytest.approx(1.1)
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert payload["sequences"][0]["matched_clips"] == 2
+
+
 def _track_items(project_path: Path, sequence_name: str, *, track_group_index: int) -> list[dict[str, float | str]]:
     root = load_premiere_project_root(project_path)
     id_lookup = build_project_object_id_lookup(root)
@@ -462,6 +729,128 @@ def _track_items(project_path: Path, sequence_name: str, *, track_group_index: i
                 }
             )
     return items
+
+
+def _write_duplicate_name_stills_project(
+    project_path: Path,
+    *,
+    first_path: str,
+    second_path: str,
+) -> None:
+    first_start = _ticks(0)
+    first_end = _ticks(5)
+    second_start = _ticks(5)
+    second_end = _ticks(10)
+    still_in = _ticks(3600)
+    still_out = _ticks(3605)
+    project_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<PremiereData Version="3">
+  <RootProjectItem ObjectURef="root-project" />
+  <RootProjectItem ObjectUID="root-project" ClassID="root-project-item" Version="1">
+    <ProjectItem Version="1">
+      <Name>Root</Name>
+    </ProjectItem>
+    <ProjectItemContainer Version="1">
+      <Items Version="1">
+        <Item Index="0" ObjectURef="project-item-raw" />
+      </Items>
+    </ProjectItemContainer>
+  </RootProjectItem>
+  <ClipProjectItem ObjectUID="project-item-raw" ClassID="clip-project-item" Version="1">
+    <ProjectItem Version="1">
+      <Name>RawSequence</Name>
+    </ProjectItem>
+    <MasterClip ObjectURef="master-raw" />
+  </ClipProjectItem>
+  <MasterClip ObjectUID="master-raw" ClassID="master-clip" Version="1">
+    <Name>RawSequence</Name>
+  </MasterClip>
+  <Sequence ObjectUID="seq-raw" ClassID="sequence" Version="1">
+    <TrackGroups Version="1">
+      <TrackGroup Version="1" Index="0">
+        <Second ObjectRef="1000" />
+      </TrackGroup>
+    </TrackGroups>
+    <Name>RawSequence</Name>
+  </Sequence>
+  <VideoTrackGroup ObjectID="1000" ClassID="video-group" Version="1">
+    <TrackGroup Version="1">
+      <Tracks Version="1">
+        <Track Index="0" ObjectURef="track-v1" />
+      </Tracks>
+    </TrackGroup>
+  </VideoTrackGroup>
+  <VideoClipTrack ObjectUID="track-v1" ClassID="video-track" Version="1">
+    <ClipTrack Version="1">
+      <ClipItems Version="1">
+        <TrackItems Version="1">
+          <TrackItem Index="0" ObjectRef="2000" />
+          <TrackItem Index="1" ObjectRef="2100" />
+        </TrackItems>
+      </ClipItems>
+    </ClipTrack>
+  </VideoClipTrack>
+  <VideoClipTrackItem ObjectID="2000" ClassID="video-item" Version="1">
+    <ClipTrackItem Version="1">
+      <TrackItem Version="1">
+        <Start>{first_start}</Start>
+        <End>{first_end}</End>
+      </TrackItem>
+      <SubClip ObjectRef="2001" />
+    </ClipTrackItem>
+  </VideoClipTrackItem>
+  <SubClip ObjectID="2001" ClassID="subclip" Version="1">
+    <Name>260806_01__wcp.png</Name>
+    <Clip ObjectRef="2002" />
+  </SubClip>
+  <VideoClip ObjectID="2002" ClassID="video-clip" Version="1">
+    <Clip Version="1">
+      <InPoint>{still_in}</InPoint>
+      <OutPoint>{still_out}</OutPoint>
+      <Source ObjectRef="2003" />
+    </Clip>
+  </VideoClip>
+  <VideoMediaSource ObjectID="2003" ClassID="video-media-source" Version="1">
+    <MediaSource Version="1">
+      <Media ObjectURef="media-first" />
+    </MediaSource>
+  </VideoMediaSource>
+  <Media ObjectUID="media-first" ClassID="media" Version="1">
+    <ActualMediaFilePath>{first_path}</ActualMediaFilePath>
+    <Infinite>true</Infinite>
+  </Media>
+  <VideoClipTrackItem ObjectID="2100" ClassID="video-item" Version="1">
+    <ClipTrackItem Version="1">
+      <TrackItem Version="1">
+        <Start>{second_start}</Start>
+        <End>{second_end}</End>
+      </TrackItem>
+      <SubClip ObjectRef="2101" />
+    </ClipTrackItem>
+  </VideoClipTrackItem>
+  <SubClip ObjectID="2101" ClassID="subclip" Version="1">
+    <Name>260806_01__wcp.png</Name>
+    <Clip ObjectRef="2102" />
+  </SubClip>
+  <VideoClip ObjectID="2102" ClassID="video-clip" Version="1">
+    <Clip Version="1">
+      <InPoint>{still_in}</InPoint>
+      <OutPoint>{still_out}</OutPoint>
+      <Source ObjectRef="2103" />
+    </Clip>
+  </VideoClip>
+  <VideoMediaSource ObjectID="2103" ClassID="video-media-source" Version="1">
+    <MediaSource Version="1">
+      <Media ObjectURef="media-second" />
+    </MediaSource>
+  </VideoMediaSource>
+  <Media ObjectUID="media-second" ClassID="media" Version="1">
+    <ActualMediaFilePath>{second_path}</ActualMediaFilePath>
+    <Infinite>true</Infinite>
+  </Media>
+</PremiereData>
+"""
+    project_path.write_bytes(gzip.compress(project_xml.encode("utf-8")))
 
 
 def _write_still_and_video_project(project_path: Path) -> None:

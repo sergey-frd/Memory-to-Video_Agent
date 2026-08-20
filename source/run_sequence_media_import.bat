@@ -11,6 +11,7 @@ if "%CONFIG_PATH%"=="" (
     echo Examples:
     echo   run_sequence_media_import.bat sequence_media_import_yotam26_part2.json
     echo   run_sequence_media_import.bat sequence_media_import_template.json
+    echo   run_sequence_media_import.bat <LOCAL_PATH>
     echo.
     echo The import JSON itself can also be passed when it contains
     echo project_path, sequence_name, root_directory, and files.

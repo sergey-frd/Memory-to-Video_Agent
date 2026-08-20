@@ -11,10 +11,11 @@ if "%CONFIG_PATH%"=="" (
     echo Examples:
     echo   run_sequence_keep_apply.bat sequence_keep_apply_yotam26_2_min.json
     echo   run_sequence_keep_apply.bat sequence_keep_apply_template.json
+    echo   run_sequence_keep_apply.bat <LOCAL_PATH>
     echo.
     echo Template: sequence_keep_apply_template.json
     echo Shared launcher: run_sequence_trim_review.bat also accepts the same config
-    echo when "mode" is apply_keep_ranges.
+    echo when "mode" is apply_keep_ranges or keep_to_new_sequence.
     exit /b 1
 )
 

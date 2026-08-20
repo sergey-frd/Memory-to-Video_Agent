@@ -1,0 +1,24 @@
+{
+  "mode": "import_to_new_sequence",
+  "project_path": "<LOCAL_PATH>",
+  "output_sequence_name": "Yt_macro_styles_IMPORT_v01",
+  "create_sequence_if_missing": true,
+  "fail_if_sequence_exists": true,
+  "write_project": true,
+  "still_duration_seconds": 5,
+  "items": [
+    {
+      "order": 1,
+      "source_path": "<LOCAL_PATH>"
+    },
+    {
+      "order": 2,
+      "source_path": "<LOCAL_PATH>"
+    },
+    {
+      "order": 3,
+      "source_path": "<LOCAL_PATH>"
+    }
+  ],
+  "reports_dir": "<LOCAL_PATH>"
+}

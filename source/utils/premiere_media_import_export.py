@@ -32,16 +32,15 @@ from utils.premiere_project import (
     resolve_project_track_item_timeline,
 )
 from utils.premiere_project_export import (
-    _ProjectCloneState,
     _ProjectObjectIdAllocator,
     _append_project_item_to_root,
-    _find_sequence_masterclip,
     _find_sequence_project_item,
     _insert_project_object_near_same_type,
     _set_child_text,
     _set_project_item_grid_order,
     _set_track_item_boundary,
     _update_sequence_duration_metadata,
+    clone_named_sequence,
 )
 from utils.premiere_trim_review_export import _ensure_track_items_container, _reindex_track_items
 from utils.sequence_trim_classifier import seconds_to_ticks
@@ -50,6 +49,24 @@ from utils.sequence_trim_classifier import seconds_to_ticks
 _STILL_IN_POINT_SECONDS = 3600.0
 _DEFAULT_STILL_SECONDS = 5.0
 _DEFAULT_VIDEO_SECONDS = 5.0
+_INTRINSIC_VIDEO_MATCH_NAMES = {
+    "AE.ADBE Motion",
+    "AE.ADBE Opacity",
+}
+_OPTIONAL_CLIP_METADATA_TAGS = frozenset({"SecondaryContentItem"})
+_INTRINSIC_PARAM_DEFAULTS = {
+    "Position": "0.5:0.5",
+    "Scale": "100.",
+    "Scale Width": "100.",
+    "Rotation": "0.",
+    "Anchor Point": "0.5:0.5",
+    "Anti-flicker Filter": "0.",
+    "Crop Left": "0.",
+    "Crop Top": "0.",
+    "Crop Right": "0.",
+    "Crop Bottom": "0.",
+    "Opacity": "100.",
+}
 
 
 @dataclass(frozen=True)
@@ -66,6 +83,7 @@ def export_media_import_premiere_project(
     sequence_name: str,
     source_paths: list[Path],
     create_sequence_if_missing: bool = True,
+    fail_if_sequence_exists: bool = False,
     still_duration_seconds: float = _DEFAULT_STILL_SECONDS,
     duration_resolver: Callable[[Path], float | None] | None = None,
     template_project_path: Path | None = None,
@@ -74,11 +92,24 @@ def export_media_import_premiere_project(
     object_id_lookup = build_project_object_id_lookup(root)
     object_uid_lookup = build_project_object_uid_lookup(root)
     warnings: list[str] = []
+    root, object_id_lookup, object_uid_lookup, adopted_template_project, adopt_warnings = (
+        _maybe_adopt_template_project(
+            root,
+            source_project_path=source_project_path,
+            output_project_path=output_project_path,
+            template_project_path=template_project_path,
+            object_id_lookup=object_id_lookup,
+            object_uid_lookup=object_uid_lookup,
+        )
+    )
+    warnings.extend(adopt_warnings)
 
     sequence_node = find_project_sequence_node(root, sequence_name)
     created_sequence = False
+    if sequence_node is not None and fail_if_sequence_exists:
+        raise PremiereProjectError(f"Sequence '{sequence_name}' already exists in the project.")
     if sequence_node is None:
-        if not create_sequence_if_missing:
+        if not create_sequence_if_missing and not adopted_template_project:
             raise PremiereProjectError(f"Sequence '{sequence_name}' was not found in the project.")
         sequence_node = _clone_empty_sequence(
             root,
@@ -109,20 +140,15 @@ def export_media_import_premiere_project(
         object_id_lookup=object_id_lookup,
         object_uid_lookup=object_uid_lookup,
     )
-    media_by_name = _index_media_by_filename(root, source_project_path)
+    media_by_path = _index_media_by_path(root)
     id_allocator = _ProjectObjectIdAllocator(root)
     imported: list[MediaImportItem] = []
-    video_template, image_template, audio_template, template_warnings = _resolve_clip_templates(
+    video_template, image_template, audio_template = _find_templates_in_root(
         root,
-        sequence_node,
+        preferred_sequence=sequence_node,
         object_id_lookup=object_id_lookup,
         object_uid_lookup=object_uid_lookup,
-        id_allocator=id_allocator,
-        source_project_path=source_project_path,
-        output_project_path=output_project_path,
-        template_project_path=template_project_path,
     )
-    warnings.extend(template_warnings)
     if video_template is None:
         raise PremiereProjectError(
             "No video clip template was found in the Premiere project. "
@@ -136,7 +162,7 @@ def export_media_import_premiere_project(
             warnings.append(f"Skipped unsupported media type: {source_path.name}")
             continue
         kind = "image" if is_supported_image_media_path(str(source_path)) else "video"
-        existing_media = media_by_name.get(source_path.name.casefold())
+        existing_media = media_by_path.get(_media_path_key(source_path))
         duration_seconds = _resolve_import_duration(
             source_path,
             kind=kind,
@@ -177,12 +203,16 @@ def export_media_import_premiere_project(
             )
         )
         if existing_media is None:
-            media_by_name[source_path.name.casefold()] = _latest_media_node(root, source_path.name)
+            latest = _latest_media_node_for_path(root, source_path)
+            if latest is not None:
+                media_by_path[_media_path_key(source_path)] = latest
         cursor += duration_ticks
 
     _update_sequence_duration_metadata(root, sequence_node, new_total_duration=cursor)
     if created_sequence:
         warnings.append(f"Created sequence '{sequence_name}'.")
+    _rewire_dangling_sequence_urefs(root, sequence_node.attrib.get("ObjectUID"))
+    _drop_unresolved_optional_refs(root)
     _assert_project_refs_resolved(root)
 
     output_project_path.parent.mkdir(parents=True, exist_ok=True)
@@ -198,37 +228,13 @@ def _clone_empty_sequence(
     object_uid_lookup: dict[str, ET.Element],
 ) -> ET.Element:
     template_name = _choose_sequence_template_name(root)
-    source_sequence = find_project_sequence_node(root, template_name)
-    if source_sequence is None:
-        raise PremiereProjectError("No named sequence was found to clone for the import.")
-    source_masterclip = _find_sequence_masterclip(root, template_name)
-    if source_masterclip is None:
-        raise PremiereProjectError(f"MasterClip for sequence '{template_name}' was not found.")
-    source_project_item = _find_sequence_project_item(root, source_masterclip.attrib.get("ObjectUID", ""))
-    if source_project_item is None:
-        raise PremiereProjectError(f"ProjectItem for sequence '{template_name}' was not found.")
-
-    clone_state = _ProjectCloneState(
-        root=root,
+    cloned_sequence = clone_named_sequence(
+        root,
+        source_sequence_name=template_name,
+        new_sequence_name=new_sequence_name,
         object_id_lookup=object_id_lookup,
         object_uid_lookup=object_uid_lookup,
-        selected_sequence_uid=source_sequence.attrib.get("ObjectUID", ""),
-        selected_masterclip_uid=source_masterclip.attrib.get("ObjectUID", ""),
     )
-    cloned_sequence = clone_state.clone_object_by_uid(source_sequence.attrib["ObjectUID"])
-    cloned_masterclip = clone_state.clone_object_by_uid(source_masterclip.attrib["ObjectUID"])
-    cloned_project_item = clone_state.clone_object_by_uid(source_project_item.attrib["ObjectUID"])
-    _set_child_text(cloned_sequence, "Name", new_sequence_name)
-    _set_child_text(cloned_masterclip, "Name", new_sequence_name)
-    project_item_payload = cloned_project_item.find("./ProjectItem")
-    _set_child_text(
-        project_item_payload if project_item_payload is not None else cloned_project_item,
-        "Name",
-        new_sequence_name,
-    )
-    _set_project_item_grid_order(root, cloned_project_item)
-    _append_project_item_to_root(root, cloned_project_item.attrib["ObjectUID"])
-
     updated_id_lookup = build_project_object_id_lookup(root)
     updated_uid_lookup = build_project_object_uid_lookup(root)
     _clear_sequence_track_items(
@@ -236,6 +242,7 @@ def _clone_empty_sequence(
         object_id_lookup=updated_id_lookup,
         object_uid_lookup=updated_uid_lookup,
     )
+    _drop_orphan_track_items(root)
     return cloned_sequence
 
 
@@ -269,6 +276,17 @@ def _clear_sequence_track_items(
             for ref in list(iter_project_track_item_refs(track_node)):
                 container.remove(ref)
             _reindex_track_items(container)
+
+
+def _drop_orphan_track_items(root: ET.Element) -> None:
+    referenced = {
+        element.attrib.get("ObjectRef")
+        for element in root.iter("TrackItem")
+        if element.attrib.get("ObjectRef")
+    }
+    for child in list(root):
+        if "TrackItem" in child.tag and child.attrib.get("ObjectID") not in referenced:
+            root.remove(child)
 
 
 def _require_first_track(
@@ -312,25 +330,36 @@ def _sequence_end_ticks(
     return end
 
 
-def _index_media_by_filename(root: ET.Element, project_path: Path) -> dict[str, ET.Element]:
+def _media_path_key(path: Path | str) -> str:
+    text = str(path or "").strip().strip('"')
+    if not text:
+        return ""
+    return os.path.normcase(os.path.normpath(text))
+
+
+def _media_node_path_key(media_node: ET.Element) -> str:
+    for tag_name in ("ActualMediaFilePath", "FilePath"):
+        value = (media_node.findtext(f"./{tag_name}") or "").strip()
+        if value:
+            return _media_path_key(value)
+    return ""
+
+
+def _index_media_by_path(root: ET.Element) -> dict[str, ET.Element]:
     index: dict[str, ET.Element] = {}
     for media_node in root.iter("Media"):
-        for tag_name in ("ActualMediaFilePath", "FilePath", "Title"):
-            value = (media_node.findtext(f"./{tag_name}") or "").strip()
-            if value:
-                index[Path(value).name.casefold()] = media_node
-                break
+        key = _media_node_path_key(media_node)
+        if key:
+            index[key] = media_node
     return index
 
 
-def _latest_media_node(root: ET.Element, file_name: str) -> ET.Element | None:
-    key = file_name.casefold()
+def _latest_media_node_for_path(root: ET.Element, source_path: Path) -> ET.Element | None:
+    key = _media_path_key(source_path)
     found: ET.Element | None = None
     for media_node in root.iter("Media"):
-        for tag_name in ("ActualMediaFilePath", "FilePath", "Title"):
-            value = (media_node.findtext(f"./{tag_name}") or "").strip()
-            if value and Path(value).name.casefold() == key:
-                found = media_node
+        if _media_node_path_key(media_node) == key:
+            found = media_node
     return found
 
 
@@ -362,26 +391,23 @@ def _resolve_import_duration(
     return _DEFAULT_VIDEO_SECONDS
 
 
-def _resolve_clip_templates(
+def _maybe_adopt_template_project(
     root: ET.Element,
-    sequence_node: ET.Element,
     *,
-    object_id_lookup: dict[str, ET.Element],
-    object_uid_lookup: dict[str, ET.Element],
-    id_allocator: _ProjectObjectIdAllocator,
     source_project_path: Path,
     output_project_path: Path,
     template_project_path: Path | None,
-) -> tuple[_ClipTemplate | None, _ClipTemplate | None, _ClipTemplate | None, list[str]]:
-    video_template, image_template, audio_template = _find_templates_in_root(
+    object_id_lookup: dict[str, ET.Element],
+    object_uid_lookup: dict[str, ET.Element],
+) -> tuple[ET.Element, dict[str, ET.Element], dict[str, ET.Element], bool, list[str]]:
+    video_template, _image_template, _audio_template = _find_templates_in_root(
         root,
-        preferred_sequence=sequence_node,
+        preferred_sequence=None,
         object_id_lookup=object_id_lookup,
         object_uid_lookup=object_uid_lookup,
     )
-    warnings: list[str] = []
     if video_template is not None:
-        return video_template, image_template, audio_template, warnings
+        return root, object_id_lookup, object_uid_lookup, False, []
 
     donor_path = _discover_template_project(
         source_project_path=source_project_path,
@@ -389,55 +415,29 @@ def _resolve_clip_templates(
         explicit_path=template_project_path,
     )
     if donor_path is None:
-        return None, None, None, warnings
+        return root, object_id_lookup, object_uid_lookup, False, []
 
     donor_root = load_premiere_project_root(donor_path)
     donor_id_lookup = build_project_object_id_lookup(donor_root)
     donor_uid_lookup = build_project_object_uid_lookup(donor_root)
-    video_template, image_template, audio_template = _find_templates_in_root(
+    video_template, _image_template, _audio_template = _find_templates_in_root(
         donor_root,
         preferred_sequence=None,
         object_id_lookup=donor_id_lookup,
         object_uid_lookup=donor_uid_lookup,
     )
     if video_template is None:
-        return None, None, None, warnings
+        return root, object_id_lookup, object_uid_lookup, False, []
 
-    graft_cache_id: dict[str, ET.Element] = {}
-    graft_cache_uid: dict[str, ET.Element] = {}
-    video_template = _graft_clip_template(
-        root,
-        video_template,
-        id_allocator=id_allocator,
-        object_id_lookup=object_id_lookup,
-        object_uid_lookup=object_uid_lookup,
-        cache_id=graft_cache_id,
-        cache_uid=graft_cache_uid,
+    return (
+        donor_root,
+        donor_id_lookup,
+        donor_uid_lookup,
+        True,
+        [
+            f"Source project has no timeline clips; using '{donor_path.name}' as the project base."
+        ],
     )
-    if image_template is not None:
-        image_template = _graft_clip_template(
-            root,
-            image_template,
-            id_allocator=id_allocator,
-            object_id_lookup=object_id_lookup,
-            object_uid_lookup=object_uid_lookup,
-            cache_id=graft_cache_id,
-            cache_uid=graft_cache_uid,
-        )
-    if audio_template is not None:
-        audio_template = _graft_clip_template(
-            root,
-            audio_template,
-            id_allocator=id_allocator,
-            object_id_lookup=object_id_lookup,
-            object_uid_lookup=object_uid_lookup,
-            cache_id=graft_cache_id,
-            cache_uid=graft_cache_uid,
-        )
-    warnings.append(
-        f"Clip templates loaded from '{donor_path.name}' because the source project has no timeline clips."
-    )
-    return video_template, image_template, audio_template, warnings
 
 
 def _discover_template_project(
@@ -460,6 +460,8 @@ def _discover_template_project(
     candidates: list[Path] = []
     for path in folder.glob("*.prproj"):
         if path.resolve() in skip:
+            continue
+        if "damaged" in path.stem.casefold():
             continue
         candidates.append(path)
     candidates.sort(
@@ -555,116 +557,69 @@ def _wrap_audio_template(
     return _ClipTemplate(item, object_id_lookup, object_uid_lookup)
 
 
-_GRAFT_SKIP_TAGS = {
-    "Project",
-    "ProjectSettings",
-    "RootProjectItem",
-    "BinProjectItem",
-    "Sequence",
-    "VideoTrackGroup",
-    "AudioTrackGroup",
-    "VideoClipTrack",
-    "AudioClipTrack",
-    "VideoTrack",
-    "AudioTrack",
-    "AudioMixTrack",
-}
+def _lookup_object(object_ref: str, *lookups: dict[str, ET.Element]) -> ET.Element | None:
+    if not object_ref:
+        return None
+    for lookup in lookups:
+        node = lookup.get(object_ref)
+        if node is not None:
+            return node
+    return None
 
 
-def _graft_clip_template(
-    root: ET.Element,
-    template: _ClipTemplate,
+def _find_clip_project_item_in_lookup(
+    uid_lookup: dict[str, ET.Element] | None,
+    masterclip_uid: str,
+) -> ET.Element | None:
+    if not uid_lookup or not masterclip_uid:
+        return None
+    for node in uid_lookup.values():
+        if node.tag != "ClipProjectItem":
+            continue
+        master_ref = node.find("./MasterClip")
+        if master_ref is not None and master_ref.attrib.get("ObjectURef") == masterclip_uid:
+            return node
+    return None
+
+
+def _project_object_ids(root: ET.Element) -> tuple[set[str], set[str]]:
+    object_ids = {node.attrib.get("ObjectID") for node in root.iter() if node.attrib.get("ObjectID")}
+    object_uids = {node.attrib.get("ObjectUID") for node in root.iter() if node.attrib.get("ObjectUID")}
+    return object_ids, object_uids
+
+
+def _drop_unresolved_optional_refs(
+    node: ET.Element,
     *,
-    id_allocator: _ProjectObjectIdAllocator,
-    object_id_lookup: dict[str, ET.Element],
-    object_uid_lookup: dict[str, ET.Element],
-    cache_id: dict[str, ET.Element],
-    cache_uid: dict[str, ET.Element],
-) -> _ClipTemplate:
-    grafted = _graft_object_graph(
-        root,
-        template.item,
-        source_id_lookup=template.object_id_lookup,
-        source_uid_lookup=template.object_uid_lookup,
-        object_id_lookup=object_id_lookup,
-        object_uid_lookup=object_uid_lookup,
-        id_allocator=id_allocator,
-        cache_id=cache_id,
-        cache_uid=cache_uid,
-    )
-    return _ClipTemplate(grafted, object_id_lookup, object_uid_lookup)
-
-
-def _graft_object_graph(
-    root: ET.Element,
-    source_node: ET.Element,
-    *,
-    source_id_lookup: dict[str, ET.Element],
-    source_uid_lookup: dict[str, ET.Element],
-    object_id_lookup: dict[str, ET.Element],
-    object_uid_lookup: dict[str, ET.Element],
-    id_allocator: _ProjectObjectIdAllocator,
-    cache_id: dict[str, ET.Element],
-    cache_uid: dict[str, ET.Element],
-) -> ET.Element:
-    old_id = source_node.attrib.get("ObjectID")
-    old_uid = source_node.attrib.get("ObjectUID")
-    if old_id and old_id in cache_id:
-        return cache_id[old_id]
-    if old_uid and old_uid in cache_uid:
-        return cache_uid[old_uid]
-
-    cloned = copy.deepcopy(source_node)
-    if old_id:
-        cloned.attrib["ObjectID"] = id_allocator.allocate()
-        cache_id[old_id] = cloned
-        object_id_lookup[cloned.attrib["ObjectID"]] = cloned
-    if old_uid:
-        cloned.attrib["ObjectUID"] = str(uuid4())
-        cache_uid[old_uid] = cloned
-        object_uid_lookup[cloned.attrib["ObjectUID"]] = cloned
-
-    _insert_project_object_near_same_type(root, cloned)
-    for element in cloned.iter():
-        object_ref = element.attrib.get("ObjectRef")
-        if object_ref:
-            target = source_id_lookup.get(object_ref)
-            if target is None or target.tag in _GRAFT_SKIP_TAGS:
+    object_ids: set[str] | None = None,
+    object_uids: set[str] | None = None,
+) -> None:
+    known_ids = object_ids if object_ids is not None else _project_object_ids(node)[0]
+    known_uids = object_uids if object_uids is not None else _project_object_ids(node)[1]
+    for parent in node.iter():
+        for child in list(parent):
+            if child.tag not in _OPTIONAL_CLIP_METADATA_TAGS:
                 continue
-            grafted = _graft_object_graph(
-                root,
-                target,
-                source_id_lookup=source_id_lookup,
-                source_uid_lookup=source_uid_lookup,
-                object_id_lookup=object_id_lookup,
-                object_uid_lookup=object_uid_lookup,
-                id_allocator=id_allocator,
-                cache_id=cache_id,
-                cache_uid=cache_uid,
-            )
-            new_id = grafted.attrib.get("ObjectID")
-            if new_id:
-                element.attrib["ObjectRef"] = new_id
+            object_ref = child.attrib.get("ObjectRef")
+            object_uref = child.attrib.get("ObjectURef")
+            dangling_ref = bool(object_ref) and object_ref not in known_ids
+            dangling_uref = bool(object_uref) and object_uref not in known_uids
+            if dangling_ref or dangling_uref:
+                parent.remove(child)
+
+
+def _rewire_dangling_sequence_urefs(root: ET.Element, sequence_uid: str | None) -> None:
+    if not sequence_uid:
+        return
+    known_uids = {node.attrib.get("ObjectUID") for node in root.iter() if node.attrib.get("ObjectUID")}
+    if sequence_uid not in known_uids:
+        return
+    for element in root.iter():
+        if element.tag != "Sequence":
+            continue
         object_uref = element.attrib.get("ObjectURef")
-        if object_uref:
-            target = source_uid_lookup.get(object_uref)
-            if target is None or target.tag in _GRAFT_SKIP_TAGS:
-                continue
-            grafted = _graft_object_graph(
-                root,
-                target,
-                source_id_lookup=source_id_lookup,
-                source_uid_lookup=source_uid_lookup,
-                object_id_lookup=object_id_lookup,
-                object_uid_lookup=object_uid_lookup,
-                id_allocator=id_allocator,
-                cache_id=cache_id,
-                cache_uid=cache_uid,
-            )
-            new_uid = grafted.attrib.get("ObjectUID")
-            if new_uid:
-                element.attrib["ObjectURef"] = new_uid
-    return cloned
+        if object_uref and object_uref not in known_uids:
+            element.attrib["ObjectURef"] = sequence_uid
 
 
 def _assert_project_refs_resolved(root: ET.Element) -> None:
@@ -754,7 +709,9 @@ def _append_imported_clip(
     )
     master_clip = None
     if existing_media is not None:
-        master_clip = _find_masterclip_by_name(root, source_path.name)
+        master_clip = _find_masterclip_for_media(root, existing_media.attrib.get("ObjectUID", ""))
+        if master_clip is None:
+            master_clip = _find_masterclip_by_name(root, source_path.name)
     if master_clip is None:
         master_clip = _clone_master_clip_for_import(
             root,
@@ -845,6 +802,7 @@ def _clone_media_node(
         source_path=source_path,
         kind=kind,
         object_id_lookup=object_id_lookup,
+        template_object_id_lookup=template.object_id_lookup,
         id_allocator=id_allocator,
     )
     _insert_project_object_near_same_type(root, new_media)
@@ -885,13 +843,18 @@ def _clone_media_streams(
     source_path: Path,
     kind: str,
     object_id_lookup: dict[str, ET.Element],
+    template_object_id_lookup: dict[str, ET.Element],
     id_allocator: _ProjectObjectIdAllocator,
 ) -> None:
     for tag_name in ("VideoStream", "AudioStream"):
         stream_ref = media_node.find(f"./{tag_name}")
         if stream_ref is None:
             continue
-        template_stream = object_id_lookup.get(stream_ref.attrib.get("ObjectRef", ""))
+        template_stream = _lookup_object(
+            stream_ref.attrib.get("ObjectRef", ""),
+            template_object_id_lookup,
+            object_id_lookup,
+        )
         if template_stream is None:
             continue
         cloned = copy.deepcopy(template_stream)
@@ -947,6 +910,18 @@ def _jpeg_size(data: bytes) -> tuple[int, int]:
         length = struct.unpack(">H", data[offset + 2 : offset + 4])[0]
         offset += 2 + length
     raise ValueError("JPEG size marker was not found.")
+
+
+def _find_masterclip_for_media(root: ET.Element, media_uid: str) -> ET.Element | None:
+    if not media_uid:
+        return None
+    found: ET.Element | None = None
+    for node in root.iter("MasterClip"):
+        for element in node.iter():
+            if element.attrib.get("ObjectURef") == media_uid:
+                found = node
+                break
+    return found
 
 
 def _find_masterclip_by_name(root: ET.Element, file_name: str) -> ET.Element | None:
@@ -1025,6 +1000,8 @@ def _clone_master_clip_for_import(
         if cloned_obj.attrib.get("ObjectID"):
             element.attrib["ObjectRef"] = cloned_obj.attrib["ObjectID"]
 
+    known_ids, known_uids = _project_object_ids(root)
+    _drop_unresolved_optional_refs(new_master, object_ids=known_ids, object_uids=known_uids)
     _insert_project_object_near_same_type(root, new_master)
     object_uid_lookup[new_master.attrib["ObjectUID"]] = new_master
     _clone_master_project_item(
@@ -1033,6 +1010,7 @@ def _clone_master_clip_for_import(
         new_master=new_master,
         source_path=source_path,
         object_uid_lookup=object_uid_lookup,
+        template_object_uid_lookup=template.object_uid_lookup,
     )
     return new_master
 
@@ -1044,8 +1022,14 @@ def _clone_master_project_item(
     new_master: ET.Element,
     source_path: Path,
     object_uid_lookup: dict[str, ET.Element],
+    template_object_uid_lookup: dict[str, ET.Element] | None = None,
 ) -> None:
-    template_item = _find_sequence_project_item(root, template_master.attrib.get("ObjectUID", ""))
+    master_uid = template_master.attrib.get("ObjectUID", "")
+    template_item = _find_sequence_project_item(root, master_uid)
+    if template_item is None:
+        template_item = _find_clip_project_item_in_lookup(template_object_uid_lookup, master_uid)
+    if template_item is None:
+        template_item = next((node for node in root.iter("ClipProjectItem")), None)
     if template_item is None:
         return
     new_item = copy.deepcopy(template_item)
@@ -1055,6 +1039,9 @@ def _clone_master_project_item(
         item_master.attrib["ObjectURef"] = new_master.attrib["ObjectUID"]
     payload = new_item.find("./ProjectItem")
     _set_child_text(payload if payload is not None else new_item, "Name", source_path.name)
+    known_ids, known_uids = _project_object_ids(root)
+    known_uids.update(uid for uid in (new_master.attrib.get("ObjectUID"), new_item.attrib.get("ObjectUID")) if uid)
+    _drop_unresolved_optional_refs(new_item, object_ids=known_ids, object_uids=known_uids)
     _set_project_item_grid_order(root, new_item)
     _insert_project_object_near_same_type(root, new_item)
     object_uid_lookup[new_item.attrib["ObjectUID"]] = new_item
@@ -1133,6 +1120,15 @@ def _place_track_item(
         raise PremiereProjectError("Cloned track item is missing timeline bounds.")
     _set_track_item_boundary(timeline_node, "Start", timeline_start)
     _set_track_item_boundary(timeline_node, "End", timeline_end)
+    if not clone_audio_source:
+        _clone_and_sanitize_video_components(
+            root,
+            new_item,
+            object_id_lookup=object_id_lookup,
+            template_object_id_lookup=template.object_id_lookup,
+            id_allocator=id_allocator,
+        )
+        _apply_imported_frame_rect(new_item, source_path)
 
     _insert_project_object_near_same_type(root, new_item)
     _insert_project_object_near_same_type(root, new_subclip)
@@ -1148,6 +1144,178 @@ def _place_track_item(
     ref.attrib["ObjectRef"] = new_item.attrib["ObjectID"]
     container.append(ref)
     _reindex_track_items(container)
+
+
+def _clone_and_sanitize_video_components(
+    root: ET.Element,
+    track_item: ET.Element,
+    *,
+    object_id_lookup: dict[str, ET.Element],
+    template_object_id_lookup: dict[str, ET.Element],
+    id_allocator: _ProjectObjectIdAllocator,
+) -> None:
+    owner_ref = track_item.find("./ClipTrackItem/ComponentOwner/Components")
+    if owner_ref is None:
+        return
+    source_chain = _lookup_object(
+        owner_ref.attrib.get("ObjectRef", ""),
+        template_object_id_lookup,
+        object_id_lookup,
+    )
+    if source_chain is None:
+        return
+    new_chain = copy.deepcopy(source_chain)
+    new_chain.attrib["ObjectID"] = id_allocator.allocate()
+    components_el = new_chain.find("./ComponentChain/Components")
+    if components_el is None:
+        _insert_project_object_near_same_type(root, new_chain)
+        object_id_lookup[new_chain.attrib["ObjectID"]] = new_chain
+        owner_ref.attrib["ObjectRef"] = new_chain.attrib["ObjectID"]
+        return
+
+    kept: list[ET.Element] = []
+    for ref in list(components_el):
+        source_component = _lookup_object(
+            ref.attrib.get("ObjectRef", ""),
+            template_object_id_lookup,
+            object_id_lookup,
+        )
+        if source_component is None:
+            continue
+        if not _is_intrinsic_video_component(source_component):
+            continue
+        cloned = _clone_filter_component(
+            root,
+            source_component,
+            object_id_lookup=object_id_lookup,
+            template_object_id_lookup=template_object_id_lookup,
+            id_allocator=id_allocator,
+        )
+        _reset_intrinsic_component_params(cloned, object_id_lookup)
+        kept.append(cloned)
+
+    if not kept:
+        for ref in list(components_el):
+            source_component = _lookup_object(
+                ref.attrib.get("ObjectRef", ""),
+                template_object_id_lookup,
+                object_id_lookup,
+            )
+            if source_component is None:
+                continue
+            kept.append(
+                _clone_filter_component(
+                    root,
+                    source_component,
+                    object_id_lookup=object_id_lookup,
+                    template_object_id_lookup=template_object_id_lookup,
+                    id_allocator=id_allocator,
+                )
+            )
+
+    for child in list(components_el):
+        components_el.remove(child)
+    motion_component_id = ""
+    for index, component in enumerate(kept):
+        entry = ET.SubElement(components_el, "Component")
+        entry.attrib["Index"] = str(index)
+        entry.attrib["ObjectRef"] = component.attrib["ObjectID"]
+        if _component_match_name(component) == "AE.ADBE Motion":
+            motion_component_id = (component.findtext("./Component/ID") or "").strip()
+
+    if motion_component_id:
+        active = new_chain.find("./ComponentChain/Node/Properties/MZ.ComponentChain.ActiveComponentID")
+        if active is not None:
+            active.text = motion_component_id
+
+    _insert_project_object_near_same_type(root, new_chain)
+    object_id_lookup[new_chain.attrib["ObjectID"]] = new_chain
+    owner_ref.attrib["ObjectRef"] = new_chain.attrib["ObjectID"]
+
+
+def _clone_filter_component(
+    root: ET.Element,
+    source_component: ET.Element,
+    *,
+    object_id_lookup: dict[str, ET.Element],
+    template_object_id_lookup: dict[str, ET.Element],
+    id_allocator: _ProjectObjectIdAllocator,
+) -> ET.Element:
+    cloned = copy.deepcopy(source_component)
+    cloned.attrib["ObjectID"] = id_allocator.allocate()
+    params = cloned.find("./Component/Params")
+    if params is not None:
+        for param_ref in list(params):
+            source_param = _lookup_object(
+                param_ref.attrib.get("ObjectRef", ""),
+                template_object_id_lookup,
+                object_id_lookup,
+            )
+            if source_param is None:
+                continue
+            cloned_param = copy.deepcopy(source_param)
+            cloned_param.attrib["ObjectID"] = id_allocator.allocate()
+            _insert_project_object_near_same_type(root, cloned_param)
+            object_id_lookup[cloned_param.attrib["ObjectID"]] = cloned_param
+            param_ref.attrib["ObjectRef"] = cloned_param.attrib["ObjectID"]
+    _insert_project_object_near_same_type(root, cloned)
+    object_id_lookup[cloned.attrib["ObjectID"]] = cloned
+    return cloned
+
+
+def _reset_intrinsic_component_params(
+    component: ET.Element,
+    object_id_lookup: dict[str, ET.Element],
+) -> None:
+    params = component.find("./Component/Params")
+    if params is None:
+        return
+    for param_ref in list(params):
+        param = object_id_lookup.get(param_ref.attrib.get("ObjectRef", ""))
+        if param is None:
+            continue
+        name = (param.findtext("./Name") or "").strip()
+        default = _INTRINSIC_PARAM_DEFAULTS.get(name)
+        if default is None:
+            continue
+        keyframes = param.find("./Keyframes")
+        if keyframes is not None:
+            param.remove(keyframes)
+        varying = param.find("./IsTimeVarying")
+        if varying is not None:
+            varying.text = "false"
+        _set_start_keyframe_value(param, default)
+        current = param.find("./CurrentValue")
+        if current is not None:
+            current.text = default.rstrip(".")
+
+
+def _set_start_keyframe_value(param: ET.Element, value: str) -> None:
+    keyframe = param.find("./StartKeyframe")
+    if keyframe is None or not (keyframe.text or "").strip():
+        return
+    parts = keyframe.text.strip().split(",")
+    if len(parts) < 2:
+        keyframe.text = value
+        return
+    parts[1] = value
+    keyframe.text = ",".join(parts)
+
+
+def _is_intrinsic_video_component(component: ET.Element) -> bool:
+    if (component.findtext("./Component/Intrinsic") or "").strip().casefold() == "true":
+        return True
+    return _component_match_name(component) in _INTRINSIC_VIDEO_MATCH_NAMES
+
+
+def _component_match_name(component: ET.Element) -> str:
+    return (component.findtext("./MatchName") or component.findtext(".//MatchName") or "").strip()
+
+
+def _apply_imported_frame_rect(track_item: ET.Element, source_path: Path) -> None:
+    frame_rect = _probe_image_frame_rect(source_path)
+    if frame_rect:
+        _set_child_text(track_item, "FrameRect", frame_rect)
 
 
 def _clone_media_source(

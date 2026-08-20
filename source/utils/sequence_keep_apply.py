@@ -5,7 +5,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from models.sequence_keep_apply import KeepRange, MediaKeepSpec
+from models.sequence_keep_apply import (
+    KeepRange,
+    MediaKeepSpec,
+    keep_spec_queues,
+    normalize_keep_media_path,
+    take_keep_spec_for_media,
+)
 from utils.premiere_keep_apply_export import (
     export_keep_apply_premiere_project,
     resolve_keep_windows_ticks,
@@ -53,11 +59,26 @@ def parse_timecode_seconds(value: object) -> float:
     return hours * 3600.0 + minutes * 60.0 + seconds
 
 
+_KEEP_MODES = {"apply_keep_ranges", "keep_to_new_sequence"}
+
+
+def _optional_keep_order(value: object, index: int) -> int | None:
+    if value is None or str(value).strip() == "":
+        return None
+    try:
+        order = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Keep clip #{index} order must be an integer, got {value!r}.") from exc
+    if order < 1:
+        raise ValueError(f"Keep clip #{index} order must be >= 1, got {order}.")
+    return order
+
+
 def is_keep_apply_config(payload: object) -> bool:
     if not isinstance(payload, dict):
         return False
     mode = str(payload.get("mode") or "").strip().casefold()
-    if mode == "apply_keep_ranges":
+    if mode in _KEEP_MODES:
         return True
     return isinstance(payload.get("operations"), list)
 
@@ -73,17 +94,45 @@ def load_media_keep_specs(payload: dict[str, object] | list[object]) -> list[Med
         raise ValueError("Keep-ranges JSON must contain a non-empty 'operations' or 'clips' list.")
 
     specs: list[MediaKeepSpec] = []
-    seen: set[str] = set()
+    seen_paths: set[str] = set()
+    seen_file_only_names: set[str] = set()
+    path_basenames: set[str] = set()
+    seen_orders: set[int] = set()
     for index, raw_clip in enumerate(raw_clips, start=1):
         if not isinstance(raw_clip, dict):
             raise ValueError(f"Keep clip #{index} must be an object.")
-        file_name = str(raw_clip.get("file") or raw_clip.get("filename") or "").strip()
+        source_text = str(raw_clip.get("source_path") or raw_clip.get("source_path_hint") or "").strip()
+        file_name = str(
+            raw_clip.get("file") or raw_clip.get("filename") or raw_clip.get("source_name") or ""
+        ).strip()
+        if not file_name and source_text:
+            file_name = Path(source_text).name
         if not file_name:
-            raise ValueError(f"Keep clip #{index} is missing 'file'.")
-        match_key = Path(file_name).name.casefold()
-        if match_key in seen:
-            raise ValueError(f"Keep clip '{file_name}' is listed more than once.")
-        seen.add(match_key)
+            raise ValueError(f"Keep clip #{index} is missing 'file' or 'source_path'.")
+        order = _optional_keep_order(raw_clip.get("order"), index)
+        path_key = normalize_keep_media_path(source_text)
+        name_key = Path(file_name).name.casefold()
+        if order is not None:
+            if order in seen_orders:
+                raise ValueError(f"Keep clip order {order} is listed more than once.")
+            seen_orders.add(order)
+        elif path_key:
+            if path_key in seen_paths:
+                raise ValueError(f"Keep clip '{file_name}' is listed more than once ({source_text}).")
+            if name_key in seen_file_only_names:
+                raise ValueError(
+                    f"Keep clip '{file_name}' is listed more than once. "
+                    "Use source_path for every copy of a duplicate filename."
+                )
+            seen_paths.add(path_key)
+            path_basenames.add(name_key)
+        else:
+            if name_key in seen_file_only_names or name_key in path_basenames:
+                raise ValueError(
+                    f"Keep clip '{file_name}' is listed more than once. "
+                    "For duplicate names use source_path, or unique 'order' for each timeline copy."
+                )
+            seen_file_only_names.add(name_key)
 
         raw_ranges = raw_clip.get("keep") or raw_clip.get("keep_ranges") or []
         duration_value = raw_clip.get("duration")
@@ -117,6 +166,8 @@ def load_media_keep_specs(payload: dict[str, object] | list[object]) -> list[Med
                 file_name=Path(file_name).name,
                 ranges=tuple(ranges),
                 duration_seconds=duration_seconds,
+                source_path=source_text,
+                order=order,
             )
         )
     return specs
@@ -129,24 +180,63 @@ def run_sequence_keep_apply_from_config(config_path: Path) -> tuple[Path, Path, 
 
     keep_payload, keep_specs, keep_ranges_path = _load_keep_job_from_config(payload, config_path)
     project_path = _resolve_existing_project_path(payload, keep_payload)
+    mode = str(payload.get("mode") or keep_payload.get("mode") or "apply_keep_ranges").strip().casefold()
+    if mode not in _KEEP_MODES:
+        mode = (
+            "keep_to_new_sequence"
+            if _first_non_empty_text(payload.get("output_sequence_name"), keep_payload.get("output_sequence_name"))
+            else "apply_keep_ranges"
+        )
+    to_new_sequence = mode == "keep_to_new_sequence"
     source_sequence_name = _first_non_empty_text(
         payload.get("source_sequence_name"),
         payload.get("sequence_name"),
         keep_payload.get("source_sequence_name"),
         keep_payload.get("sequence_name"),
     )
+    output_sequence_name = _first_non_empty_text(
+        payload.get("output_sequence_name"),
+        keep_payload.get("output_sequence_name"),
+    )
+    create_output_sequence_from_source = bool(
+        payload.get(
+            "create_output_sequence_from_source",
+            keep_payload.get("create_output_sequence_from_source", to_new_sequence),
+        )
+    )
+    preserve_source_sequence = bool(
+        payload.get(
+            "preserve_source_sequence",
+            keep_payload.get("preserve_source_sequence", to_new_sequence),
+        )
+    )
+    fail_if_output_sequence_exists = bool(
+        payload.get(
+            "fail_if_output_sequence_exists",
+            keep_payload.get("fail_if_output_sequence_exists", to_new_sequence),
+        )
+    )
+    if to_new_sequence:
+        if not source_sequence_name:
+            raise ValueError("keep_to_new_sequence requires 'source_sequence_name'.")
+        if not output_sequence_name:
+            raise ValueError("keep_to_new_sequence requires 'output_sequence_name'.")
+        if output_sequence_name.casefold() == source_sequence_name.casefold():
+            raise ValueError(
+                "keep_to_new_sequence requires output_sequence_name to differ from source_sequence_name."
+            )
     reports_dir = Path(str(payload.get("reports_dir") or (project_path.parent / "keep_apply_reports")))
     reports_dir.mkdir(parents=True, exist_ok=True)
-    output_project_path = Path(
-        str(payload.get("output_project_path") or (project_path.parent / f"{project_path.stem}_keep.prproj"))
-    )
+    default_output = str(project_path) if to_new_sequence else str(project_path.parent / f"{project_path.stem}_keep.prproj")
+    output_project_path = Path(str(payload.get("output_project_path") or default_output))
     ripple_compact = bool(payload.get("ripple_compact", True))
     write_project = bool(payload.get("write_project", True))
     prin_path = str(payload.get("prin_path") or keep_payload.get("prin_path") or "").strip()
 
     progress = _build_progress_reporter(reports_dir / "sequence_keep_apply_progress.log")
     progress(f"Keep-apply started. Config: {config_path}")
-    project_path = _prefer_import_project_if_empty(project_path, source_sequence_name, progress)
+    if not to_new_sequence:
+        project_path = _prefer_import_project_if_empty(project_path, source_sequence_name, progress)
     progress(f"Project: {project_path}")
     if prin_path:
         progress(f"Reference .prin (not parsed): {prin_path}")
@@ -154,7 +244,9 @@ def run_sequence_keep_apply_from_config(config_path: Path) -> tuple[Path, Path, 
 
     root = load_premiere_project_root(project_path)
     sequence_names = _resolve_target_sequence_names(root, source_sequence_name)
-    progress(f"Target sequences: {', '.join(sequence_names)}")
+    progress(f"Source sequences: {', '.join(sequence_names)}")
+    if output_sequence_name:
+        progress(f"Output sequence: {output_sequence_name}")
 
     sequence_summaries: list[dict[str, object]] = []
     all_warnings: list[str] = []
@@ -167,13 +259,15 @@ def run_sequence_keep_apply_from_config(config_path: Path) -> tuple[Path, Path, 
             progress(f"Skip sequence '{sequence_name}': {warning}")
             continue
         summary = _build_sequence_plan_summary(
-            sequence_name=selected_name,
+            sequence_name=output_sequence_name or selected_name,
             clips=clips,
             keep_specs=keep_specs,
         )
+        summary["source_sequence_name"] = selected_name
+        summary["output_sequence_name"] = output_sequence_name or selected_name
         sequence_summaries.append(summary)
         progress(
-            f"Sequence '{selected_name}': matched {summary['matched_clips']} clip(s), "
+            f"Sequence '{summary['sequence_name']}': matched {summary['matched_clips']} clip(s), "
             f"keep {summary['keep_seconds']:.2f}s, drop {summary['drop_seconds']:.2f}s."
         )
         for clip_row in summary.get("clips") or []:
@@ -199,6 +293,10 @@ def run_sequence_keep_apply_from_config(config_path: Path) -> tuple[Path, Path, 
             keep_specs=keep_specs,
             sequence_names=sequence_names,
             ripple_compact=ripple_compact,
+            output_sequence_name=output_sequence_name,
+            create_output_sequence_from_source=create_output_sequence_from_source,
+            fail_if_output_sequence_exists=fail_if_output_sequence_exists,
+            preserve_source_sequence=preserve_source_sequence,
         )
         progress(f"Wrote project: {exported_project}")
     else:
@@ -206,16 +304,25 @@ def run_sequence_keep_apply_from_config(config_path: Path) -> tuple[Path, Path, 
     all_warnings.extend(export_warnings)
 
     report_payload = {
-        "mode": "apply_keep_ranges",
+        "mode": mode,
         "source_project_path": str(project_path),
         "prin_path": prin_path or None,
         "output_project_path": str(exported_project) if exported_project is not None else None,
+        "wrote_in_place": bool(
+            exported_project is not None and exported_project.resolve() == project_path.resolve()
+        ),
         "keep_ranges_path": str(keep_ranges_path) if keep_ranges_path is not None else None,
         "source_sequence_name": source_sequence_name,
+        "output_sequence_name": output_sequence_name,
+        "create_output_sequence_from_source": create_output_sequence_from_source,
+        "preserve_source_sequence": preserve_source_sequence,
+        "fail_if_output_sequence_exists": fail_if_output_sequence_exists,
         "ripple_compact": ripple_compact,
         "keep_specs": [
             {
                 "file": spec.file_name,
+                "source_path": spec.source_path or None,
+                "order": spec.order,
                 "duration_seconds": spec.duration_seconds,
                 "keep": [
                     {
@@ -253,10 +360,16 @@ def build_keep_apply_report(
         f"Source project: {payload.get('source_project_path')}",
         f"Ripple compact: {payload.get('ripple_compact')}",
     ]
+    if payload.get("source_sequence_name"):
+        lines.append(f"Source sequence: {payload['source_sequence_name']}")
+    if payload.get("output_sequence_name"):
+        lines.append(f"Output sequence: {payload['output_sequence_name']}")
     if payload.get("prin_path"):
         lines.append(f"Reference .prin: {payload['prin_path']}")
     if exported_project is not None:
         lines.append(f"Output project: {exported_project}")
+    if payload.get("wrote_in_place"):
+        lines.append("Wrote in place: true")
     lines.extend(["", "Keep specs:", "-" * 72])
     for spec in payload.get("keep_specs") or []:
         if not isinstance(spec, dict):
@@ -278,11 +391,12 @@ def build_keep_apply_report(
     lines.extend(["", "How to use in Premiere:", "-" * 72])
     lines.extend(
         [
-            "1. Open the output .prproj. The original project file was not modified.",
-            "2. Sequence names, bins, and unlisted clips stay as they were.",
-            "3. Listed media files keep only the specified source ranges; unused pieces are removed.",
-            "4. Linked audio for those files is trimmed to the same ranges.",
-            "5. With ripple_compact=true the following clips move left to close the deleted gaps.",
+            "1. Open the output .prproj. apply_keep_ranges writes a copy; keep_to_new_sequence writes the same project.",
+            "2. Sequence names, bins, and unlisted clips stay as they were on the source sequence.",
+            "3. keep_to_new_sequence copies the source sequence first and trims only the copy.",
+            "4. Listed media files keep only the specified source ranges; unused pieces are removed.",
+            "5. Linked audio for those files is trimmed to the same ranges.",
+            "6. With ripple_compact=true the following clips move left to close the deleted gaps.",
         ]
     )
 
@@ -404,14 +518,17 @@ def _build_sequence_plan_summary(
     clips,
     keep_specs: list[MediaKeepSpec],
 ) -> dict[str, object]:
-    specs_by_key = {spec.match_key: spec for spec in keep_specs}
     clip_rows: list[dict[str, object]] = []
     matched_keys: set[str] = set()
     keep_seconds = 0.0
     drop_seconds = 0.0
+    spec_queues = keep_spec_queues(keep_specs)
     for clip in clips:
-        match_key = Path(clip.source_path or clip.name).name.casefold()
-        spec = specs_by_key.get(match_key)
+        spec = take_keep_spec_for_media(
+            spec_queues,
+            source_path=clip.source_path,
+            name=clip.name,
+        )
         if spec is None:
             clip_rows.append(
                 {
@@ -426,7 +543,7 @@ def _build_sequence_plan_summary(
                 }
             )
             continue
-        matched_keys.add(match_key)
+        matched_keys.add(spec.match_key)
         intersections = resolve_keep_windows_ticks(spec, clip.in_point)
         clip_keep = sum(ticks_to_seconds(end - start) for start, end in intersections)
         clip_drop = max(0.0, ticks_to_seconds(clip.duration) - clip_keep)
@@ -459,7 +576,7 @@ def _build_sequence_plan_summary(
                 "restored_ranges": restored,
             }
         )
-    missing = [spec.file_name for spec in keep_specs if spec.match_key not in matched_keys]
+    missing = [spec.source_path or spec.file_name for spec in keep_specs if spec.match_key not in matched_keys]
     return {
         "sequence_name": sequence_name,
         "clip_count": len(clips),

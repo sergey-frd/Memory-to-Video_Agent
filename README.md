@@ -4,10 +4,10 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.08.16.01`
-- Git tag: `v2026.08.16.01`
+- Publication version: `2026.08.20.01`
+- Git tag: `v2026.08.20.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-08-16T03:49:52+02:00`
+- Last synchronized: `2026-08-20T06:47:09+02:00`
 - Source project: `img-style-ag_1`
 - Python files: `238`
 - Test files: `43`
@@ -15,7 +15,7 @@ This repository is intended to store the current architecture, guides, change-im
 
 ## Published Source Mirror
 
-- Mirrored source files: `494`
+- Mirrored source files: `498`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/CHANGELOG.md`
@@ -186,7 +186,11 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/sequence_keep_apply_template.json`
 - `source/sequence_keep_apply_yotam26_2_min.json`
 - `source/sequence_keep_apply_yotam26_2_min_vtr_2.json`
+- `source/sequence_keep_apply_yotam26_macro_styles.json`
+- `source/sequence_keep_to_new_sequence_template.json`
 - `source/sequence_media_import_template.json`
+- `source/sequence_media_import_to_new_sequence_template.json`
+- `source/sequence_media_import_yotam26_macro_styles.json`
 - `source/sequence_media_import_yotam26_part2.json`
 - `source/sequence_music_recommendation_Alice.json`
 - `source/sequence_trim_review_01.json`

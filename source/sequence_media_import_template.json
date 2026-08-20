@@ -3,7 +3,9 @@
   "import_path": "<LOCAL_PATH>",
   "project_path": "<LOCAL_PATH>",
   "sequence_name": "<Sequence>",
+  "output_sequence_name": "",
   "create_sequence_if_missing": true,
+  "fail_if_sequence_exists": false,
   "root_directory": "<LOCAL_PATH>",
   "files": [
     "<Media.mp4>",

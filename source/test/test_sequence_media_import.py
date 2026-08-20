@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import gzip
 import json
+import struct
+import xml.etree.ElementTree as ET
+import zlib
 from pathlib import Path
 from uuid import uuid4
 
 from utils.premiere_project import (
     PREMIERE_TICKS_PER_SECOND,
+    PremiereProjectError,
     build_project_object_id_lookup,
     build_project_object_uid_lookup,
     find_project_sequence_node,
@@ -137,6 +141,24 @@ def test_resolve_import_files_rejects_relative_path_name_mismatch() -> None:
         raise AssertionError("expected ImportFileLookupError")
 
 
+def test_resolve_import_files_accepts_source_path_hint_and_source_name() -> None:
+    root = Path("test_runtime") / f"import_hint_{uuid4().hex}"
+    root.mkdir(parents=True)
+    target = root / "SQ_960_1.mp4"
+    target.write_bytes(b"video")
+    resolved = resolve_import_files(
+        None,
+        [
+            {
+                "order": 1,
+                "source_name": "SQ_960_1.mp4",
+                "source_path_hint": str(target),
+            }
+        ],
+    )
+    assert [path.resolve() for path in resolved] == [target.resolve()]
+
+
 def test_resolve_import_files_uses_absolute_source_path_and_order() -> None:
     root = Path("test_runtime") / f"import_abs_{uuid4().hex}"
     root.mkdir(parents=True)
@@ -154,11 +176,61 @@ def test_resolve_import_files_uses_absolute_source_path_and_order() -> None:
     assert [path.resolve() for path in resolved] == [second.resolve(), first.resolve()]
 
 
+def test_resolve_import_files_uses_underscore_variant_in_same_folder() -> None:
+    root = Path("test_runtime") / f"import_src_alt_{uuid4().hex}"
+    folder = root / "chatgpt_all_styles" / "IMG_4859"
+    folder.mkdir(parents=True)
+    actual = folder / "IMG_4859_artp.png"
+    actual.write_bytes(b"img")
+    resolved = resolve_import_files(
+        None,
+        [{"order": 1, "source_path": str(folder / "IMG_4859__artp.png")}],
+    )
+    assert [path.resolve() for path in resolved] == [actual.resolve()]
+
+
+def test_resolve_import_files_finds_unique_source_under_existing_parent() -> None:
+    root = Path("test_runtime") / f"import_src_parent_{uuid4().hex}"
+    actual_dir = root / "chatgpt_all_styles" / "IMG_5166_A"
+    actual_dir.mkdir(parents=True)
+    actual = actual_dir / "IMG_5166_A__bwk.png"
+    actual.write_bytes(b"img")
+    missing = root / "IMG_5166_A" / "IMG_5166_A__bwk.png"
+    resolved = resolve_import_files(
+        None,
+        [{"order": 1, "source_path": str(missing)}],
+    )
+    assert [path.resolve() for path in resolved] == [actual.resolve()]
+
+
+def test_resolve_import_files_source_path_error_does_not_mention_relative_path() -> None:
+    root = Path("test_runtime") / f"import_src_miss_{uuid4().hex}"
+    root.mkdir(parents=True)
+    missing = root / "absent.png"
+    try:
+        resolve_import_files(None, [{"order": 1, "source_path": str(missing)}])
+    except ImportFileLookupError as exc:
+        message = str(exc)
+        assert "source_path files were not found" in message
+        assert "relative_path" not in message
+        assert "absent.png" in message
+    else:
+        raise AssertionError("expected ImportFileLookupError")
+
+
 def test_is_media_import_config_detects_items_source_path() -> None:
     assert is_media_import_config(
         {
             "project_path": r"<LOCAL_PATH>",
             "sequence_name": "Ready",
+            "items": [{"order": 1, "source_path": r"<LOCAL_PATH>"}],
+        }
+    )
+    assert is_media_import_config(
+        {
+            "mode": "import_to_new_sequence",
+            "project_path": r"<LOCAL_PATH>",
+            "output_sequence_name": "IMPORT_styles",
             "items": [{"order": 1, "source_path": r"<LOCAL_PATH>"}],
         }
     )
@@ -211,7 +283,7 @@ def test_run_sequence_media_import_creates_sequence_and_appends_listed_files() -
     assert "ImportedSequence" in names
     _seq, clips = parse_premiere_project_sequence_visual_clips(output_project, "ImportedSequence")
     assert [clip.name for clip in clips] == ["clip_a.mp4", "new_take.mp4", "new_still.jpg"]
-    assert ticks_to_seconds(clips[0].duration) == 10.0
+    assert ticks_to_seconds(clips[0].duration) == 5.0
     assert ticks_to_seconds(clips[1].duration) == 5.0
     assert ticks_to_seconds(clips[2].duration) == 5.0
     _assert_unique_masterclips_for_imported_files(
@@ -221,7 +293,7 @@ def test_run_sequence_media_import_creates_sequence_and_appends_listed_files() -
     )
     payload = json.loads(json_path.read_text(encoding="utf-8"))
     assert payload["missing_files"] == []
-    assert payload["imported"][0]["reused_existing_media"] is True
+    assert payload["imported"][0]["reused_existing_media"] is False
     assert payload["imported"][1]["reused_existing_media"] is False
 
 
@@ -363,7 +435,234 @@ def test_run_sequence_media_import_uses_sibling_project_when_source_has_no_clips
     )
     payload = json.loads(json_path.read_text(encoding="utf-8"))
     assert any("donor_with_clips.prproj" in warning for warning in payload["warnings"])
+    assert any("project base" in warning for warning in payload["warnings"])
+    names = list_named_project_sequence_names(load_premiere_project_root(output_project))
+    assert "RawSequence" in names
+    assert "EmptySequence" in names
     _assert_no_dangling_project_refs(output_project)
+    _assert_sequence_urefs_point_to(output_project, "EmptySequence")
+    _assert_no_orphan_track_items(output_project)
+    _assert_imported_names_in_bin(output_project, ["new_take.mp4", "new_still.jpg"])
+    _assert_no_donor_secondary_content(output_project, "1215")
+
+
+def test_run_sequence_media_import_strips_template_effects_and_resets_motion() -> None:
+    root = Path("test_runtime") / f"import_clean_{uuid4().hex}"
+    media_root = root / "media"
+    media_root.mkdir(parents=True)
+    first = media_root / "clean_a.png"
+    second = media_root / "clean_b.png"
+    _write_tiny_png(first, width=8, height=4)
+    _write_tiny_png(second, width=8, height=4)
+    project_path = root / "fx.prproj"
+    _write_import_source_project_with_effects(project_path)
+    output_project = root / "fx_import.prproj"
+    config_path = root / "import.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "mode": "import_media",
+                "project_path": str(project_path),
+                "sequence_name": "ImportedSequence",
+                "create_sequence_if_missing": True,
+                "items": [
+                    {"order": 1, "source_path": str(first)},
+                    {"order": 2, "source_path": str(second)},
+                ],
+                "output_project_path": str(output_project),
+                "reports_dir": str(root / "reports"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    _json_path, _txt_path, exported = run_sequence_media_import_from_config(config_path)
+    assert exported == output_project
+    chains = _collect_imported_video_component_names(output_project, "ImportedSequence")
+    assert [item[0] for item in chains] == ["clean_a.png", "clean_b.png"]
+    assert [item[1] for item in chains] == [["AE.ADBE Motion"], ["AE.ADBE Motion"]]
+    assert chains[0][2] != chains[1][2]
+    scales = _collect_imported_motion_scale(output_project, "ImportedSequence")
+    assert scales == [("100.", False), ("100.", False)]
+    frame_rects = _collect_imported_frame_rects(output_project, "ImportedSequence")
+    assert frame_rects == ["0,0,8,4", "0,0,8,4"]
+    _assert_no_dangling_project_refs(output_project)
+
+
+def test_run_sequence_media_import_to_new_sequence_writes_same_project() -> None:
+    root = Path("test_runtime") / f"import_new_seq_{uuid4().hex}"
+    media_root = root / "media"
+    media_root.mkdir(parents=True)
+    first = media_root / "style_a.png"
+    second = media_root / "style_b.png"
+    first.write_bytes(b"photo-a")
+    second.write_bytes(b"photo-b")
+    project_path = root / "ready.prproj"
+    _write_import_source_project(project_path)
+    _seq, source_clips = parse_premiere_project_sequence_visual_clips(project_path, "RawSequence")
+    source_snapshot = [(clip.name, clip.start, clip.end, clip.in_point, clip.out_point) for clip in source_clips]
+    config_path = root / "import_new.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "mode": "import_to_new_sequence",
+                "project_path": str(project_path),
+                "output_sequence_name": "IMPORT_styles_v01",
+                "create_sequence_if_missing": True,
+                "fail_if_sequence_exists": True,
+                "write_project": True,
+                "items": [
+                    {"order": 2, "source_path": str(second)},
+                    {"order": 1, "source_path": str(first)},
+                ],
+                "reports_dir": str(root / "reports"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    json_path, _txt_path, exported = run_sequence_media_import_from_config(config_path)
+
+    assert exported == project_path
+    assert not (root / "ready_import.prproj").exists()
+    names = list_named_project_sequence_names(load_premiere_project_root(project_path))
+    assert "RawSequence" in names
+    assert "IMPORT_styles_v01" in names
+    _seq, after_source = parse_premiere_project_sequence_visual_clips(project_path, "RawSequence")
+    assert [(clip.name, clip.start, clip.end, clip.in_point, clip.out_point) for clip in after_source] == source_snapshot
+    _seq, imported_clips = parse_premiere_project_sequence_visual_clips(project_path, "IMPORT_styles_v01")
+    assert [clip.name for clip in imported_clips] == ["style_a.png", "style_b.png"]
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert payload["mode"] == "import_to_new_sequence"
+    assert payload["wrote_in_place"] is True
+    _assert_no_dangling_project_refs(project_path)
+
+    retry_path = root / "import_retry.json"
+    retry_path.write_text(config_path.read_text(encoding="utf-8"), encoding="utf-8")
+    try:
+        run_sequence_media_import_from_config(retry_path)
+    except PremiereProjectError as exc:
+        assert "IMPORT_styles_v01" in str(exc)
+        assert "already exists" in str(exc)
+    else:
+        raise AssertionError("expected PremiereProjectError when output sequence exists")
+
+
+def test_run_sequence_media_import_to_new_sequence_rewires_donor_sequence_refs() -> None:
+    root = Path("test_runtime") / f"import_new_seq_empty_{uuid4().hex}"
+    media_root = root / "media"
+    media_root.mkdir(parents=True)
+    photo = media_root / "style_a.png"
+    photo.write_bytes(b"photo-a")
+    project_path = root / "empty.prproj"
+    donor_project = root / "donor_with_clips.prproj"
+    _write_empty_import_source_project(project_path)
+    _write_import_source_project(donor_project)
+    config_path = root / "import_new.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "mode": "import_to_new_sequence",
+                "project_path": str(project_path),
+                "output_sequence_name": "IMPORT_styles_v01",
+                "create_sequence_if_missing": True,
+                "fail_if_sequence_exists": True,
+                "write_project": True,
+                "items": [{"order": 1, "source_path": str(photo)}],
+                "reports_dir": str(root / "reports"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    json_path, _txt_path, exported = run_sequence_media_import_from_config(config_path)
+
+    assert exported == project_path
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert any("donor_with_clips.prproj" in warning for warning in payload["warnings"])
+    assert any("project base" in warning for warning in payload["warnings"])
+    names = list_named_project_sequence_names(load_premiere_project_root(project_path))
+    assert "RawSequence" in names
+    assert "IMPORT_styles_v01" in names
+    _seq, imported_clips = parse_premiere_project_sequence_visual_clips(project_path, "IMPORT_styles_v01")
+    assert [clip.name for clip in imported_clips] == ["style_a.png"]
+    _assert_no_dangling_project_refs(project_path)
+    _assert_sequence_urefs_point_to(project_path, "IMPORT_styles_v01")
+    _assert_no_orphan_track_items(project_path)
+    _assert_imported_names_in_bin(project_path, ["style_a.png"])
+    _assert_no_donor_secondary_content(project_path, "1215")
+
+
+def test_run_sequence_media_import_keeps_separate_media_for_duplicate_names() -> None:
+    root = Path("test_runtime") / f"import_dup_names_{uuid4().hex}"
+    first_dir = root / "watercolor"
+    second_dir = root / "all_styles"
+    first_dir.mkdir(parents=True)
+    second_dir.mkdir(parents=True)
+    first = first_dir / "260806_01__wcp.png"
+    second = second_dir / "260806_01__wcp.png"
+    first.write_bytes(b"photo-a")
+    second.write_bytes(b"photo-b")
+    project_path = root / "ready.prproj"
+    _write_import_source_project(project_path)
+    config_path = root / "import_dup.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "mode": "import_to_new_sequence",
+                "project_path": str(project_path),
+                "output_sequence_name": "IMPORT_styles_v01",
+                "create_sequence_if_missing": True,
+                "fail_if_sequence_exists": True,
+                "write_project": True,
+                "items": [
+                    {"order": 1, "source_path": str(first)},
+                    {"order": 2, "source_path": str(second)},
+                ],
+                "reports_dir": str(root / "reports"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    json_path, _txt_path, exported = run_sequence_media_import_from_config(config_path)
+    assert exported == project_path
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert [item["reused_existing_media"] for item in payload["imported"]] == [False, False]
+    _assert_unique_masterclips_for_imported_files(
+        project_path,
+        "IMPORT_styles_v01",
+        ["260806_01__wcp.png", "260806_01__wcp.png"],
+    )
+    _seq, clips = parse_premiere_project_sequence_visual_clips(project_path, "IMPORT_styles_v01")
+    assert [Path(clip.source_path).name for clip in clips] == ["260806_01__wcp.png", "260806_01__wcp.png"]
+    assert Path(clips[0].source_path).parent.name == "watercolor"
+    assert Path(clips[1].source_path).parent.name == "all_styles"
+    _assert_no_dangling_project_refs(project_path)
+
+
+def _assert_sequence_urefs_point_to(project_path: Path, sequence_name: str) -> None:
+    root = load_premiere_project_root(project_path)
+    sequence_node = find_project_sequence_node(root, sequence_name)
+    assert sequence_node is not None
+    sequence_uid = sequence_node.attrib.get("ObjectUID")
+    assert sequence_uid
+    known_uids = {node.attrib.get("ObjectUID") for node in root.iter() if node.attrib.get("ObjectUID")}
+    assert sequence_uid in known_uids
+    sequence_urefs = [
+        element.attrib.get("ObjectURef")
+        for element in root.iter()
+        if element.tag == "Sequence" and element.attrib.get("ObjectURef")
+    ]
+    assert all(uref in known_uids for uref in sequence_urefs)
 
 
 def _assert_unique_masterclips_for_imported_files(
@@ -424,6 +723,42 @@ def _assert_unique_masterclips_for_imported_files(
     stream_ids = [stream_id for _name, _master_name, _master_uid, stream_id in observed]
     assert len(set(master_uids)) == len(expected_names)
     assert len(set(stream_ids)) == len(expected_names)
+
+
+def _assert_no_orphan_track_items(project_path: Path) -> None:
+    root = load_premiere_project_root(project_path)
+    referenced = {
+        element.attrib.get("ObjectRef")
+        for element in root.iter("TrackItem")
+        if element.attrib.get("ObjectRef")
+    }
+    orphans = [
+        child.attrib.get("ObjectID")
+        for child in list(root)
+        if "TrackItem" in child.tag and child.attrib.get("ObjectID") not in referenced
+    ]
+    assert orphans == []
+
+
+def _assert_imported_names_in_bin(project_path: Path, expected_names: list[str]) -> None:
+    root = load_premiere_project_root(project_path)
+    bin_names = [
+        (node.findtext("./ProjectItem/Name") or node.findtext("./Name") or "").strip()
+        for node in root.iter("ClipProjectItem")
+    ]
+    for name in expected_names:
+        assert name in bin_names, f"{name} missing from bin items {bin_names}"
+
+
+def _assert_no_donor_secondary_content(project_path: Path, object_ref: str) -> None:
+    root = load_premiere_project_root(project_path)
+    object_ids = {node.attrib.get("ObjectID") for node in root.iter() if node.attrib.get("ObjectID")}
+    leftover = [
+        node.attrib.get("ObjectRef")
+        for node in root.iter("SecondaryContentItem")
+        if node.attrib.get("ObjectRef") == object_ref and object_ref not in object_ids
+    ]
+    assert leftover == []
 
 
 def _assert_no_dangling_project_refs(project_path: Path) -> None:
@@ -711,25 +1046,253 @@ def _write_import_source_project(project_path: Path) -> None:
       <Clip Index="0" ObjectRef="2002" />
       <Clip Index="1" ObjectRef="2202" />
     </Clips>
+    <Sequence ObjectURef="seq-raw" />
+    <SecondaryContentItem ObjectRef="1215" />
   </MasterClip>
   <MasterClip ObjectUID="master-photo" ClassID="master-clip" Version="1">
     <Name>still.jpg</Name>
     <Clips Version="1">
       <Clip Index="0" ObjectRef="2102" />
     </Clips>
+    <Sequence ObjectURef="seq-raw" />
   </MasterClip>
   <ClipProjectItem ObjectUID="project-item-video" ClassID="clip-project-item" Version="1">
     <ProjectItem Version="1">
       <Name>clip_a.mp4</Name>
     </ProjectItem>
     <MasterClip ObjectURef="master-video" />
+    <SecondaryContentItem ObjectRef="1215" />
   </ClipProjectItem>
   <ClipProjectItem ObjectUID="project-item-photo" ClassID="clip-project-item" Version="1">
     <ProjectItem Version="1">
       <Name>still.jpg</Name>
     </ProjectItem>
     <MasterClip ObjectURef="master-photo" />
+    <SecondaryContentItem ObjectRef="1215" />
   </ClipProjectItem>
+  <LoggingInfo ObjectID="1215" ClassID="logging-info" Version="1">
+    <Name>donor-secondary</Name>
+  </LoggingInfo>
 </PremiereData>
 """
     project_path.write_bytes(gzip.compress(project_xml.encode("utf-8")))
+
+
+def _write_tiny_png(path: Path, *, width: int, height: int) -> None:
+    def chunk(tag: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+
+    raw = b"".join(b"\x00" + (b"\x00\x00\x00\xff" * width) for _ in range(height))
+    path.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(raw))
+        + chunk(b"IEND", b"")
+    )
+
+
+def _write_import_source_project_with_effects(project_path: Path) -> None:
+    _write_import_source_project(project_path)
+    root = load_premiere_project_root(project_path)
+    photo_item = None
+    for node in root.iter("VideoClipTrackItem"):
+        if node.attrib.get("ObjectID") == "2100":
+            photo_item = node
+            break
+    assert photo_item is not None
+    clip_track_item = photo_item.find("./ClipTrackItem")
+    assert clip_track_item is not None
+    owner = ET.Element("ComponentOwner")
+    owner.attrib["Version"] = "1"
+    components = ET.SubElement(owner, "Components")
+    components.attrib["ObjectRef"] = "3000"
+    clip_track_item.insert(0, owner)
+    root.append(
+        ET.fromstring(
+            """
+<VideoComponentChain ObjectID="3000" ClassID="video-component-chain" Version="3">
+  <ComponentChain Version="3">
+    <Node Version="1">
+      <Properties Version="1">
+        <MZ.ComponentChain.ActiveComponentID>2</MZ.ComponentChain.ActiveComponentID>
+      </Properties>
+    </Node>
+    <Components Version="1">
+      <Component Index="0" ObjectRef="3001" />
+      <Component Index="1" ObjectRef="3010" />
+      <Component Index="2" ObjectRef="3020" />
+    </Components>
+  </ComponentChain>
+</VideoComponentChain>
+"""
+        )
+    )
+    root.append(
+        ET.fromstring(
+            """
+<VideoFilterComponent ObjectID="3001" ClassID="video-filter" Version="9">
+  <Component Version="7">
+    <Params Version="1">
+      <Param Index="0" ObjectRef="3002" />
+      <Param Index="1" ObjectRef="3003" />
+    </Params>
+    <ID>1</ID>
+    <DisplayName>Motion</DisplayName>
+    <Intrinsic>true</Intrinsic>
+  </Component>
+  <MatchName>AE.ADBE Motion</MatchName>
+</VideoFilterComponent>
+"""
+        )
+    )
+    root.append(
+        ET.fromstring(
+            """
+<PointComponentParam ObjectID="3002" ClassID="point-param" Version="4">
+  <Name>Position</Name>
+  <IsTimeVarying>true</IsTimeVarying>
+  <StartKeyframe>-91445760000000000,0.5:0.5,0,0,0,0,0,0,5,4,0,0,0,0</StartKeyframe>
+  <Keyframes>914457600000000,0.5:0.8,0,0,0,0,0,0,5,4,0,0,0,0;</Keyframes>
+</PointComponentParam>
+"""
+        )
+    )
+    root.append(
+        ET.fromstring(
+            """
+<VideoComponentParam ObjectID="3003" ClassID="video-param" Version="10">
+  <Name>Scale</Name>
+  <IsTimeVarying>true</IsTimeVarying>
+  <StartKeyframe>-91445760000000000,312.,0,0,0,0,0,0</StartKeyframe>
+  <Keyframes>914457600000000,166.9,0,0,0,0,0,0;</Keyframes>
+  <CurrentValue>312</CurrentValue>
+</VideoComponentParam>
+"""
+        )
+    )
+    root.append(
+        ET.fromstring(
+            """
+<VideoFilterComponent ObjectID="3010" ClassID="video-filter" Version="9">
+  <Component Version="7">
+    <Params Version="1" />
+    <ID>2</ID>
+    <DisplayName>Lumetri Color</DisplayName>
+  </Component>
+  <MatchName>AE.ADBE Lumetri</MatchName>
+</VideoFilterComponent>
+"""
+        )
+    )
+    root.append(
+        ET.fromstring(
+            """
+<VideoFilterComponent ObjectID="3020" ClassID="video-filter" Version="9">
+  <Component Version="7">
+    <Params Version="1" />
+    <ID>3</ID>
+    <DisplayName>Gaussian Blur</DisplayName>
+  </Component>
+  <MatchName>AE.ADBE Gaussian Blur 2</MatchName>
+</VideoFilterComponent>
+"""
+        )
+    )
+    project_path.write_bytes(gzip.compress(ET.tostring(root, encoding="utf-8", xml_declaration=True)))
+
+
+def _collect_imported_video_component_names(
+    project_path: Path,
+    sequence_name: str,
+) -> list[tuple[str, list[str], str]]:
+    root = load_premiere_project_root(project_path)
+    object_id_lookup = build_project_object_id_lookup(root)
+    object_uid_lookup = build_project_object_uid_lookup(root)
+    sequence_node = find_project_sequence_node(root, sequence_name)
+    assert sequence_node is not None
+    collected: list[tuple[str, list[str], str]] = []
+    for _index, track_node in get_project_track_nodes(
+        sequence_node,
+        track_group_index=0,
+        object_id_lookup=object_id_lookup,
+        object_uid_lookup=object_uid_lookup,
+    ):
+        for ref in iter_project_track_item_refs(track_node):
+            item = object_id_lookup.get(ref.attrib.get("ObjectRef", ""))
+            if item is None:
+                continue
+            name = resolve_project_track_item_name(item, object_id_lookup)
+            owner = item.find("./ClipTrackItem/ComponentOwner/Components")
+            chain_id = owner.attrib.get("ObjectRef", "") if owner is not None else ""
+            chain = object_id_lookup.get(chain_id)
+            match_names: list[str] = []
+            if chain is not None:
+                for component_ref in chain.findall("./ComponentChain/Components/Component"):
+                    component = object_id_lookup.get(component_ref.attrib.get("ObjectRef", ""))
+                    if component is None:
+                        continue
+                    match_names.append((component.findtext("./MatchName") or "").strip())
+            collected.append((name, match_names, chain_id))
+    return collected
+
+
+def _collect_imported_motion_scale(
+    project_path: Path,
+    sequence_name: str,
+) -> list[tuple[str, bool]]:
+    root = load_premiere_project_root(project_path)
+    object_id_lookup = build_project_object_id_lookup(root)
+    object_uid_lookup = build_project_object_uid_lookup(root)
+    sequence_node = find_project_sequence_node(root, sequence_name)
+    assert sequence_node is not None
+    scales: list[tuple[str, bool]] = []
+    for _index, track_node in get_project_track_nodes(
+        sequence_node,
+        track_group_index=0,
+        object_id_lookup=object_id_lookup,
+        object_uid_lookup=object_uid_lookup,
+    ):
+        for ref in iter_project_track_item_refs(track_node):
+            item = object_id_lookup.get(ref.attrib.get("ObjectRef", ""))
+            if item is None:
+                continue
+            owner = item.find("./ClipTrackItem/ComponentOwner/Components")
+            chain = object_id_lookup.get(owner.attrib.get("ObjectRef", "")) if owner is not None else None
+            if chain is None:
+                continue
+            for component_ref in chain.findall("./ComponentChain/Components/Component"):
+                component = object_id_lookup.get(component_ref.attrib.get("ObjectRef", ""))
+                if component is None or (component.findtext("./MatchName") or "") != "AE.ADBE Motion":
+                    continue
+                for param_ref in component.findall("./Component/Params/Param"):
+                    param = object_id_lookup.get(param_ref.attrib.get("ObjectRef", ""))
+                    if param is None or (param.findtext("./Name") or "") != "Scale":
+                        continue
+                    start = (param.findtext("./StartKeyframe") or "").split(",")
+                    value = start[1] if len(start) > 1 else ""
+                    varying = (param.findtext("./IsTimeVarying") or "").casefold() == "true"
+                    has_keys = param.find("./Keyframes") is not None
+                    scales.append((value, varying or has_keys))
+    return scales
+
+
+def _collect_imported_frame_rects(project_path: Path, sequence_name: str) -> list[str]:
+    root = load_premiere_project_root(project_path)
+    object_id_lookup = build_project_object_id_lookup(root)
+    object_uid_lookup = build_project_object_uid_lookup(root)
+    sequence_node = find_project_sequence_node(root, sequence_name)
+    assert sequence_node is not None
+    rects: list[str] = []
+    for _index, track_node in get_project_track_nodes(
+        sequence_node,
+        track_group_index=0,
+        object_id_lookup=object_id_lookup,
+        object_uid_lookup=object_uid_lookup,
+    ):
+        for ref in iter_project_track_item_refs(track_node):
+            item = object_id_lookup.get(ref.attrib.get("ObjectRef", ""))
+            if item is None:
+                continue
+            rects.append((item.findtext("./FrameRect") or "").strip())
+    return rects
+

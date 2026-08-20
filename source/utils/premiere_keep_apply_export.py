@@ -7,7 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
-from models.sequence_keep_apply import KeepRange, MediaKeepSpec
+from models.sequence_keep_apply import (
+    KeepRange,
+    MediaKeepSpec,
+    keep_spec_queues,
+    normalize_keep_media_path,
+    take_keep_spec_for_media,
+)
 from utils.premiere_project import (
     PremiereProjectError,
     build_project_object_id_lookup,
@@ -30,6 +36,7 @@ from utils.premiere_project_export import (
     _set_child_text,
     _set_track_item_boundary,
     _update_sequence_duration_metadata,
+    clone_named_sequence,
 )
 from utils.premiere_trim_review_export import (
     _ensure_track_items_container,
@@ -112,6 +119,10 @@ def export_keep_apply_premiere_project(
     keep_specs: list[MediaKeepSpec],
     sequence_names: list[str] | None = None,
     ripple_compact: bool = True,
+    output_sequence_name: str | None = None,
+    create_output_sequence_from_source: bool = False,
+    fail_if_output_sequence_exists: bool = False,
+    preserve_source_sequence: bool = False,
 ) -> tuple[Path, list[str]]:
     if not keep_specs:
         raise PremiereProjectError("No keep-range specs were provided.")
@@ -122,7 +133,15 @@ def export_keep_apply_premiere_project(
         raise PremiereProjectError(f"No named sequences were found in project: {source_project_path}")
 
     all_warnings: list[str] = []
-    for sequence_name in target_names:
+    apply_names = _resolve_keep_apply_sequence_names(
+        root,
+        source_sequence_names=target_names,
+        output_sequence_name=output_sequence_name,
+        create_output_sequence_from_source=create_output_sequence_from_source,
+        fail_if_output_sequence_exists=fail_if_output_sequence_exists,
+        preserve_source_sequence=preserve_source_sequence,
+    )
+    for sequence_name in apply_names:
         sequence_node = find_project_sequence_node(root, sequence_name)
         if sequence_node is None:
             all_warnings.append(f"Sequence '{sequence_name}' was not found and was skipped.")
@@ -146,6 +165,54 @@ def export_keep_apply_premiere_project(
     return output_project_path, all_warnings
 
 
+def _resolve_keep_apply_sequence_names(
+    root: ET.Element,
+    *,
+    source_sequence_names: list[str],
+    output_sequence_name: str | None,
+    create_output_sequence_from_source: bool,
+    fail_if_output_sequence_exists: bool,
+    preserve_source_sequence: bool,
+) -> list[str]:
+    if not output_sequence_name:
+        if preserve_source_sequence:
+            raise PremiereProjectError(
+                "preserve_source_sequence requires 'output_sequence_name' so the source sequence is left unchanged."
+            )
+        return source_sequence_names
+
+    existing_output = find_project_sequence_node(root, output_sequence_name)
+    if existing_output is not None:
+        if fail_if_output_sequence_exists:
+            raise PremiereProjectError(
+                f"Output sequence '{output_sequence_name}' already exists in the project."
+            )
+        return [output_sequence_name]
+
+    if not create_output_sequence_from_source:
+        raise PremiereProjectError(
+            f"Output sequence '{output_sequence_name}' was not found. "
+            "Set create_output_sequence_from_source=true to copy the source sequence first."
+        )
+    if len(source_sequence_names) != 1:
+        raise PremiereProjectError(
+            "create_output_sequence_from_source needs exactly one source_sequence_name."
+        )
+    source_name = source_sequence_names[0]
+    if source_name.casefold() == output_sequence_name.casefold():
+        raise PremiereProjectError(
+            "output_sequence_name must differ from source_sequence_name when copying a sequence."
+        )
+    clone_named_sequence(
+        root,
+        source_sequence_name=source_name,
+        new_sequence_name=output_sequence_name,
+        object_id_lookup=build_project_object_id_lookup(root),
+        object_uid_lookup=build_project_object_uid_lookup(root),
+    )
+    return [output_sequence_name]
+
+
 def _apply_keep_ranges_to_sequence(
     root: ET.Element,
     sequence_node: ET.Element,
@@ -157,7 +224,7 @@ def _apply_keep_ranges_to_sequence(
     ripple_compact: bool,
 ) -> list[str]:
     warnings: list[str] = []
-    specs_by_key = {spec.match_key: spec for spec in keep_specs}
+    spec_queues = keep_spec_queues(keep_specs)
     video_views = _collect_track_item_views(
         sequence_node,
         track_group_index=0,
@@ -178,11 +245,18 @@ def _apply_keep_ranges_to_sequence(
         )
         return warnings
 
-    video_plans = _build_item_plans(video_views, specs_by_key, ripple_compact=ripple_compact)
+    video_plans = _build_item_plans(
+        video_views,
+        spec_queues=spec_queues,
+        ripple_compact=ripple_compact,
+    )
     audio_plans = _align_secondary_plans(audio_views, video_plans, ripple_compact=ripple_compact)
     id_allocator = _ProjectObjectIdAllocator(root)
-    matched_keys = {plan.view.match_key for plan in video_plans if plan.action != "unchanged"}
-    missing = [spec.file_name for spec in keep_specs if spec.match_key not in matched_keys]
+    missing = [
+        spec.source_path or spec.file_name
+        for bucket in spec_queues.values()
+        for spec in bucket
+    ]
     if missing:
         warnings.append(
             "Keep specs were not matched in this sequence: " + ", ".join(missing)
@@ -265,14 +339,18 @@ def _collect_track_item_views(
 
 def _build_item_plans(
     views: list[_TrackItemView],
-    specs_by_key: dict[str, MediaKeepSpec],
     *,
+    spec_queues: dict[str, list[MediaKeepSpec]],
     ripple_compact: bool,
 ) -> list[_ItemPlan]:
     plans: list[_ItemPlan] = []
     cursor_shift = 0
     for view in views:
-        spec = specs_by_key.get(view.match_key)
+        spec = take_keep_spec_for_media(
+            spec_queues,
+            source_path=view.source_path,
+            name=view.name,
+        )
         if spec is None:
             if ripple_compact:
                 new_start = view.start - cursor_shift
@@ -325,6 +403,16 @@ def _build_item_plans(
     return plans
 
 
+def _same_keep_media(left: _TrackItemView, right: _TrackItemView) -> bool:
+    left_path = normalize_keep_media_path(left.source_path)
+    right_path = normalize_keep_media_path(right.source_path)
+    if left_path and right_path:
+        return left_path == right_path
+    left_name = Path(left.source_path or left.name).name.casefold() if (left.source_path or left.name) else ""
+    right_name = Path(right.source_path or right.name).name.casefold() if (right.source_path or right.name) else ""
+    return bool(left_name) and left_name == right_name
+
+
 def _align_secondary_plans(
     views: list[_TrackItemView],
     master_plans: list[_ItemPlan],
@@ -364,12 +452,12 @@ def _align_secondary_plans(
 
 def _take_matching_plan(view: _TrackItemView, remaining: list[_ItemPlan]) -> _ItemPlan | None:
     for index, plan in enumerate(remaining):
-        if plan.view.match_key != view.match_key:
+        if not _same_keep_media(plan.view, view):
             continue
         if plan.view.start == view.start and plan.view.end == view.end:
             return remaining.pop(index)
     for index, plan in enumerate(remaining):
-        if plan.view.match_key == view.match_key:
+        if _same_keep_media(plan.view, view):
             return remaining.pop(index)
     return None
 

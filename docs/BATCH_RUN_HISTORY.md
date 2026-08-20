@@ -58,38 +58,44 @@
 | B040 | `run_sequence_keep_apply.bat` | Второй проход Yotam: KEEP JSON с `project_path`, `sequence_name` и несколькими `keep_ranges` | `.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min_vtr_2.json` |
 | B041 | `run_sequence_media_import.bat` | Импорт списка файлов из корневой папки в Premiere sequence | `.\run_sequence_media_import.bat .\sequence_media_import_yotam26_part2.json` |
 | B042 | `run_sequence_import_and_keep.bat` | Импорт списка файлов и keep/очистка за один проход | `.\run_sequence_import_and_keep.bat <LOCAL_PATH>` |
+| B043 | `run_sequence_media_import.bat` | Новая sequence в существующем `.prproj` (`import_to_new_sequence`); compact Yotam macro styles с дублем `source_path` | `.\run_sequence_media_import.bat .\sequence_media_import_yotam26_macro_styles.json` |
+| B044 | `run_sequence_keep_apply.bat` | Копия source-sequence и KEEP только на копии (`keep_to_new_sequence`); compact Yotam macro styles | `.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_macro_styles.json` |
 
-## GitHub publication note (2026-08-16)
+## GitHub publication note (2026-08-20)
 
 Dev history: https://github.com/sergey-frd/img-style-ag_1 (`git push origin main`).
 
-Public Internet bundle: https://github.com/sergey-frd/Memory-to-Video_Agent at version **`2026.08.16.01`** (tag `v2026.08.16.01`). Headline: Premiere import / keep-apply / import-and-keep plus expanded portrait style banks.
+Public Internet bundle: https://github.com/sergey-frd/Memory-to-Video_Agent at version **`2026.08.20.01`** (tag `v2026.08.20.01`). Headline: in-place Premiere `keep_to_new_sequence` and `import_to_new_sequence`.
 
 ## Рабочая команда для текущей задачи
 
-Применить ручной KEEP JSON к копии Premiere-проекта Yotam:
+Импортировать стили в новую sequence того же Yotam `.prproj`, затем KEEP-обрезать копию:
+
+```bat
+.\run_sequence_media_import.bat .\sequence_media_import_yotam26_macro_styles.json
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_macro_styles.json
+```
+
+Полный 74-file job (workspace, не в репозитории):
+
+```bat
+.\run_sequence_media_import.bat <LOCAL_PATH>
+.\run_sequence_keep_apply.bat <LOCAL_PATH>
+```
+
+Ожидаемый результат in-place import/keep:
+- проект: `<LOCAL_PATH>` (отдельный `*_import.prproj` / `*_keep.prproj` не создаётся);
+- sequence `Yt_macro_styles_IMPORT_v01` не меняется после KEEP;
+- новая sequence `Yt_macro_styles_KEEP_v01` содержит только KEEP-диапазоны;
+- одинаковые имена из разных папок остаются разными `MasterClip` / клипами;
+- повторный запуск упирается в `fail_if_sequence_exists` / `fail_if_output_sequence_exists`;
+- перед записью закройте Premiere.
+
+Старый режим копии проекта (`apply_keep_ranges`):
 
 ```bat
 .\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min.json
 ```
-
-Тот же JSON через общий launcher:
-
-```bat
-.\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json
-```
-
-Новый проект по шаблону:
-
-```bat
-.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
-```
-
-Ожидаемый результат keep-apply:
-- исходный `Yotam26_2_min.prproj` не меняется;
-- новый проект: `<LOCAL_PATH>`;
-- отчёты: `<LOCAL_PATH>`;
-- в консоли: `Keep apply completed successfully.`
 
 Gemini equivalent with the same config format:
 

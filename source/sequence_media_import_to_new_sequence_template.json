@@ -1,0 +1,21 @@
+{
+  "mode": "import_to_new_sequence",
+  "project_path": "<LOCAL_PATH>",
+  "output_sequence_name": "<IMPORT_sequence>",
+  "create_sequence_if_missing": true,
+  "fail_if_sequence_exists": true,
+  "write_project": true,
+  "still_duration_seconds": 5,
+  "template_project_path": "",
+  "items": [
+    {
+      "order": 1,
+      "source_path": "<LOCAL_PATH>"
+    },
+    {
+      "order": 2,
+      "source_path": "<LOCAL_PATH>"
+    }
+  ],
+  "reports_dir": "<LOCAL_PATH>"
+}

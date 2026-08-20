@@ -13,8 +13,8 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 
 ## Current version
 
-- Workspace `VERSION`: **`2026.08.16.01`** ([`VERSION`](VERSION))
-- Latest intended publication tag: **`v2026.08.16.01`**
+- Workspace `VERSION`: **`2026.08.20.01`** ([`VERSION`](VERSION))
+- Latest intended publication tag: **`v2026.08.20.01`**
 
 ## Published on GitHub (Internet)
 
@@ -22,16 +22,15 @@ Public repository:
 
 - https://github.com/sergey-frd/Memory-to-Video_Agent
 
-This release wave (**2026.08.16.01**) adds Premiere import / keep-apply and expanded portrait style banks:
+This release wave (**2026.08.20.01**) adds in-place Premiere sequence copy/import:
 
-- Manual KEEP JSON apply (`apply_keep_ranges`) with ripple-compact and linked audio trim
-- Media import into a sequence (`import_media`) with per-file MasterClip / streams
-- Import then keep in one pass (`import_and_keep`)
-- Music-first recommendation launcher `run_sequence_music_recommendation.bat`
-- Portrait banks: `ILYA_REPIN`, selected artists, Russian artists, and the name/slug table in [`docs/portrait_styles_tables.md`](docs/portrait_styles_tables.md)
-- Entry points: `run_sequence_keep_apply.bat`, `run_sequence_media_import.bat`, `run_sequence_import_and_keep.bat`, `run_sequence_music_recommendation.bat`, skill `sequence-trim-review`
+- KEEP onto a copied sequence in the same `.prproj` (`keep_to_new_sequence`)
+- Import listed files onto a new sequence in the existing project (`import_to_new_sequence`)
+- Templates `sequence_keep_to_new_sequence_template.json` and `sequence_media_import_to_new_sequence_template.json`
+- Duplicate filenames stay distinct when each clip has its own `source_path`
+- Entry points: `run_sequence_keep_apply.bat`, `run_sequence_media_import.bat`, skill `sequence-trim-review`
 
-Also carries earlier waves already on the public repo (hero-aware Sequence Trim Review, documentation consolidation, video story rules).
+Also carries earlier waves already on the public repo (import / keep-apply / import-and-keep, expanded portrait banks, hero-aware Sequence Trim Review).
 
 ## Operator docs
 

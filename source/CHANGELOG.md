@@ -2,6 +2,16 @@
 
 Краткая история заметных пользовательских изменений. Подробные инструкции находятся в [`docs/`](docs/).
 
+## 2026.08.20.01
+
+- Добавлен режим `keep_to_new_sequence`: source-sequence копируется в новую sequence внутри того же `.prproj`, KEEP применяется только к копии, исходная sequence не меняется.
+- Добавлен режим `import_to_new_sequence`: в существующем Premiere-проекте создаётся новая sequence, туда импортируется список файлов, остальные sequence не трогаются.
+- Для обоих режимов отдельные `.prproj` не создаются, пока не задан `output_project_path`. Повторный запуск останавливается, если output-имя уже занято.
+- Новые шаблоны: `sequence_keep_to_new_sequence_template.json`, `sequence_media_import_to_new_sequence_template.json`.
+- Рабочие конфиги Yotam macro styles: `sequence_media_import_yotam26_macro_styles.json` и `sequence_keep_apply_yotam26_macro_styles.json`.
+- В KEEP `operations` файл можно задать через `source_path` (нужно, если одно имя встречается в разных папках); для фото достаточно `duration`.
+- `import_to_new_sequence` принимает `items` с `order` и абсолютным `source_path`; если файл не найден, пробуется замена `__`↔`_` и уникальный поиск под ближайшим существующим родителем.
+
 ## 2026.08.16.01
 
 - Добавлен режим `apply_keep_ranges`: копия Premiere `.prproj` сохраняет весь проект, а для файлов из KEEP JSON остаются только указанные source-диапазоны. Связанное аудио режется вместе с видео, следующие клипы сдвигаются (`ripple_compact`).

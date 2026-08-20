@@ -5,8 +5,8 @@
 1. создание визуального определения героя;
 2. KEEP/DROP-анализ исходной sequence;
 3. повторный экспорт из готового отчёта без OpenAI;
-4. применение ручного KEEP JSON к копии Premiere-проекта;
-5. импорт списка файлов из корневой папки в sequence;
+4. применение ручного KEEP JSON к копии Premiere-проекта или KEEP только на копии sequence в том же `.prproj`;
+5. импорт списка файлов в существующую sequence или в новую sequence того же проекта;
 6. оптимизацию sequence;
 7. персонализированные и музыкальные отчёты.
 
@@ -51,7 +51,9 @@ flowchart LR
 | Разбить sequence на KEEP/DROP | `main_sequence_trim_review.py` | `run_sequence_trim_review.bat` | `sequence_trim_review_*.json` | review `.prproj` + JSON/TXT |
 | Переэкспортировать уровни без OpenAI | `main_sequence_trim_review.py`, режим `report_replay` | `run_sequence_trim_review.bat` | `sequence_trim_review_*_replay_levels.json` | одна sequence, V1–V4 |
 | Оставить только указанные куски медиа | `main_sequence_trim_review.py`, режим `apply_keep_ranges` | `run_sequence_keep_apply.bat`; тот же JSON принимает `run_sequence_trim_review.bat` | `sequence_keep_apply_*.json` + KEEP JSON | новый `.prproj` без лишних кусков |
+| Скопировать sequence и KEEP-обрезать копию | `main_sequence_trim_review.py`, режим `keep_to_new_sequence` | `run_sequence_keep_apply.bat` | `sequence_keep_to_new_sequence_template.json`, `sequence_keep_apply_yotam26_macro_styles.json` | та же `.prproj`, новая sequence |
 | Импортировать список файлов в sequence | `main_sequence_trim_review.py`, режим `import_media` | `run_sequence_media_import.bat` | `sequence_media_import_*.json` + import JSON | новый `.prproj` с файлами на sequence |
+| Импортировать файлы в новую sequence того же проекта | `main_sequence_trim_review.py`, режим `import_to_new_sequence` | `run_sequence_media_import.bat` | `sequence_media_import_to_new_sequence_template.json`, `sequence_media_import_yotam26_macro_styles.json` | та же `.prproj`, новая sequence |
 | Импортировать файлы и сразу обрезать KEEP | `main_sequence_trim_review.py`, режим `import_and_keep` | `run_sequence_import_and_keep.bat` | `sequence_import_and_keep_*.json` + import JSON + KEEP JSON | `*_import.prproj` и укороченный `*_keep.prproj` |
 | Оптимизировать sequence и построить bundle отчётов | `main_project_sequence_batch.py` | `run_project_sequence_batch.bat`; проектные `run_project_sequence_batch_*.bat` | `project_sequence_batch_*.json` | оптимизированный `.prproj`, отчёты, JSX |
 | Построить персонализированный отчёт отдельно | `main_human_sequence_report.py` | нет, прямой Python-запуск | CLI | `*_human_profile_report.txt` |
@@ -174,6 +176,8 @@ run_hero_definition.bat hero_definition_Alice.json
 .\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min.json
 .\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min_vtr_2.json
 .\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
+.\run_sequence_keep_apply.bat .\sequence_keep_to_new_sequence_template.json
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_macro_styles.json
 .\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json
 ```
 
@@ -183,22 +187,30 @@ python .\main_sequence_trim_review.py --config .\sequence_keep_apply_yotam26_2_m
 
 Исходный `.prproj` не меняется. Новый проект сохраняет bins, sequence names и все неперечисленные клипы. Для файлов из KEEP JSON на timeline остаются только указанные source-диапазоны; связанное аудио режется так же. `.prin` в конфиге только справочный и не парсится.
 
+Режим `keep_to_new_sequence` пишет в тот же `.prproj`: копирует `source_sequence_name` в `output_sequence_name` и обрезает только копию. Исходная sequence не меняется. Перед in-place записью закройте Premiere. Matching KEEP идёт по полному `source_path`, поэтому одно имя из двух папок — два клипа.
+
 | Параметр | Обязательность / default | Назначение | Программа | Batch |
 |---|---|---|---|---|
-| `mode` | обязательное значение `apply_keep_ranges` | Переключает CLI на применение ручного KEEP JSON | `main_sequence_trim_review.py` | `run_sequence_keep_apply.bat`, `run_sequence_trim_review.bat` |
+| `mode` | обязательное значение `apply_keep_ranges` или `keep_to_new_sequence` | Переключает CLI на применение ручного KEEP JSON | `main_sequence_trim_review.py` | `run_sequence_keep_apply.bat`, `run_sequence_trim_review.bat` |
 | `project_path` | обязательный | Исходный Premiere `.prproj` | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
 | `prin_path` | необязательный | Справочный путь к `.prin`; не читается | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
 | `keep_ranges_path` | обязательный, если нет `operations`/`clips` | JSON со списком файлов и KEEP-диапазонов; может сам содержать `project_path` и `sequence_name` | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
 | `operations` | обязательный в новом KEEP JSON, если нет `clips` | Список файлов и `keep_ranges`; тот же смысл, что `clips` | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
-| `operations[].file` | обязательный | Имя медиафайла на timeline | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `operations[].order` | необязательный | Порядок операции; полезен, когда одно имя встречается больше одного раза | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `operations[].file` | обязательный, если нет `source_path` | Имя медиафайла на timeline | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
+| `operations[].source_path` | альтернатива `file` | Абсолютный путь; matching по полному пути, поэтому одинаковые имена из разных папок допустимы | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
 | `operations[].keep_ranges` | обязательный для видео, если нет `duration` | Source-диапазоны файла; можно несколько островов | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
 | `operations[].duration` | для фото вместо `keep_ranges` | Новая длительность клипа от текущего InPoint | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
 | `operations[].keep_ranges[].in` | обязательный | Начало KEEP в source-timecode | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
 | `operations[].keep_ranges[].out` | обязательный | Конец KEEP в source-timecode | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
 | `clips` | обязательный, если нет `keep_ranges_path`/`operations` | Старый inline-список файлов и KEEP-диапазонов | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
 | `sequence_name` | из KEEP JSON или все sequence | Предпочтительное имя sequence; алиас `source_sequence_name` | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
-| `source_sequence_name` | все именованные sequence | Старое имя того же поля | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
-| `output_project_path` | `<project>_keep.prproj` | Новый проект рядом с исходным | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
+| `source_sequence_name` | все именованные sequence | Старое имя того же поля; обязательно для `keep_to_new_sequence` | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
+| `output_sequence_name` | обязательно в `keep_to_new_sequence` | Новая sequence, куда копируется source и применяется KEEP | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
+| `create_output_sequence_from_source` | `true` в `keep_to_new_sequence` | Скопировать source-sequence вместе с клипами | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
+| `preserve_source_sequence` | `true` в `keep_to_new_sequence` | Не менять исходную sequence | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
+| `fail_if_output_sequence_exists` | `true` в `keep_to_new_sequence` | Остановиться, если output-sequence уже есть | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
+| `output_project_path` | `<project>_keep.prproj`; тот же `project_path` в `keep_to_new_sequence` | Куда писать `.prproj` | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
 | `reports_dir` | `<project_dir>/keep_apply_reports` | JSON/TXT отчёт и progress log | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
 | `ripple_compact` | `true` | Сдвинуть следующие клипы влево после удаления кусков | `utils/premiere_keep_apply_export.py` | `run_sequence_keep_apply.bat` |
 | `write_project` | `true` | Записывать итоговый `.prproj` | `utils/sequence_keep_apply.py` | `run_sequence_keep_apply.bat` |
@@ -223,6 +235,34 @@ KEEP JSON использует source-время медиафайла, не по
 
 Старый формат `clips` / `keep` по-прежнему принимается. Несколько `keep_ranges` дают несколько клипов на timeline. Диапазон вне текущего In/Out восстанавливается из исходного медиафайла.
 
+Пример `keep_to_new_sequence` (compact Yotam, дубль имени через полный путь):
+
+```json
+{
+  "mode": "keep_to_new_sequence",
+  "project_path": "<LOCAL_PATH>",
+  "source_sequence_name": "Yt_macro_styles_IMPORT_v01",
+  "output_sequence_name": "Yt_macro_styles_KEEP_v01",
+  "create_output_sequence_from_source": true,
+  "preserve_source_sequence": true,
+  "fail_if_output_sequence_exists": true,
+  "ripple_compact": true,
+  "write_project": true,
+  "operations": [
+    {
+      "order": 1,
+      "source_path": "<LOCAL_PATH>",
+      "duration": "00:00:0.800"
+    },
+    {
+      "order": 2,
+      "source_path": "<LOCAL_PATH>",
+      "duration": "00:00:1.100"
+    }
+  ]
+}
+```
+
 ## 5. Media Import
 
 Примеры запуска:
@@ -230,18 +270,24 @@ KEEP JSON использует source-время медиафайла, не по
 ```bat
 .\run_sequence_media_import.bat .\sequence_media_import_yotam26_part2.json
 .\run_sequence_media_import.bat .\sequence_media_import_template.json
+.\run_sequence_media_import.bat .\sequence_media_import_to_new_sequence_template.json
+.\run_sequence_media_import.bat .\sequence_media_import_yotam26_macro_styles.json
 .\run_sequence_media_import.bat <LOCAL_PATH>
 ```
 
-Программа ищет имена из `files` внутри `root_directory` только по полному имени файла с расширением. Prefix/substring и выбор «первого похожего» запрещены: если файла нет или одно имя встречается больше одного раза, импорт останавливается и сообщает все пути. Исходный `.prproj` не меняется. Если sequence нет и `create_sequence_if_missing=true`, она создаётся клонированием существующей (`lib`, если есть). Уже импортированное медиа переиспользуется; новые файлы копируются в проект как новые Media, отдельный `MasterClip` и отдельные `VideoStream`/`AudioStream` на каждый файл. Если в исходном проекте нет клипов на timeline, шаблон клипа берётся из `template_project_path` или из соседнего `.prproj` в той же папке.
+Программа ищет имена из `files` внутри `root_directory` только по полному имени файла с расширением. Prefix/substring и выбор «первого похожего» запрещены: если файла нет или одно имя встречается больше одного раза, импорт останавливается и сообщает все пути. Исходный `.prproj` не меняется в режиме `import_media`. Если sequence нет и `create_sequence_if_missing=true`, она создаётся клонированием существующей (`lib`, если есть). Media переиспользуется только если совпадает полный путь; то же имя в другой папке получает свой `MasterClip`. Новые файлы копируются в проект как новые Media, отдельный `MasterClip` и отдельные `VideoStream`/`AudioStream` на каждый файл. Если в исходном проекте нет клипов на timeline, за основу берётся `template_project_path` или соседний `.prproj` в той же папке, а новая sequence клонируется из этого файла. `SecondaryContentItem` с ссылками только донора отбрасывается. Если `source_path` нет на диске, импорт пробует `__`↔`_` в той же папке, затем уникальный `rglob` под ближайшим существующим родителем.
+
+Режим `import_to_new_sequence` создаёт новую sequence в существующем `.prproj` и не размножает файлы проекта. Остальные sequence не меняются. Перед in-place записью закройте Premiere. Одинаковое имя в двух папках — два клипа: каждый со своим `source_path`.
 
 | Параметр | Обязательность / default | Назначение | Программа | Batch |
 |---|---|---|---|---|
-| `mode` | `import_media` или авто по `files`+`root_directory` | Переключает CLI на импорт медиа | `main_sequence_trim_review.py` | `run_sequence_media_import.bat` |
+| `mode` | `import_media` / `import_to_new_sequence` или авто по `files`+`root_directory` | Переключает CLI на импорт медиа | `main_sequence_trim_review.py` | `run_sequence_media_import.bat` |
 | `import_path` | необязательный | Отдельный import JSON; из него берутся проект, sequence, root и files | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
 | `project_path` | обязательный, если нет в import JSON | Исходный Premiere `.prproj` | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
-| `sequence_name` | обязательный | Sequence, куда класть файлы | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
+| `sequence_name` | обязательный, если нет `output_sequence_name` | Sequence, куда класть файлы | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
+| `output_sequence_name` | обязательно в `import_to_new_sequence` | Новая sequence в существующем проекте | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
 | `create_sequence_if_missing` | `true` | Создать sequence, если её нет | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
+| `fail_if_sequence_exists` | `true` в `import_to_new_sequence` | Остановиться, если sequence уже есть | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
 | `root_directory` | обязательный, если нет `items[].source_path` | Корень поиска файлов из списка | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
 | `files` | обязательный, если нет `items` | Точное имя или объект `{file, relative_path}`; 0 или >1 совпадений без пути — стоп | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
 | `files[].relative_path` | для дублей | Путь от `root_directory`; basename должен совпасть с `file` | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
@@ -250,9 +296,32 @@ KEEP JSON использует source-время медиафайла, не по
 | `items[].source_path` | обязательный в новом формате | Абсолютный путь к файлу; поиск по имени не выполняется | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
 | `still_duration_seconds` | `5` | Длительность импортированных фото | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
 | `template_project_path` | необязательный | `.prproj` с клипами-шаблонами, если исходный проект пустой | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
-| `output_project_path` | `<project>_import.prproj` | Новый проект рядом с исходным | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
+| `output_project_path` | `<project>_import.prproj`; тот же `project_path` в `import_to_new_sequence` | Куда писать `.prproj` | `utils/premiere_media_import_export.py` | `run_sequence_media_import.bat` |
 | `reports_dir` | `<project_dir>/media_import_reports` | JSON/TXT отчёт и progress log | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
 | `write_project` | `true` | Записывать итоговый `.prproj` | `utils/sequence_media_import.py` | `run_sequence_media_import.bat` |
+
+Пример `import_to_new_sequence` (compact Yotam, дубль имени через полный путь):
+
+```json
+{
+  "mode": "import_to_new_sequence",
+  "project_path": "<LOCAL_PATH>",
+  "output_sequence_name": "Yt_macro_styles_IMPORT_v01",
+  "create_sequence_if_missing": true,
+  "fail_if_sequence_exists": true,
+  "write_project": true,
+  "items": [
+    {
+      "order": 1,
+      "source_path": "<LOCAL_PATH>"
+    },
+    {
+      "order": 2,
+      "source_path": "<LOCAL_PATH>"
+    }
+  ]
+}
+```
 
 ## 5.1. Import and Keep
 
