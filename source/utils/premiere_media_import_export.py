@@ -417,15 +417,28 @@ def _maybe_adopt_template_project(
     if donor_path is None:
         return root, object_id_lookup, object_uid_lookup, False, []
 
-    donor_root = load_premiere_project_root(donor_path)
-    donor_id_lookup = build_project_object_id_lookup(donor_root)
-    donor_uid_lookup = build_project_object_uid_lookup(donor_root)
+    donor_root, donor_id_lookup, donor_uid_lookup = _load_template_lookups(donor_path)
     video_template, _image_template, _audio_template = _find_templates_in_root(
         donor_root,
         preferred_sequence=None,
         object_id_lookup=donor_id_lookup,
         object_uid_lookup=donor_uid_lookup,
     )
+    if video_template is None and template_project_path is not None:
+        donor_path = _discover_template_project(
+            source_project_path=source_project_path,
+            output_project_path=output_project_path,
+            explicit_path=None,
+        )
+        if donor_path is None:
+            return root, object_id_lookup, object_uid_lookup, False, []
+        donor_root, donor_id_lookup, donor_uid_lookup = _load_template_lookups(donor_path)
+        video_template, _image_template, _audio_template = _find_templates_in_root(
+            donor_root,
+            preferred_sequence=None,
+            object_id_lookup=donor_id_lookup,
+            object_uid_lookup=donor_uid_lookup,
+        )
     if video_template is None:
         return root, object_id_lookup, object_uid_lookup, False, []
 
@@ -440,6 +453,15 @@ def _maybe_adopt_template_project(
     )
 
 
+def _load_template_lookups(path: Path) -> tuple[ET.Element, dict[str, ET.Element], dict[str, ET.Element]]:
+    donor_root = load_premiere_project_root(path)
+    return (
+        donor_root,
+        build_project_object_id_lookup(donor_root),
+        build_project_object_uid_lookup(donor_root),
+    )
+
+
 def _discover_template_project(
     *,
     source_project_path: Path,
@@ -450,7 +472,8 @@ def _discover_template_project(
         resolved = Path(explicit_path)
         if not resolved.exists():
             raise PremiereProjectError(f"template_project_path was not found: {resolved}")
-        return resolved
+        if resolved.resolve() != source_project_path.resolve():
+            return resolved
 
     folder = source_project_path.parent
     if not folder.is_dir():

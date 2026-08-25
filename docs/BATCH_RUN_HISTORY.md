@@ -60,12 +60,35 @@
 | B042 | `run_sequence_import_and_keep.bat` | Импорт списка файлов и keep/очистка за один проход | `.\run_sequence_import_and_keep.bat <LOCAL_PATH>` |
 | B043 | `run_sequence_media_import.bat` | Новая sequence в существующем `.prproj` (`import_to_new_sequence`); compact Yotam macro styles с дублем `source_path` | `.\run_sequence_media_import.bat .\sequence_media_import_yotam26_macro_styles.json` |
 | B044 | `run_sequence_keep_apply.bat` | Копия source-sequence и KEEP только на копии (`keep_to_new_sequence`); compact Yotam macro styles | `.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_macro_styles.json` |
+| B045 | `copy_sequence_images_sveta_igr_26_2.bat` | Копия только картинок sequence Sveta | `.\copy_sequence_images_sveta_igr_26_2.bat` |
+| B046 | `copy_sequence_media_sveta_igr_26_2.bat` | Готовый wrapper копирования медиа sequence Sveta | `.\copy_sequence_media_sveta_igr_26_2.bat` |
+| B047 | `install_premiere_transition_panel.bat` | Установить CEP-панель Premiere transitions | `.\install_premiere_transition_panel.bat` |
+| B048 | `open_ai_work_window.bat` | Открыть одно reusable Chrome-окно Grok/ChatGPT на 9222 | `.\open_ai_work_window.bat` |
+| B049 | `open_ai_work_window_bookmarks_profile.bat` | То же reusable-окно через bookmarks-профиль Chrome | `.\open_ai_work_window_bookmarks_profile.bat` |
+| B050 | `open_ai_work_window_user_chrome.bat` | То же reusable-окно через обычный user-профиль Chrome | `.\open_ai_work_window_user_chrome.bat` |
+| B051 | `run_chatgpt_artistic_photo_portret_existing.bat` | Laptop-batch стиля artistic photo portrait | `.\run_chatgpt_artistic_photo_portret_existing.bat --delivery-config-file config_Ziggi.json` |
+| B052 | `run_chatgpt_pair_batch_existing.bat` | Парные портреты из папок input_pair | `.\run_chatgpt_pair_batch_existing.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error` |
+| B053 | `run_chatgpt_pair_batch_work_window.bat` | Парные портреты через reusable work-window | `.\run_chatgpt_pair_batch_work_window.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error` |
+| B054 | `run_chatgpt_portrait_batch_work_window.bat` | Portrait batch ChatGPT через reusable work-window | `.\run_chatgpt_portrait_batch_work_window.bat --config-file chatgpt_portrait_base_config.json --skip-existing` |
+| B055 | `run_chatgpt_style_menu_existing.bat` | Интерактивное меню банков chatgpt_*_config.json | `.\run_chatgpt_style_menu_existing.bat` |
+| B056 | `run_chatgpt_watercolor_on_paper_existing.bat` | Laptop-batch watercolor on paper | `.\run_chatgpt_watercolor_on_paper_existing.bat --delivery-config-file config_Ziggi.json` |
+| B057 | `run_copy_minimal_to_laptop_dir.bat` | Скопировать минимальный laptop-bundle | `.\run_copy_minimal_to_laptop_dir.bat` |
+| B058 | `run_copy_sequence_images.bat` | Скопировать картинки одной Premiere sequence (CLI) | `.\run_copy_sequence_images.bat --project <prproj> --sequence <sequence> --dest <image_dir>` |
+| B059 | `run_copy_sequence_media_batch.bat` | Скопировать медиа sequence по JSON-конфигу | `.\run_copy_sequence_media_batch.bat .\copy_sequence_media_sveta_igr_26_2.json` |
+| B060 | `run_full_grok_pipeline_work_window.bat` | Полный Grok pipeline через reusable debug-окно | `.\run_full_grok_pipeline_work_window.bat --upload-timeout 300` |
+| B061 | `run_laptop_env_compare.bat` | Сравнить laptop-окружение с watercolor baseline | `.\run_laptop_env_compare.bat` |
+| B062 | `run_laptop_env_snapshot.bat` | Снять snapshot laptop watercolor-окружения | `.\run_laptop_env_snapshot.bat` |
+| B063 | `run_premiere_transform_script.bat` | Собрать Premiere transform JSX из sequence-batch конфига | `.\run_premiere_transform_script.bat .\project_sequence_batch_igor_26_1A.json` |
+| B064 | `run_premiere_transition_script.bat` | Собрать Premiere transition JSX из sequence-batch конфига | `.\run_premiere_transition_script.bat .\project_sequence_batch_igor_26_1A.json` |
+| B065 | `run_sequence_media_import_standalone.bat` | Тот же media import через `main_premiere_import_keep.py` | `.\run_sequence_media_import_standalone.bat .\sequence_media_import_template.json` |
+| B066 | `run_sequence_keep_apply_standalone.bat` | Тот же KEEP/apply через `main_premiere_import_keep.py` | `.\run_sequence_keep_apply_standalone.bat .\sequence_keep_apply_template.json` |
+| B067 | `run_sequence_import_and_keep_standalone.bat` | Тот же import-and-keep через `main_premiere_import_keep.py` | `.\run_sequence_import_and_keep_standalone.bat .\sequence_import_and_keep_template.json` |
 
-## GitHub publication note (2026-08-20)
+## GitHub publication note (2026-08-26)
 
 Dev history: https://github.com/sergey-frd/img-style-ag_1 (`git push origin main`).
 
-Public Internet bundle: https://github.com/sergey-frd/Memory-to-Video_Agent at version **`2026.08.20.01`** (tag `v2026.08.20.01`). Headline: in-place Premiere `keep_to_new_sequence` and `import_to_new_sequence`.
+Public Internet bundle: https://github.com/sergey-frd/Memory-to-Video_Agent at version **`2026.08.26.01`** (tag `v2026.08.26.01`). Headline: dedicated Premiere import/KEEP runner, portable standalone BAT launchers, multi-root media lookup, and empty-project donor fixes.
 
 ## Рабочая команда для текущей задачи
 

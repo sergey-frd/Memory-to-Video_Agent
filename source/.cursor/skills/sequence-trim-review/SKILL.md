@@ -40,6 +40,26 @@ When `compact_keep: true` (default):
 python .\main_sequence_trim_review.py --config .\sequence_trim_review_01.json
 ```
 
+Import/keep dedicated runner (preferred for those JSON configs):
+
+```bat
+.\run_sequence_media_import.bat .\sequence_media_import_template.json
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
+.\run_sequence_import_and_keep.bat .\sequence_import_and_keep_template.json
+```
+
+Portable aliases from the ChatGPT Work package call the same runner:
+
+```bat
+.\run_sequence_media_import_standalone.bat .\sequence_media_import_template.json
+.\run_sequence_keep_apply_standalone.bat .\sequence_keep_apply_template.json
+.\run_sequence_import_and_keep_standalone.bat .\sequence_import_and_keep_template.json
+```
+
+```powershell
+python .\main_premiere_import_keep.py --config .\sequence_media_import_template.json
+```
+
 Template: `sequence_trim_review_template.json`.
 
 ## Important config keys
@@ -71,6 +91,10 @@ When keep windows are already known (source timecode, not timeline position). Pr
 ```
 
 ```bat
+.\run_sequence_keep_apply_standalone.bat .\sequence_keep_apply_template.json
+```
+
+```bat
 .\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min_vtr_2.json
 ```
 
@@ -85,6 +109,7 @@ The same JSON also works through the shared trim-review launcher:
 ```
 
 ```powershell
+python .\main_premiere_import_keep.py --config .\sequence_keep_apply_yotam26_2_min.json
 python .\main_sequence_trim_review.py --config .\sequence_keep_apply_yotam26_2_min.json
 ```
 
@@ -157,6 +182,10 @@ Look up filenames under `root_directory` and append them to a sequence. Media al
 ```
 
 ```bat
+.\run_sequence_media_import_standalone.bat .\sequence_media_import_template.json
+```
+
+```bat
 .\run_sequence_media_import.bat <LOCAL_PATH>
 ```
 
@@ -172,7 +201,7 @@ Look up filenames under `root_directory` and append them to a sequence. Media al
 
 `import_to_new_sequence` creates `output_sequence_name` inside the existing `.prproj` and imports there. Other sequences stay unchanged. `fail_if_sequence_exists` (default `true` in this mode) refuses to append if the name is already taken. Close Premiere before the in-place write.
 
-If `source_path` is missing, import also tries `__`↔`_` in the same folder, then a unique `rglob` under the nearest existing parent.
+If `source_path` is missing, import also tries `__`↔`_` in the same folder, then a unique `rglob` under the nearest existing parent. Items may use `source_name` with `root_search_paths` (or `root_directory`) instead of an absolute path.
 
 Repo template: `sequence_media_import_to_new_sequence_template.json`. Compact Yotam example: `sequence_media_import_yotam26_macro_styles.json`. Full 74-file job: `Yotam_macro_styles_import_v02.json`.
 
@@ -205,6 +234,10 @@ Repo template: `sequence_media_import_to_new_sequence_template.json`. Compact Yo
 .\run_sequence_import_and_keep.bat <LOCAL_PATH>
 ```
 
+```bat
+.\run_sequence_import_and_keep_standalone.bat .\sequence_import_and_keep_template.json
+```
+
 ```json
 {
   "mode": "import_and_keep",
@@ -225,6 +258,7 @@ Set `"mode": "report_replay"` and point `review_json_path` to an existing hero p
 ## Reference
 
 - `main_sequence_trim_review.py`
+- `main_premiere_import_keep.py`
 - `utils/sequence_trim_review.py`, `utils/sequence_trim_classifier.py`, `utils/sequence_trim_semantic.py`
 - `utils/premiere_project_export.py` (`clone_named_sequence`)
 - `utils/sequence_keep_apply.py`, `utils/premiere_keep_apply_export.py`
@@ -236,7 +270,8 @@ Set `"mode": "report_replay"` and point `review_json_path` to an existing hero p
 - `sequence_media_import_template.json`, `sequence_media_import_to_new_sequence_template.json`, `sequence_media_import_yotam26_macro_styles.json`
 - `sequence_keep_apply_template.json`, `sequence_keep_to_new_sequence_template.json`, `sequence_keep_apply_yotam26_macro_styles.json`
 - `run_sequence_keep_apply.bat`, `run_sequence_media_import.bat`, `run_sequence_import_and_keep.bat`, `run_sequence_trim_review.bat`
-- `test/test_sequence_trim_review_app.py`, `test/test_sequence_keep_apply.py`, `test/test_sequence_media_import.py`, `test/test_sequence_import_and_keep.py`
+- `run_sequence_keep_apply_standalone.bat`, `run_sequence_media_import_standalone.bat`, `run_sequence_import_and_keep_standalone.bat`
+- `test/test_sequence_trim_review_app.py`, `test/test_sequence_keep_apply.py`, `test/test_sequence_media_import.py`, `test/test_sequence_import_and_keep.py`, `test/test_premiere_import_keep_main.py`
 - `docs/USER_GUIDE_EN.md` / `docs/USER_GUIDE_RU.md` → Sequence Trim Review
 - `docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md` → sections 4–5
-- `docs/BATCH_RUN_HISTORY.md` → B037–B044
+- `docs/BATCH_RUN_HISTORY.md` → B037–B044, B065–B067

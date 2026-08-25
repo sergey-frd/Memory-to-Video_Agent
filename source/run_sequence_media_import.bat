@@ -15,10 +15,12 @@ if "%CONFIG_PATH%"=="" (
     echo.
     echo The import JSON itself can also be passed when it contains
     echo project_path, sequence_name, root_directory, and files.
+    echo Dedicated runner: main_premiere_import_keep.py
+    echo Portable alias: run_sequence_media_import_standalone.bat
     exit /b 1
 )
 
-python "%SCRIPT_DIR%main_sequence_trim_review.py" --config "%CONFIG_PATH%"
+python "%SCRIPT_DIR%main_premiere_import_keep.py" --config "%CONFIG_PATH%"
 set "EXIT_CODE=%ERRORLEVEL%"
 
 if not "%EXIT_CODE%"=="0" (

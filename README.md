@@ -4,18 +4,18 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.08.20.01`
-- Git tag: `v2026.08.20.01`
+- Publication version: `2026.08.25.01`
+- Git tag: `v2026.08.25.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-08-20T06:47:09+02:00`
+- Last synchronized: `2026-08-25T23:54:53+02:00`
 - Source project: `img-style-ag_1`
-- Python files: `238`
-- Test files: `43`
-- Entry points: `30`
+- Python files: `240`
+- Test files: `44`
+- Entry points: `31`
 
 ## Published Source Mirror
 
-- Mirrored source files: `498`
+- Mirrored source files: `503`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/CHANGELOG.md`
@@ -105,6 +105,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/main_grok_web.py`
 - `source/main_hero_definition.py`
 - `source/main_human_sequence_report.py`
+- `source/main_premiere_import_keep.py`
 - `source/main_premiere_transform_script.py`
 - `source/main_premiere_transition_script.py`
 - `source/main_project_publication.py`
@@ -175,8 +176,11 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/run_project_sequence_batch_nicol_26_T2.bat`
 - `source/run_project_sequence_batch_vika_26_1A.bat`
 - `source/run_sequence_import_and_keep.bat`
+- `source/run_sequence_import_and_keep_standalone.bat`
 - `source/run_sequence_keep_apply.bat`
+- `source/run_sequence_keep_apply_standalone.bat`
 - `source/run_sequence_media_import.bat`
+- `source/run_sequence_media_import_standalone.bat`
 - `source/run_sequence_music_recommendation.bat`
 - `source/run_sequence_trim_review.bat`
 - `source/run_video_prompt_story_export.bat`

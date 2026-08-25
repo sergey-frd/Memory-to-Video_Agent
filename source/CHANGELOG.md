@@ -2,6 +2,14 @@
 
 Краткая история заметных пользовательских изменений. Подробные инструкции находятся в [`docs/`](docs/).
 
+## 2026.08.26.01
+
+- Import/keep BAT-файлы вызывают отдельный runner `main_premiere_import_keep.py`; trim-review JSON по-прежнему идёт через `main_sequence_trim_review.py`.
+- Добавлены переносимые alias: `run_sequence_media_import_standalone.bat`, `run_sequence_keep_apply_standalone.bat`, `run_sequence_import_and_keep_standalone.bat`.
+- Media import поддерживает `root_search_paths` и `items[].source_name`, сохраняя строгую проверку неоднозначных совпадений.
+- Исправлен выбор проекта-шаблона для пустого `.prproj`: сам пустой проект не используется как donor, при необходимости выбирается подходящий соседний проект.
+- Документация, карта запуска, матрица параметров, BAT-примеры и тесты синхронизированы с отдельным import/keep runner.
+
 ## 2026.08.20.01
 
 - Добавлен режим `keep_to_new_sequence`: source-sequence копируется в новую sequence внутри того же `.prproj`, KEEP применяется только к копии, исходная sequence не меняется.

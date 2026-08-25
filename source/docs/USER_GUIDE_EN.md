@@ -60,6 +60,65 @@ Example Windows paths in `config.json`:
 
 ## BAT Files
 
+Complete inventory of every root `.bat`. Unique extra-parameter examples live in [`BATCH_RUN_HISTORY.md`](BATCH_RUN_HISTORY.md). Detailed notes follow for the main launchers.
+
+| Launcher | Purpose | Example |
+| --- | --- | --- |
+| `copy_sequence_images_sveta_igr_26_2.bat` | Sveta images-only copy from a named sequence | `.\copy_sequence_images_sveta_igr_26_2.bat` |
+| `copy_sequence_media_sveta_igr_26_2.bat` | Sveta config wrapper for sequence media copy | `.\copy_sequence_media_sveta_igr_26_2.bat` |
+| `install_premiere_transition_panel.bat` | Install the Premiere transition CEP panel | `.\install_premiere_transition_panel.bat` |
+| `login_chatgpt_debug_profile.bat` | Open ChatGPT debug Chrome on port 9333 | `.\login_chatgpt_debug_profile.bat` |
+| `login_chatgpt_profile.bat` | Open ChatGPT web automation profile | `.\login_chatgpt_profile.bat` |
+| `login_gemini_profile.bat` | Open a dedicated Gemini Chrome profile | `.\login_gemini_profile.bat` |
+| `login_grok_profile.bat` | Open the Grok automation profile and verify Imagine | `.\login_grok_profile.bat` |
+| `open_ai_work_window.bat` | Open one reusable Grok/ChatGPT Chrome debug window on 9222 | `.\open_ai_work_window.bat` |
+| `open_ai_work_window_bookmarks_profile.bat` | Same reusable window using the bookmarks Chrome profile | `.\open_ai_work_window_bookmarks_profile.bat` |
+| `open_ai_work_window_user_chrome.bat` | Same reusable window using the normal user Chrome profile | `.\open_ai_work_window_user_chrome.bat` |
+| `run_chatgpt_artistic_photo_portret_existing.bat` | Laptop artistic photo-portrait style batch | `.\run_chatgpt_artistic_photo_portret_existing.bat --delivery-config-file config_Ziggi.json` |
+| `run_chatgpt_pair_batch_existing.bat` | Pair portraits from input_pair folders | `.\run_chatgpt_pair_batch_existing.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error` |
+| `run_chatgpt_pair_batch_work_window.bat` | Pair portraits attached to the reusable work window | `.\run_chatgpt_pair_batch_work_window.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error` |
+| `run_chatgpt_portrait_batch.bat` | ChatGPT portrait batch via standard Python backend | `.\run_chatgpt_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing` |
+| `run_chatgpt_portrait_batch_debug.bat` | ChatGPT portrait batch via debug Chrome 9333 | `.\run_chatgpt_portrait_batch_debug.bat --config-file chatgpt_portrait_config.json --skip-existing` |
+| `run_chatgpt_portrait_batch_existing.bat` | Recommended ChatGPT desktop portrait batch | `.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer` |
+| `run_chatgpt_portrait_batch_work_window.bat` | ChatGPT portrait batch attached to the reusable work window | `.\run_chatgpt_portrait_batch_work_window.bat --config-file chatgpt_portrait_base_config.json --skip-existing` |
+| `run_chatgpt_style_batch_existing.bat` | Generic style-batch launcher for chatgpt_*_config.json | `run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --skip-existing --continue-on-error` |
+| `run_chatgpt_style_menu_existing.bat` | Interactive menu of chatgpt_*_config.json style banks | `.\run_chatgpt_style_menu_existing.bat` |
+| `run_chatgpt_watercolor_on_paper_existing.bat` | Laptop watercolor-on-paper style batch | `.\run_chatgpt_watercolor_on_paper_existing.bat --delivery-config-file config_Ziggi.json` |
+| `run_copy_minimal_to_laptop_dir.bat` | Copy the minimal laptop watercolor bundle | `.\run_copy_minimal_to_laptop_dir.bat` |
+| `run_copy_sequence_images.bat` | Copy images used by one Premiere sequence (CLI) | `.\run_copy_sequence_images.bat --project <prproj> --sequence <sequence> --dest <image_dir>` |
+| `run_copy_sequence_media_batch.bat` | Copy sequence images/videos from a JSON config | `.\run_copy_sequence_media_batch.bat .\copy_sequence_media_sveta_igr_26_2.json` |
+| `run_full_grok_pipeline.bat` | Full Grok web video pipeline from input/ | `.\run_full_grok_pipeline.bat --upload-timeout 300` |
+| `run_full_grok_pipeline_api.bat` | Full Grok video pipeline via xAI API | `.\run_full_grok_pipeline_api.bat --config-file .\config_SF.json` |
+| `run_full_grok_pipeline_local.bat` | Full Grok pipeline via .venv and config.local.json | `.\run_full_grok_pipeline_local.bat --skip-existing --upload-timeout 300` |
+| `run_full_grok_pipeline_work_window.bat` | Full Grok pipeline attached to the reusable debug window | `.\run_full_grok_pipeline_work_window.bat --upload-timeout 300` |
+| `run_gemini_portrait_batch_existing.bat` | Gemini desktop portrait batch, same JSON configs | `.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer` |
+| `run_grok_automation.bat` | One Grok job for one image and prompt file | `.\run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_20260314_101010_v_prompt_1.txt --upload-timeout 300` |
+| `run_grok_automation_all.bat` | Grok batch over existing *_v_prompt_*.txt files | `.\run_grok_automation_all.bat --skip-existing --upload-timeout 300` |
+| `run_grok_portrait_batch_existing.bat` | Grok web portrait batch, same JSON configs | `.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error` |
+| `run_hero_definition.bat` | Build hero_def.json from reference photos | `.\run_hero_definition.bat .\hero_definition_Alice.json` |
+| `run_laptop_env_compare.bat` | Compare laptop env against the watercolor baseline | `.\run_laptop_env_compare.bat` |
+| `run_laptop_env_snapshot.bat` | Snapshot the laptop watercolor environment | `.\run_laptop_env_snapshot.bat` |
+| `run_local_portrait_batch.bat` | Local stylizer portrait batch without ChatGPT UI | `.\run_local_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing` |
+| `run_openai_portrait_batch.bat` | Portrait batch through OpenAI Images API | `.\run_openai_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing --api-model gpt-image-1.5` |
+| `run_premiere_transform_script.bat` | Generate Premiere transform JSX from a sequence batch config | `.\run_premiere_transform_script.bat .\project_sequence_batch_igor_26_1A.json` |
+| `run_premiere_transition_script.bat` | Generate Premiere transition JSX from a sequence batch config | `.\run_premiere_transition_script.bat .\project_sequence_batch_igor_26_1A.json` |
+| `run_project_publication_push.bat` | Refresh, commit, tag, and push the public bundle | `.\run_project_publication_push.bat --source-root .` |
+| `run_project_publication_stage.bat` | Refresh the public bundle without commit/push | `.\run_project_publication_stage.bat --source-root . --dry-run` |
+| `run_project_sequence_batch.bat` | Optimize a Premiere sequence from a JSON config | `.\run_project_sequence_batch.bat .\project_sequence_batch_igor_26_1A.json` |
+| `run_project_sequence_batch_igor_26_1A.bat` | Igor sequence-batch wrapper | `.\run_project_sequence_batch_igor_26_1A.bat` |
+| `run_project_sequence_batch_nicol_26_T2.bat` | Nicol sequence-batch wrapper | `.\run_project_sequence_batch_nicol_26_T2.bat` |
+| `run_project_sequence_batch_vika_26_1A.bat` | Vika sequence-batch wrapper | `.\run_project_sequence_batch_vika_26_1A.bat` |
+| `run_sequence_import_and_keep.bat` | Import listed files then KEEP-trim in one pass | `.\run_sequence_import_and_keep.bat .\sequence_import_and_keep_template.json` |
+| `run_sequence_import_and_keep_standalone.bat` | Same import-and-keep via `main_premiere_import_keep.py` | `.\run_sequence_import_and_keep_standalone.bat .\sequence_import_and_keep_template.json` |
+| `run_sequence_keep_apply.bat` | Apply KEEP JSON: project copy or in-place new sequence | `.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json` |
+| `run_sequence_keep_apply_standalone.bat` | Same KEEP/apply via `main_premiere_import_keep.py` | `.\run_sequence_keep_apply_standalone.bat .\sequence_keep_apply_template.json` |
+| `run_sequence_media_import.bat` | Import listed files onto a sequence or a new sequence | `.\run_sequence_media_import.bat .\sequence_media_import_template.json` |
+| `run_sequence_media_import_standalone.bat` | Same media import via `main_premiere_import_keep.py` | `.\run_sequence_media_import_standalone.bat .\sequence_media_import_template.json` |
+| `run_sequence_music_recommendation.bat` | Video-only plus personalized music report | `.\run_sequence_music_recommendation.bat .\sequence_music_recommendation_Alice.json` |
+| `run_sequence_trim_review.bat` | KEEP/DROP review, replay, keep, import, or import-and-keep | `.\run_sequence_trim_review.bat .\sequence_trim_review_01.json` |
+| `run_video_prompt_story_export.bat` | Export composer JSON after HTML story review | `.\run_video_prompt_story_export.bat <LOCAL_PATH>` |
+| `run_video_prompt_story_generate.bat` | Generate a reviewable HTML/JSON video story | `.\run_video_prompt_story_generate.bat` |
+
 ### `login_grok_profile.bat`
 
 Purpose:
@@ -199,7 +258,7 @@ Purpose:
 - leave unlisted clips, bins, and sequence names unchanged;
 - trim linked audio with the listed video and ripple the following clips.
 
-This is the dedicated launcher for `"mode": "apply_keep_ranges"` and `"mode": "keep_to_new_sequence"`. The same config also works with `run_sequence_trim_review.bat`.
+This is the dedicated launcher for `"mode": "apply_keep_ranges"` and `"mode": "keep_to_new_sequence"`. It calls `main_premiere_import_keep.py`. The same config also works with `run_sequence_keep_apply_standalone.bat` and `run_sequence_trim_review.bat`.
 
 Examples:
 
@@ -219,7 +278,7 @@ Purpose:
 - create `output_sequence_name` inside the existing `.prproj` and import there (`import_to_new_sequence`);
 - reuse Media only when the full path already exists in the project; same filename in another folder gets its own `MasterClip`.
 
-This is the dedicated launcher for `"mode": "import_media"` and `"mode": "import_to_new_sequence"`. The same config also works with `run_sequence_trim_review.bat`.
+This is the dedicated launcher for `"mode": "import_media"` and `"mode": "import_to_new_sequence"`. It calls `main_premiere_import_keep.py`. The same config also works with `run_sequence_media_import_standalone.bat` and `run_sequence_trim_review.bat`.
 
 Examples:
 
@@ -237,7 +296,7 @@ Purpose:
 - keep the intermediate `*_import.prproj` and write the final trimmed `*_keep.prproj`;
 - ignore `project_path` from the KEEP JSON and always apply keep to the import result.
 
-This is the dedicated launcher for `"mode": "import_and_keep"`. The same config also works with `run_sequence_trim_review.bat`.
+This is the dedicated launcher for `"mode": "import_and_keep"`. It calls `main_premiere_import_keep.py`. The same config also works with `run_sequence_import_and_keep_standalone.bat` and `run_sequence_trim_review.bat`.
 
 Examples:
 
@@ -613,8 +672,9 @@ flowchart LR
   B5["run_chatgpt_portrait_batch_existing.bat / run_gemini_portrait_batch_existing.bat / run_grok_portrait_batch_existing.bat"] --> P6["main_chatgpt_portrait_batch.py"]
   B6["run_hero_definition.bat"] --> P7["main_hero_definition.py"]
   B7["run_sequence_trim_review.bat"] --> P8["main_sequence_trim_review.py"]
-  B8["run_sequence_keep_apply.bat"] --> P8
-  B9["run_sequence_media_import.bat"] --> P8
+  B8["run_sequence_keep_apply.bat / *_standalone.bat"] --> P9["main_premiere_import_keep.py"]
+  B9["run_sequence_media_import.bat / *_standalone.bat"] --> P9
+  B10["run_sequence_import_and_keep.bat / *_standalone.bat"] --> P9
 
   A1["CLI flags"] --> P1
   A2["CLI flags"] --> P2
@@ -626,7 +686,9 @@ flowchart LR
   C6["hero_definition_*.json"] --> P7
   P7 --> H1["hero_def.json"]
   H1 --> P8
-  C7["sequence_trim_review_*.json\nsequence_keep_apply_*.json\nsequence_media_import_*.json\nsequence_import_and_keep_*.json"] --> P8
+  C7["sequence_trim_review_*.json"] --> P8
+  C8["sequence_keep_apply_*.json\nsequence_media_import_*.json\nsequence_import_and_keep_*.json"] --> P9
+  C8 --> P8
 
   C3["project_sequence_batch_*.json"] --> P3
   P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
@@ -639,7 +701,8 @@ flowchart LR
   P5 --> O3["reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)"]
   P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
   P6 --> O5["portrait / image-edit results:\noutput/chatgpt_*/*.png\noutput/gemini_*/*.png\noutput/grok_*/*.png"]
-  P8 --> O6["trim review / keep-apply / media import:\nreview .prproj\ntrimmed keep .prproj\nin-place IMPORT/KEEP sequences\nJSON/TXT reports"]
+  P8 --> O6["trim review:\nreview .prproj\nJSON/TXT reports"]
+  P9 --> O7["keep-apply / media import:\ntrimmed keep .prproj\nin-place IMPORT/KEEP sequences\nJSON/TXT reports"]
 ```
 
 The left side of the diagram shows launch wrappers and parameter sources, and the right side shows the reports and result artifacts produced by each route.
@@ -1043,7 +1106,7 @@ Yotam example (`11_Yotam_minimal_part2_import.json`):
 
 ### Import listed files onto a new sequence in the same project
 
-Use `mode: "import_to_new_sequence"` to create `output_sequence_name` inside the existing `.prproj` and import there. Other sequences stay unchanged. No extra `.prproj` is written unless `output_project_path` is set. `fail_if_sequence_exists` (default `true` in this mode) stops if that sequence name already exists. Close Premiere before the in-place write. The same filename in two folders is two clips: list each with its own `source_path`. If a `source_path` is missing on disk, import tries `__`↔`_` in the same folder, then a unique search under the nearest existing parent.
+Use `mode: "import_to_new_sequence"` to create `output_sequence_name` inside the existing `.prproj` and import there. Other sequences stay unchanged. No extra `.prproj` is written unless `output_project_path` is set. `fail_if_sequence_exists` (default `true` in this mode) stops if that sequence name already exists. Close Premiere before the in-place write. The same filename in two folders is two clips: list each with its own `source_path`. If a `source_path` is missing on disk, import tries `__`↔`_` in the same folder, then a unique search under the nearest existing parent. Items may use `source_name` plus `root_search_paths` (or `root_directory`) instead of an absolute `source_path`; lookup is the exact filename with extension. The same `source_name` may be listed more than once to place several clips from one file.
 
 Start from the template, then the compact repo example, then the full workspace job:
 
@@ -1418,11 +1481,14 @@ Apply a manual KEEP JSON to a Premiere project copy:
 .\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
 .\run_sequence_keep_apply.bat .\sequence_keep_to_new_sequence_template.json
 .\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_macro_styles.json
+.\run_sequence_keep_apply_standalone.bat .\sequence_keep_apply_template.json
 .\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json
 .\run_sequence_media_import.bat .\sequence_media_import_yotam26_part2.json
 .\run_sequence_media_import.bat .\sequence_media_import_to_new_sequence_template.json
 .\run_sequence_media_import.bat .\sequence_media_import_yotam26_macro_styles.json
+.\run_sequence_media_import_standalone.bat .\sequence_media_import_template.json
 .\run_sequence_import_and_keep.bat <LOCAL_PATH>
+.\run_sequence_import_and_keep_standalone.bat .\sequence_import_and_keep_template.json
 ```
 
 Premiere sequence optimization batch:
@@ -1457,6 +1523,67 @@ One prompt manually:
 
 ```bat
 run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_20260314_101010_v_prompt_1.txt --upload-timeout 300
+```
+
+### Complete launcher set
+
+Every root `.bat` has one canonical example here. Prefer [`BATCH_RUN_HISTORY.md`](BATCH_RUN_HISTORY.md) when you need a unique parameter combination.
+
+```bat
+.\copy_sequence_images_sveta_igr_26_2.bat
+.\copy_sequence_media_sveta_igr_26_2.bat
+.\install_premiere_transition_panel.bat
+.\login_chatgpt_debug_profile.bat
+.\login_chatgpt_profile.bat
+.\login_gemini_profile.bat
+.\login_grok_profile.bat
+.\open_ai_work_window.bat
+.\open_ai_work_window_bookmarks_profile.bat
+.\open_ai_work_window_user_chrome.bat
+.\run_chatgpt_artistic_photo_portret_existing.bat --delivery-config-file config_Ziggi.json
+.\run_chatgpt_pair_batch_existing.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error
+.\run_chatgpt_pair_batch_work_window.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error
+.\run_chatgpt_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing
+.\run_chatgpt_portrait_batch_debug.bat --config-file chatgpt_portrait_config.json --skip-existing
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+.\run_chatgpt_portrait_batch_work_window.bat --config-file chatgpt_portrait_base_config.json --skip-existing
+run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --skip-existing --continue-on-error
+.\run_chatgpt_style_menu_existing.bat
+.\run_chatgpt_watercolor_on_paper_existing.bat --delivery-config-file config_Ziggi.json
+.\run_copy_minimal_to_laptop_dir.bat
+.\run_copy_sequence_images.bat --project <prproj> --sequence <sequence> --dest <image_dir>
+.\run_copy_sequence_media_batch.bat .\copy_sequence_media_sveta_igr_26_2.json
+.\run_full_grok_pipeline.bat --upload-timeout 300
+.\run_full_grok_pipeline_api.bat --config-file .\config_SF.json
+.\run_full_grok_pipeline_local.bat --skip-existing --upload-timeout 300
+.\run_full_grok_pipeline_work_window.bat --upload-timeout 300
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+.\run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_20260314_101010_v_prompt_1.txt --upload-timeout 300
+.\run_grok_automation_all.bat --skip-existing --upload-timeout 300
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error
+.\run_hero_definition.bat .\hero_definition_Alice.json
+.\run_laptop_env_compare.bat
+.\run_laptop_env_snapshot.bat
+.\run_local_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing
+.\run_openai_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing --api-model gpt-image-1.5
+.\run_premiere_transform_script.bat .\project_sequence_batch_igor_26_1A.json
+.\run_premiere_transition_script.bat .\project_sequence_batch_igor_26_1A.json
+.\run_project_publication_push.bat --source-root .
+.\run_project_publication_stage.bat --source-root . --dry-run
+.\run_project_sequence_batch.bat .\project_sequence_batch_igor_26_1A.json
+.\run_project_sequence_batch_igor_26_1A.bat
+.\run_project_sequence_batch_nicol_26_T2.bat
+.\run_project_sequence_batch_vika_26_1A.bat
+.\run_sequence_import_and_keep.bat .\sequence_import_and_keep_template.json
+.\run_sequence_import_and_keep_standalone.bat .\sequence_import_and_keep_template.json
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
+.\run_sequence_keep_apply_standalone.bat .\sequence_keep_apply_template.json
+.\run_sequence_media_import.bat .\sequence_media_import_template.json
+.\run_sequence_media_import_standalone.bat .\sequence_media_import_template.json
+.\run_sequence_music_recommendation.bat .\sequence_music_recommendation_Alice.json
+.\run_sequence_trim_review.bat .\sequence_trim_review_01.json
+.\run_video_prompt_story_export.bat <LOCAL_PATH>
+.\run_video_prompt_story_generate.bat
 ```
 
 ## Short Operator Recommendations

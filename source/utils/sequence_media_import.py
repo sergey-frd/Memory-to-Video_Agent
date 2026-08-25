@@ -32,7 +32,16 @@ def is_media_import_config(payload: object) -> bool:
     if mode in _IMPORT_MODES:
         return True
     if isinstance(payload.get("items"), list) and any(
-        isinstance(item, dict) and _item_source_path_text(item) for item in payload["items"]
+        isinstance(item, dict)
+        and (
+            _item_source_path_text(item)
+            or str(item.get("source_name") or item.get("file") or item.get("filename") or "").strip()
+        )
+        for item in payload["items"]
+    ):
+        return True
+    if payload.get("root_search_paths") and (
+        isinstance(payload.get("files"), list) or isinstance(payload.get("items"), list)
     ):
         return True
     return bool(payload.get("root_directory")) and isinstance(payload.get("files"), list)
@@ -48,12 +57,7 @@ def run_sequence_media_import_from_config(config_path: Path) -> tuple[Path, Path
         job_payload.get("project_path") or payload.get("project_path"),
         label="project_path",
     )
-    root_raw = job_payload.get("root_directory") or payload.get("root_directory")
-    root_directory = (
-        _resolve_existing_directory(root_raw, label="root_directory")
-        if str(root_raw or "").strip()
-        else None
-    )
+    root_directory, search_roots = _load_search_roots(job_payload, payload)
     mode = str(payload.get("mode") or job_payload.get("mode") or "import_media").strip().casefold()
     if mode not in _IMPORT_MODES:
         has_output_sequence = bool(
@@ -98,9 +102,15 @@ def run_sequence_media_import_from_config(config_path: Path) -> tuple[Path, Path
     progress(f"Project: {project_path}")
     if root_directory is not None:
         progress(f"Root directory: {root_directory}")
+    if search_roots:
+        progress("Search roots: " + "; ".join(str(path) for path in search_roots))
     progress(f"Sequence: {sequence_name}")
 
-    resolved_items = resolve_import_files(root_directory, requested_files)
+    resolved_items = resolve_import_files(
+        root_directory,
+        requested_files,
+        search_roots=search_roots,
+    )
     for item_path in resolved_items:
         progress(f"Resolved {item_path.name} -> {item_path}")
 
@@ -133,6 +143,7 @@ def run_sequence_media_import_from_config(config_path: Path) -> tuple[Path, Path
         ),
         "import_path": str(import_path) if import_path is not None else None,
         "root_directory": str(root_directory) if root_directory is not None else None,
+        "root_search_paths": [str(path) for path in search_roots],
         "sequence_name": sequence_name,
         "output_sequence_name": sequence_name,
         "create_sequence_if_missing": create_sequence,
@@ -166,21 +177,28 @@ class ImportFileLookupError(ValueError):
 def resolve_import_files(
     root_directory: Path | None,
     requests: list[str | ImportFileRequest | dict[str, object]],
+    *,
+    search_roots: list[Path] | None = None,
 ) -> list[Path]:
     normalized = [_normalize_file_request(item, index) for index, item in enumerate(requests, start=1)]
     normalized = sorted(
         normalized,
         key=lambda item: (item.order if item.order is not None else 10**9, item.file_name.casefold()),
     )
+    roots = _combined_search_roots(root_directory, search_roots)
     need_index = any(item.source_path is None and item.relative_path is None for item in normalized)
-    if need_index and root_directory is None:
-        raise ValueError("Media-import config must contain 'root_directory' when items have no source_path.")
+    if need_index and not roots:
+        raise ValueError(
+            "Media-import config must contain 'root_directory' or 'root_search_paths' "
+            "when items have no source_path."
+        )
     index: dict[str, list[Path]] = {}
-    if need_index and root_directory is not None:
-        for path in root_directory.rglob("*"):
-            if not path.is_file():
-                continue
-            index.setdefault(path.name, []).append(path)
+    if need_index:
+        for root in roots:
+            for path in root.rglob("*"):
+                if not path.is_file():
+                    continue
+                index.setdefault(path.name, []).append(path)
 
     resolved: list[Path] = []
     errors: list[str] = []
@@ -195,10 +213,10 @@ def resolve_import_files(
                 resolved.append(path)
             continue
         if request.relative_path:
-            if root_directory is None:
-                errors.append(f"{request.file_name}: relative_path requires root_directory.")
+            if not roots:
+                errors.append(f"{request.file_name}: relative_path requires root_directory or root_search_paths.")
                 continue
-            path, error = _resolve_relative_file(root_directory, request)
+            path, error = _resolve_relative_file(roots, request)
             if error:
                 errors.append(error)
             else:
@@ -226,7 +244,7 @@ def resolve_import_files(
                     f"Same name with different case:\n    {listed}"
                 )
             else:
-                errors.append(f"{file_name}: not found under {root_directory}")
+                errors.append(f"{file_name}: not found under {_format_search_roots(roots)}")
             continue
         listed = "\n    ".join(str(path) for path in matches)
         errors.append(
@@ -272,7 +290,7 @@ def _normalize_file_request(item: object, index: int) -> ImportFileRequest:
         file_name = str(item.get("file") or item.get("filename") or item.get("source_name") or "").strip()
         relative_path = str(item.get("relative_path") or "").strip() or None
         if not file_name:
-            raise ValueError(f"Import file #{index} is missing 'file' or 'source_path'.")
+            raise ValueError(f"Import file #{index} is missing 'file', 'source_name', or 'source_path'.")
         return ImportFileRequest(file_name=file_name, relative_path=relative_path, order=order)
     raise ValueError(
         f"Import file #{index} must be a filename string or an object with 'file' or 'source_path'."
@@ -354,7 +372,7 @@ def _request_to_report(item: ImportFileRequest) -> str | dict[str, object]:
 
 
 def _resolve_relative_file(
-    root_directory: Path,
+    roots: list[Path],
     request: ImportFileRequest,
 ) -> tuple[Path, str | None]:
     relative = Path(str(request.relative_path).replace("\\", "/"))
@@ -365,15 +383,31 @@ def _resolve_relative_file(
             f"{request.file_name}: relative_path basename must be exactly '{request.file_name}', "
             f"got '{relative.name}'."
         )
-    candidate = (root_directory / relative)
-    try:
-        resolved = candidate.resolve()
-        resolved.relative_to(root_directory.resolve())
-    except ValueError:
-        return Path(), f"{request.file_name}: relative_path escapes root_directory: {relative}"
-    if not resolved.is_file():
-        return Path(), f"{request.file_name}: relative_path does not exist: {resolved}"
-    return resolved, None
+    matches: list[Path] = []
+    missing: list[str] = []
+    for root_directory in roots:
+        candidate = root_directory / relative
+        try:
+            resolved = candidate.resolve()
+            resolved.relative_to(root_directory.resolve())
+        except ValueError:
+            missing.append(f"{request.file_name}: relative_path escapes {root_directory}: {relative}")
+            continue
+        if resolved.is_file():
+            matches.append(resolved)
+        else:
+            missing.append(str(resolved))
+    unique = _unique_existing_paths(matches)
+    if len(unique) == 1:
+        return unique[0], None
+    if not unique:
+        listed = "\n    ".join(missing) if missing else str(relative)
+        return Path(), f"{request.file_name}: relative_path does not exist:\n    {listed}"
+    listed = "\n    ".join(str(path) for path in unique)
+    return Path(), (
+        f"{request.file_name}: {len(unique)} files match relative_path; "
+        f"narrow root_search_paths or use source_path:\n    {listed}"
+    )
 
 
 def _default_sequence_name(project_path: Path) -> str:
@@ -425,6 +459,9 @@ def build_media_import_report(payload: dict[str, object]) -> str:
         f"Root directory: {payload.get('root_directory')}",
         f"Sequence: {payload.get('sequence_name')}",
     ]
+    search_roots = payload.get("root_search_paths") or []
+    if search_roots:
+        lines.append("Search roots: " + "; ".join(str(path) for path in search_roots))
     if payload.get("output_project_path"):
         lines.append(f"Output project: {payload['output_project_path']}")
     if payload.get("wrote_in_place"):
@@ -464,6 +501,54 @@ def build_media_import_report(payload: dict[str, object]) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def _load_search_roots(
+    job_payload: dict[str, object],
+    payload: dict[str, object],
+) -> tuple[Path | None, list[Path]]:
+    root_raw = job_payload.get("root_directory") or payload.get("root_directory")
+    root_directory = (
+        _resolve_existing_directory(root_raw, label="root_directory")
+        if str(root_raw or "").strip()
+        else None
+    )
+    raw_paths = payload.get("root_search_paths")
+    if not isinstance(raw_paths, list) or not raw_paths:
+        raw_paths = job_payload.get("root_search_paths")
+    if isinstance(raw_paths, str) and raw_paths.strip():
+        raw_paths = [raw_paths]
+    search_roots: list[Path] = []
+    if isinstance(raw_paths, list):
+        for index, item in enumerate(raw_paths, start=1):
+            text = str(item or "").strip()
+            if not text:
+                continue
+            search_roots.append(_resolve_existing_directory(text, label=f"root_search_paths[{index}]"))
+    return root_directory, search_roots
+
+
+def _combined_search_roots(
+    root_directory: Path | None,
+    search_roots: list[Path] | None,
+) -> list[Path]:
+    roots: list[Path] = []
+    seen: set[str] = set()
+    for path in [root_directory, *(search_roots or [])]:
+        if path is None:
+            continue
+        key = str(path.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+        roots.append(path)
+    return roots
+
+
+def _format_search_roots(roots: list[Path]) -> str:
+    if not roots:
+        return "root_directory/root_search_paths"
+    return "; ".join(str(path) for path in roots)
 
 
 def _load_import_job(payload: dict[str, object], config_path: Path) -> tuple[dict[str, object], Path | None]:

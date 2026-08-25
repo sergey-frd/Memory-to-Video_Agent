@@ -6,12 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from utils.sequence_import_and_keep import (
-    is_import_and_keep_config,
-    run_sequence_import_and_keep_from_config,
-)
-from utils.sequence_keep_apply import is_keep_apply_config, run_sequence_keep_apply_from_config
-from utils.sequence_media_import import is_media_import_config, run_sequence_media_import_from_config
+from main_premiere_import_keep import try_run_premiere_import_keep
 from utils.sequence_trim_report_replay import run_sequence_trim_report_replay_from_config
 from utils.sequence_trim_review import run_sequence_trim_review_from_config
 
@@ -56,26 +51,23 @@ def main() -> None:
                 "Windows paths must use doubled backslashes, "
                 r'e.g. "<LOCAL_PATH>".'
             ) from exc
+        if not isinstance(payload, dict):
+            raise ValueError(f"Config {args.config} must be a JSON object.")
         mode = str(payload.get("mode") or "").strip().casefold()
         if mode == "report_replay":
             json_path, txt_path, project_path = run_sequence_trim_report_replay_from_config(
                 args.config
             )
             label = "Trim review"
-        elif is_import_and_keep_config(payload):
-            json_path, txt_path, project_path = run_sequence_import_and_keep_from_config(
-                args.config
-            )
-            label = "Import and keep"
-        elif is_media_import_config(payload):
-            json_path, txt_path, project_path = run_sequence_media_import_from_config(args.config)
-            label = "Media import"
-        elif is_keep_apply_config(payload):
-            json_path, txt_path, project_path = run_sequence_keep_apply_from_config(args.config)
-            label = "Keep apply"
         else:
-            json_path, txt_path, project_path = run_sequence_trim_review_from_config(args.config)
-            label = "Trim review"
+            import_keep = try_run_premiere_import_keep(args.config, payload)
+            if import_keep is not None:
+                label, json_path, txt_path, project_path = import_keep
+            else:
+                json_path, txt_path, project_path = run_sequence_trim_review_from_config(
+                    args.config
+                )
+                label = "Trim review"
     except KeyboardInterrupt:
         print(
             "\nTrim review interrupted by user. Run the same command again to restart. "

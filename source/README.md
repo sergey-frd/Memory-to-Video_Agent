@@ -13,8 +13,8 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 
 ## Current version
 
-- Workspace `VERSION`: **`2026.08.20.01`** ([`VERSION`](VERSION))
-- Latest intended publication tag: **`v2026.08.20.01`**
+- Workspace `VERSION`: **`2026.08.26.01`** ([`VERSION`](VERSION))
+- Latest intended publication tag: **`v2026.08.26.01`**
 
 ## Published on GitHub (Internet)
 
@@ -22,12 +22,12 @@ Public repository:
 
 - https://github.com/sergey-frd/Memory-to-Video_Agent
 
-This release wave (**2026.08.20.01**) adds in-place Premiere sequence copy/import:
+This release wave (**2026.08.26.01**) consolidates the Premiere import/KEEP desktop workflow:
 
-- KEEP onto a copied sequence in the same `.prproj` (`keep_to_new_sequence`)
-- Import listed files onto a new sequence in the existing project (`import_to_new_sequence`)
-- Templates `sequence_keep_to_new_sequence_template.json` and `sequence_media_import_to_new_sequence_template.json`
-- Duplicate filenames stay distinct when each clip has its own `source_path`
+- Dedicated `main_premiere_import_keep.py` runner for import, KEEP/apply, and combined jobs
+- Portable `*_standalone.bat` aliases alongside the existing desktop BAT files
+- Media lookup through `root_search_paths` and `items[].source_name`
+- Empty-project donor fallback fixes, updated templates, documentation, examples, and tests
 - Entry points: `run_sequence_keep_apply.bat`, `run_sequence_media_import.bat`, skill `sequence-trim-review`
 
 Also carries earlier waves already on the public repo (import / keep-apply / import-and-keep, expanded portrait banks, hero-aware Sequence Trim Review).

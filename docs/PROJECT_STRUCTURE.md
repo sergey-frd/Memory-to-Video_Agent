@@ -98,7 +98,7 @@
 | Full Sequential Pipeline | `main_full_pipeline.py`, `main_full_pipeline_api.py` | Prompt generation + Grok-run для каждого изображения из `input/`; `main_full_pipeline_api.py` использует `GrokVideoAPISessionRunner` вместо браузера | delivered stage outputs, cleanup of `input/` and `output/` |
 | Delivery & Lifecycle | `utils/project_delivery.py`, `utils/artifact_cleanup.py`, `main_cleanup_artifacts.py` | Доставка, очистка, перенос ошибок, архивирование | `final_videos_dir`, `final_output_dir`, `regeneration_assets_dir`, `error/`, cleanup reports |
 | Sequence Optimization & Music | `main_sequence_optimizer.py`, `main_sequence_music_first.py`, `utils/sequence_optimizer.py`, `utils/project_sequence_music_recommendation.py`, `utils/human_profile_sequence_report.py`, `utils/premiere_xml.py`, `utils/premiere_project.py`, `models/video_sequence.py` | Рекомендованный порядок клипов, video-only и персонализированные музыкальные рекомендации | optimized JSON/TXT/XML/PRPROJ, `*_music_first.txt`, `*_personalized_music.txt` |
-| Sequence Trim Review | `main_sequence_trim_review.py`, `utils/sequence_trim_review.py`, `utils/sequence_trim_classifier.py`, `utils/sequence_trim_semantic.py`, `utils/premiere_trim_review_export.py`, `utils/sequence_keep_apply.py`, `utils/premiere_keep_apply_export.py`, `utils/sequence_media_import.py`, `utils/premiere_media_import_export.py`, `utils/sequence_import_and_keep.py`, `utils/video_frame_extract.py`, `api/openai_trim_semantic.py`, `models/sequence_trim_review.py`, `models/sequence_keep_apply.py`, `models/sequence_media_import.py` | Per-clip KEEP/DROP segments (heuristic + semantic), compact still/video keep, manual keep-range apply, keep onto a copied sequence in the same `.prproj`, media import into a sequence or a new sequence in the existing project, import-and-keep in one pass | review `.prproj`, trimmed `.prproj`, import `.prproj`, in-place new sequences, bundle/JSON/TXT reports |
+| Sequence Trim Review | `main_sequence_trim_review.py`, `main_premiere_import_keep.py`, `utils/sequence_trim_review.py`, `utils/sequence_trim_classifier.py`, `utils/sequence_trim_semantic.py`, `utils/premiere_trim_review_export.py`, `utils/sequence_keep_apply.py`, `utils/premiere_keep_apply_export.py`, `utils/sequence_media_import.py`, `utils/premiere_media_import_export.py`, `utils/sequence_import_and_keep.py`, `utils/video_frame_extract.py`, `api/openai_trim_semantic.py`, `models/sequence_trim_review.py`, `models/sequence_keep_apply.py`, `models/sequence_media_import.py` | Per-clip KEEP/DROP segments (heuristic + semantic), compact still/video keep, manual keep-range apply, keep onto a copied sequence in the same `.prproj`, media import into a sequence or a new sequence in the existing project, import-and-keep in one pass | review `.prproj`, trimmed `.prproj`, import `.prproj`, in-place new sequences, bundle/JSON/TXT reports |
 | Reports & Batch Orchestration | `main_project_sequence_batch.py`, `main_sequence_reports.py`, `main_human_sequence_report.py`, `utils/project_sequence_batch.py`, `utils/current_sequence_reports.py`, `utils/human_profile_sequence_report.py`, `utils/sequence_structure_report.py`, `utils/transition_recommendations.py`, `utils/premiere_transition_script.py`, `utils/premiere_transform_script.py`, `utils/fcp_translation_results.py` | Reports, batch delivery, human-profile overlays, transition and transform scripts | reports, batch summaries, transition reports, Premiere JSX scripts |
 | Desktop/Web Automation | `main_desktop.py`, `api/chatgpt_desktop.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/chatgpt_web.py`, `api/grok_web.py` | Prompt-driven interaction with external UIs | submitted prompts, saved media |
 | Portrait/Image Batch | `main_chatgpt_portrait_batch.py`, `api/chatgpt_desktop_v2.py`, `api/gemini_desktop.py`, `api/grok_web.py`, `chatgpt_portrait_config.json`, `chatgpt_portrait_base_config.json`, `chatgpt_all_styles_config.json`, `chatgpt_pair_base_config.json`, `run_chatgpt_portrait_batch_existing.bat`, `run_chatgpt_pair_batch_existing.bat`, `run_gemini_portrait_batch_existing.bat`, `run_grok_portrait_batch_existing.bat` | Batch generation of artistic portraits, pair portraits, and image-edit tasks through ChatGPT, Gemini, Grok, OpenAI API, or local stylizer | `output/chatgpt_*`, `output/gemini_*`, `output/grok_*`, `output/pair`, optional `final_output_dir` copy, optional response text |
@@ -233,9 +233,9 @@ flowchart LR
   B7["run_grok_portrait_batch_existing.bat"] --> P6
   B8["run_chatgpt_pair_batch_existing.bat"] --> P6
   B9["run_sequence_trim_review.bat"] --> P8["main_sequence_trim_review.py"]
-  B10["run_sequence_keep_apply.bat"] --> P8
-  B11["run_sequence_media_import.bat"] --> P8
-  B12["run_sequence_import_and_keep.bat"] --> P8
+  B10["run_sequence_keep_apply.bat / *_standalone.bat"] --> P9["main_premiere_import_keep.py"]
+  B11["run_sequence_media_import.bat / *_standalone.bat"] --> P9
+  B12["run_sequence_import_and_keep.bat / *_standalone.bat"] --> P9
 
   C1["config.json / config.local.json / config_*.json"] --> G1["GenerationConfig"]
   G1 --> P1
@@ -245,7 +245,9 @@ flowchart LR
 
   C5["chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_all_styles_config.json\nspecial portrait configs"] --> P6
   C6["chatgpt_pair_base_config.json"] --> P6
-  C7["sequence_trim_review_*.json\nsequence_keep_apply_*.json\nsequence_media_import_*.json\nsequence_import_and_keep_*.json"] --> P8
+  C7["sequence_trim_review_*.json"] --> P8
+  C8["sequence_keep_apply_*.json\nsequence_media_import_*.json\nsequence_import_and_keep_*.json"] --> P9
+  C8 --> P8
 
   P1 --> O1["final_videos_dir\nregeneration_assets_dir"]
   P2 --> O2["*_video_*.mp4\n*_bg_image_16x9.*"]
@@ -253,7 +255,8 @@ flowchart LR
   P4 --> O4["publication bundle"]
   P6 --> O5["output/chatgpt_*\noutput/gemini_*\noutput/grok_*"]
   P6 --> O6["output/pair\nfinal_output_dir/pair"]
-  P8 --> O7["review .prproj\ntrimmed keep .prproj\nimport .prproj\nJSON/TXT reports"]
+  P8 --> O7["review .prproj\nJSON/TXT reports"]
+  P9 --> O8["trimmed keep .prproj\nimport .prproj\nJSON/TXT reports"]
 ```
 
 ### Common Commands
@@ -329,6 +332,37 @@ flowchart LR
 ```bat
 .\run_sequence_import_and_keep.bat .\sequence_import_and_keep_template.json
 ```
+
+```bat
+.\run_sequence_media_import_standalone.bat .\sequence_media_import_template.json
+```
+
+```bat
+.\run_sequence_keep_apply_standalone.bat .\sequence_keep_apply_template.json
+```
+
+```bat
+.\run_sequence_import_and_keep_standalone.bat .\sequence_import_and_keep_template.json
+```
+
+```bat
+.\run_copy_sequence_media_batch.bat .\copy_sequence_media_sveta_igr_26_2.json
+```
+
+```bat
+.\run_hero_definition.bat .\hero_definition_Alice.json
+```
+
+```bat
+.\run_sequence_music_recommendation.bat .\sequence_music_recommendation_Alice.json
+```
+
+```bat
+.\open_ai_work_window.bat
+.\run_full_grok_pipeline_work_window.bat --upload-timeout 300
+```
+
+The complete launcher inventory lives in [`docs/USER_GUIDE_EN.md`](USER_GUIDE_EN.md) / [`docs/USER_GUIDE_RU.md`](USER_GUIDE_RU.md) under BAT Files, with unique extra-parameter examples in [`docs/BATCH_RUN_HISTORY.md`](BATCH_RUN_HISTORY.md).
 
 Parameter precedence:
 

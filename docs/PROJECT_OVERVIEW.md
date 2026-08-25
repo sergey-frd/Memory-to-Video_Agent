@@ -2,17 +2,17 @@
 
 This document is generated from the source project and is intended for the external project-information repository.
 
-- Generated at: `2026-08-20T06:47:09+02:00`
+- Generated at: `2026-08-25T23:54:53+02:00`
 - Source project: `img-style-ag_1`
 
 ## Snapshot
 
-- Files scanned: `563`
-- Python files: `238`
-- Test files: `43`
+- Files scanned: `568`
+- Python files: `240`
+- Test files: `44`
 - Config JSON files: `40`
 - Markdown docs: `28`
-- Entry points: `30`
+- Entry points: `31`
 - API modules: `17`
 - Utils modules: `46`
 - Model modules: `6`
@@ -36,6 +36,7 @@ This document is generated from the source project and is intended for the exter
 - `main_grok_web.py`
 - `main_hero_definition.py`
 - `main_human_sequence_report.py`
+- `main_premiere_import_keep.py`
 - `main_premiere_transform_script.py`
 - `main_premiere_transition_script.py`
 - `main_project_publication.py`

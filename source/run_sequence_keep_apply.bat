@@ -14,12 +14,14 @@ if "%CONFIG_PATH%"=="" (
     echo   run_sequence_keep_apply.bat <LOCAL_PATH>
     echo.
     echo Template: sequence_keep_apply_template.json
+    echo Dedicated runner: main_premiere_import_keep.py
     echo Shared launcher: run_sequence_trim_review.bat also accepts the same config
     echo when "mode" is apply_keep_ranges or keep_to_new_sequence.
+    echo Portable alias: run_sequence_keep_apply_standalone.bat
     exit /b 1
 )
 
-python "%SCRIPT_DIR%main_sequence_trim_review.py" --config "%CONFIG_PATH%"
+python "%SCRIPT_DIR%main_premiere_import_keep.py" --config "%CONFIG_PATH%"
 set "EXIT_CODE=%ERRORLEVEL%"
 
 if not "%EXIT_CODE%"=="0" (

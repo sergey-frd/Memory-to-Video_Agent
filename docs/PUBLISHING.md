@@ -37,14 +37,14 @@ python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Vi
 
 Never `git push origin main` from the publication clone, and never push the dev workspace root to `publication`.
 
-## GitHub sync status (2026-08-20)
+## GitHub sync status (2026-08-26)
 
-Publication **`2026.08.20.01`** targets the Internet:
+Publication **`2026.08.26.01`** targets the Internet:
 
 - Repository: https://github.com/sergey-frd/Memory-to-Video_Agent
 - Dev remote: https://github.com/sergey-frd/img-style-ag_1
-- Tag: `v2026.08.20.01`
+- Tag: `v2026.08.26.01`
 
-Headline feature: in-place Premiere `keep_to_new_sequence` and `import_to_new_sequence`.
+Headline feature: dedicated Premiere import/KEEP runner, portable standalone BAT launchers, multi-root media lookup, and empty-project donor fixes.
 
 Do **not** read version from nested `source/data/project_snapshot.json`; that stale copy is no longer published. Older tags are historical snapshots only; `main` and the latest tag reflect the current bundle.

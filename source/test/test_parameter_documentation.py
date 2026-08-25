@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 
@@ -50,9 +51,13 @@ def test_parameter_matrix_names_every_entry_program_and_batch() -> None:
         "run_hero_definition.bat",
         "main_sequence_trim_review.py",
         "run_sequence_trim_review.bat",
+        "main_premiere_import_keep.py",
         "run_sequence_keep_apply.bat",
+        "run_sequence_keep_apply_standalone.bat",
         "run_sequence_media_import.bat",
+        "run_sequence_media_import_standalone.bat",
         "run_sequence_import_and_keep.bat",
+        "run_sequence_import_and_keep_standalone.bat",
         "main_project_sequence_batch.py",
         "run_project_sequence_batch.bat",
         "main_human_sequence_report.py",
@@ -71,6 +76,52 @@ def test_canonical_documentation_is_consolidated_under_docs() -> None:
     }
     assert root_documents == ROOT_DOCUMENTS
     assert all(path.is_file() for path in CANONICAL_DOCS)
+
+
+def _h2_section(text: str, heading: str) -> str:
+    match = re.search(rf"^## {re.escape(heading)}\s*$", text, re.M)
+    assert match is not None, f"Missing heading: {heading}"
+    start = match.start()
+    rest = text[match.end() :]
+    next_h2 = re.search(r"^## ", rest, re.M)
+    end = match.end() + next_h2.start() if next_h2 else len(text)
+    return text[start:end]
+
+
+def _bat_names(text: str) -> set[str]:
+    return set(re.findall(r"(?:login_|run_|copy_|open_|install_)[\w.-]*\.bat", text))
+
+
+def test_all_root_bat_files_are_listed_and_exemplified() -> None:
+    bats = {path.name for path in Path(".").glob("*.bat")}
+    assert bats, "No root .bat files found"
+
+    en = Path("docs/USER_GUIDE_EN.md").read_text(encoding="utf-8")
+    ru = Path("docs/USER_GUIDE_RU.md").read_text(encoding="utf-8")
+    history = Path("docs/BATCH_RUN_HISTORY.md").read_text(encoding="utf-8")
+
+    en_list = _bat_names(_h2_section(en, "BAT Files"))
+    ru_list = _bat_names(_h2_section(ru, "BAT-файлы"))
+    en_examples = _bat_names(_h2_section(en, "Typical Commands"))
+    ru_examples = _bat_names(_h2_section(ru, "Типовые команды"))
+    history_table = set()
+    for line in history.splitlines():
+        if line.startswith("| B"):
+            match = re.search(r"`((?:login_|run_|copy_|open_|install_)[\w.-]*\.bat)`", line)
+            if match:
+                history_table.add(match.group(1))
+
+    missing = {
+        "USER_GUIDE_EN BAT Files": sorted(bats - en_list),
+        "USER_GUIDE_RU BAT-файлы": sorted(bats - ru_list),
+        "USER_GUIDE_EN Typical Commands": sorted(bats - en_examples),
+        "USER_GUIDE_RU Типовые команды": sorted(bats - ru_examples),
+        "BATCH_RUN_HISTORY table": sorted(bats - history_table),
+    }
+    missing = {place: names for place, names in missing.items() if names}
+    assert not missing, "Root .bat files missing from docs:\n" + "\n".join(
+        f"{place}: {', '.join(names)}" for place, names in missing.items()
+    )
 
 
 def _leaf_key_paths(value: object, prefix: str = "") -> list[str]:

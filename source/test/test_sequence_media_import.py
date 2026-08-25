@@ -159,6 +159,37 @@ def test_resolve_import_files_accepts_source_path_hint_and_source_name() -> None
     assert [path.resolve() for path in resolved] == [target.resolve()]
 
 
+def test_resolve_import_files_uses_root_search_paths_and_source_name() -> None:
+    root = Path("test_runtime") / f"import_search_{uuid4().hex}"
+    nested = root / "2019" / "Out"
+    nested.mkdir(parents=True)
+    first = nested / "Sergey76_1min_v03_1.mp4"
+    second = nested / "SF_26_BD_t3_1.mp4"
+    first.write_bytes(b"video-a")
+    second.write_bytes(b"video-b")
+    resolved = resolve_import_files(
+        None,
+        [
+            {"order": 2, "source_name": "SF_26_BD_t3_1.mp4"},
+            {"order": 1, "source_name": "Sergey76_1min_v03_1.mp4"},
+            {"order": 3, "source_name": "Sergey76_1min_v03_1.mp4"},
+        ],
+        search_roots=[root],
+    )
+    assert [path.resolve() for path in resolved] == [first.resolve(), second.resolve(), first.resolve()]
+
+
+def test_resolve_import_files_requires_search_root_when_source_name_has_no_path() -> None:
+    try:
+        resolve_import_files(None, [{"order": 1, "source_name": "clip.mp4"}])
+    except ValueError as exc:
+        message = str(exc)
+        assert "root_directory" in message
+        assert "root_search_paths" in message
+    else:
+        raise AssertionError("expected ValueError")
+
+
 def test_resolve_import_files_uses_absolute_source_path_and_order() -> None:
     root = Path("test_runtime") / f"import_abs_{uuid4().hex}"
     root.mkdir(parents=True)
@@ -232,6 +263,15 @@ def test_is_media_import_config_detects_items_source_path() -> None:
             "project_path": r"<LOCAL_PATH>",
             "output_sequence_name": "IMPORT_styles",
             "items": [{"order": 1, "source_path": r"<LOCAL_PATH>"}],
+        }
+    )
+    assert is_media_import_config(
+        {
+            "mode": "import_to_new_sequence",
+            "project_path": r"<LOCAL_PATH>",
+            "output_sequence_name": "VIDEO_BANK",
+            "root_search_paths": [r"<LOCAL_PATH>"],
+            "items": [{"order": 1, "source_name": "clip.mp4"}],
         }
     )
 
@@ -446,6 +486,46 @@ def test_run_sequence_media_import_uses_sibling_project_when_source_has_no_clips
     _assert_no_donor_secondary_content(output_project, "1215")
 
 
+def test_run_sequence_media_import_ignores_empty_self_template_and_uses_sibling() -> None:
+    root = Path("test_runtime") / f"import_self_tmpl_{uuid4().hex}"
+    media_root = root / "media"
+    media_root.mkdir(parents=True)
+    video = media_root / "new_take.mp4"
+    video.write_bytes(b"video")
+    empty_project = root / "empty.prproj"
+    donor_project = root / "donor_with_clips.prproj"
+    _write_empty_import_source_project(empty_project)
+    _write_import_source_project(donor_project)
+    output_project = root / "empty_import.prproj"
+    config_path = root / "import.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "mode": "import_media",
+                "project_path": str(empty_project),
+                "template_project_path": str(empty_project),
+                "sequence_name": "EmptySequence",
+                "create_sequence_if_missing": False,
+                "root_directory": str(media_root),
+                "files": ["new_take.mp4"],
+                "output_project_path": str(output_project),
+                "reports_dir": str(root / "reports"),
+                "write_project": True,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    json_path, _txt_path, exported = run_sequence_media_import_from_config(config_path)
+    assert exported == output_project
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert any("donor_with_clips.prproj" in warning for warning in payload["warnings"])
+    _seq, clips = parse_premiere_project_sequence_visual_clips(output_project, "EmptySequence")
+    assert [clip.name for clip in clips] == ["new_take.mp4"]
+
+
 def test_run_sequence_media_import_strips_template_effects_and_resets_motion() -> None:
     root = Path("test_runtime") / f"import_clean_{uuid4().hex}"
     media_root = root / "media"
@@ -550,6 +630,57 @@ def test_run_sequence_media_import_to_new_sequence_writes_same_project() -> None
         assert "already exists" in str(exc)
     else:
         raise AssertionError("expected PremiereProjectError when output sequence exists")
+
+
+def test_run_sequence_media_import_resolves_source_name_via_root_search_paths() -> None:
+    root = Path("test_runtime") / f"import_search_run_{uuid4().hex}"
+    search_root = root / "Pictures" / "Photo" / "2019" / "Out"
+    search_root.mkdir(parents=True)
+    clip = search_root / "Sergey76_1min_v03_1.mp4"
+    clip.write_bytes(b"video")
+    project_path = root / "sf_26_empty_v01.prproj"
+    _write_import_source_project(project_path)
+    output_project = root / "Sergey76_video_bank_IMPORT_v01.prproj"
+    config_path = root / "39_Sergey76_video_bank_import_v01.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "mode": "import_to_new_sequence",
+                "project_path": str(project_path),
+                "output_project_path": str(output_project),
+                "output_sequence_name": "Sergey76_VIDEO_BANK_IMPORT_v01",
+                "create_sequence_if_missing": True,
+                "fail_if_sequence_exists": True,
+                "write_project": True,
+                "root_search_paths": [str(search_root)],
+                "items": [
+                    {"order": 1, "source_name": "Sergey76_1min_v03_1.mp4"},
+                    {"order": 2, "source_name": "Sergey76_1min_v03_1.mp4"},
+                ],
+                "reports_dir": str(root / "reports"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    json_path, _txt_path, exported = run_sequence_media_import_from_config(config_path)
+    assert exported == output_project
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    assert payload["root_search_paths"] == [str(search_root)]
+    assert [item["file"] for item in payload["imported"]] == [
+        "Sergey76_1min_v03_1.mp4",
+        "Sergey76_1min_v03_1.mp4",
+    ]
+    _seq, imported_clips = parse_premiere_project_sequence_visual_clips(
+        output_project,
+        "Sergey76_VIDEO_BANK_IMPORT_v01",
+    )
+    assert [Path(clip.source_path).name for clip in imported_clips] == [
+        "Sergey76_1min_v03_1.mp4",
+        "Sergey76_1min_v03_1.mp4",
+    ]
 
 
 def test_run_sequence_media_import_to_new_sequence_rewires_donor_sequence_refs() -> None:

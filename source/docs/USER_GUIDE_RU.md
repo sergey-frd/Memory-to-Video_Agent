@@ -52,6 +52,65 @@ run_full_grok_pipeline.bat --upload-timeout 300
 
 ## BAT-файлы
 
+Полный список всех корневых `.bat`. Неповторяющиеся примеры с параметрами — в [`BATCH_RUN_HISTORY.md`](BATCH_RUN_HISTORY.md). Ниже — подробные заметки по основным launcher'ам.
+
+| Launcher | Назначение | Пример |
+| --- | --- | --- |
+| `copy_sequence_images_sveta_igr_26_2.bat` | Копия только картинок sequence Sveta | `.\copy_sequence_images_sveta_igr_26_2.bat` |
+| `copy_sequence_media_sveta_igr_26_2.bat` | Готовый wrapper копирования медиа sequence Sveta | `.\copy_sequence_media_sveta_igr_26_2.bat` |
+| `install_premiere_transition_panel.bat` | Установить CEP-панель Premiere transitions | `.\install_premiere_transition_panel.bat` |
+| `login_chatgpt_debug_profile.bat` | Ручной вход в ChatGPT debug-профиль на порту 9333 | `.\login_chatgpt_debug_profile.bat` |
+| `login_chatgpt_profile.bat` | Ручной вход в ChatGPT web-профиль | `.\login_chatgpt_profile.bat` |
+| `login_gemini_profile.bat` | Ручной вход в отдельный Gemini-профиль | `.\login_gemini_profile.bat` |
+| `login_grok_profile.bat` | Ручной вход в Grok automation-профиль | `.\login_grok_profile.bat` |
+| `open_ai_work_window.bat` | Открыть одно reusable Chrome-окно Grok/ChatGPT на 9222 | `.\open_ai_work_window.bat` |
+| `open_ai_work_window_bookmarks_profile.bat` | То же reusable-окно через bookmarks-профиль Chrome | `.\open_ai_work_window_bookmarks_profile.bat` |
+| `open_ai_work_window_user_chrome.bat` | То же reusable-окно через обычный user-профиль Chrome | `.\open_ai_work_window_user_chrome.bat` |
+| `run_chatgpt_artistic_photo_portret_existing.bat` | Laptop-batch стиля artistic photo portrait | `.\run_chatgpt_artistic_photo_portret_existing.bat --delivery-config-file config_Ziggi.json` |
+| `run_chatgpt_pair_batch_existing.bat` | Парные портреты из папок input_pair | `.\run_chatgpt_pair_batch_existing.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error` |
+| `run_chatgpt_pair_batch_work_window.bat` | Парные портреты через reusable work-window | `.\run_chatgpt_pair_batch_work_window.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error` |
+| `run_chatgpt_portrait_batch.bat` | Portrait batch ChatGPT через стандартный Python-backend | `.\run_chatgpt_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing` |
+| `run_chatgpt_portrait_batch_debug.bat` | Portrait batch ChatGPT через debug Chrome 9333 | `.\run_chatgpt_portrait_batch_debug.bat --config-file chatgpt_portrait_config.json --skip-existing` |
+| `run_chatgpt_portrait_batch_existing.bat` | Рекомендуемый desktop-batch портретов ChatGPT | `.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer` |
+| `run_chatgpt_portrait_batch_work_window.bat` | Portrait batch ChatGPT через reusable work-window | `.\run_chatgpt_portrait_batch_work_window.bat --config-file chatgpt_portrait_base_config.json --skip-existing` |
+| `run_chatgpt_style_batch_existing.bat` | Общий style-batch launcher для chatgpt_*_config.json | `run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --skip-existing --continue-on-error` |
+| `run_chatgpt_style_menu_existing.bat` | Интерактивное меню банков chatgpt_*_config.json | `.\run_chatgpt_style_menu_existing.bat` |
+| `run_chatgpt_watercolor_on_paper_existing.bat` | Laptop-batch watercolor on paper | `.\run_chatgpt_watercolor_on_paper_existing.bat --delivery-config-file config_Ziggi.json` |
+| `run_copy_minimal_to_laptop_dir.bat` | Скопировать минимальный laptop-bundle | `.\run_copy_minimal_to_laptop_dir.bat` |
+| `run_copy_sequence_images.bat` | Скопировать картинки одной Premiere sequence (CLI) | `.\run_copy_sequence_images.bat --project <prproj> --sequence <sequence> --dest <image_dir>` |
+| `run_copy_sequence_media_batch.bat` | Скопировать медиа sequence по JSON-конфигу | `.\run_copy_sequence_media_batch.bat .\copy_sequence_media_sveta_igr_26_2.json` |
+| `run_full_grok_pipeline.bat` | Полный Grok web video pipeline из input/ | `.\run_full_grok_pipeline.bat --upload-timeout 300` |
+| `run_full_grok_pipeline_api.bat` | Полный Grok video pipeline через xAI API | `.\run_full_grok_pipeline_api.bat --config-file .\config_SF.json` |
+| `run_full_grok_pipeline_local.bat` | Полный Grok pipeline через .venv и config.local.json | `.\run_full_grok_pipeline_local.bat --skip-existing --upload-timeout 300` |
+| `run_full_grok_pipeline_work_window.bat` | Полный Grok pipeline через reusable debug-окно | `.\run_full_grok_pipeline_work_window.bat --upload-timeout 300` |
+| `run_gemini_portrait_batch_existing.bat` | Gemini desktop portrait batch с теми же JSON-конфигами | `.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer` |
+| `run_grok_automation.bat` | Один Grok job для одного изображения и prompt-файла | `.\run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_20260314_101010_v_prompt_1.txt --upload-timeout 300` |
+| `run_grok_automation_all.bat` | Grok batch по уже готовым *_v_prompt_*.txt | `.\run_grok_automation_all.bat --skip-existing --upload-timeout 300` |
+| `run_grok_portrait_batch_existing.bat` | Grok web portrait batch с теми же JSON-конфигами | `.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error` |
+| `run_hero_definition.bat` | Собрать hero_def.json из эталонных фото | `.\run_hero_definition.bat .\hero_definition_Alice.json` |
+| `run_laptop_env_compare.bat` | Сравнить laptop-окружение с watercolor baseline | `.\run_laptop_env_compare.bat` |
+| `run_laptop_env_snapshot.bat` | Снять snapshot laptop watercolor-окружения | `.\run_laptop_env_snapshot.bat` |
+| `run_local_portrait_batch.bat` | Локальная stylization без UI ChatGPT | `.\run_local_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing` |
+| `run_openai_portrait_batch.bat` | Portrait batch через OpenAI Images API | `.\run_openai_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing --api-model gpt-image-1.5` |
+| `run_premiere_transform_script.bat` | Собрать Premiere transform JSX из sequence-batch конфига | `.\run_premiere_transform_script.bat .\project_sequence_batch_igor_26_1A.json` |
+| `run_premiere_transition_script.bat` | Собрать Premiere transition JSX из sequence-batch конфига | `.\run_premiere_transition_script.bat .\project_sequence_batch_igor_26_1A.json` |
+| `run_project_publication_push.bat` | Подготовить, закоммитить, пометить и запушить публичный bundle | `.\run_project_publication_push.bat --source-root .` |
+| `run_project_publication_stage.bat` | Подготовить публичный bundle без commit/push | `.\run_project_publication_stage.bat --source-root . --dry-run` |
+| `run_project_sequence_batch.bat` | Оптимизировать Premiere sequence по JSON-конфигу | `.\run_project_sequence_batch.bat .\project_sequence_batch_igor_26_1A.json` |
+| `run_project_sequence_batch_igor_26_1A.bat` | Готовый wrapper sequence-batch Igor | `.\run_project_sequence_batch_igor_26_1A.bat` |
+| `run_project_sequence_batch_nicol_26_T2.bat` | Готовый wrapper sequence-batch Nicol | `.\run_project_sequence_batch_nicol_26_T2.bat` |
+| `run_project_sequence_batch_vika_26_1A.bat` | Готовый wrapper sequence-batch Vika | `.\run_project_sequence_batch_vika_26_1A.bat` |
+| `run_sequence_import_and_keep.bat` | Импорт списка файлов и KEEP за один проход | `.\run_sequence_import_and_keep.bat .\sequence_import_and_keep_template.json` |
+| `run_sequence_import_and_keep_standalone.bat` | Тот же import-and-keep через `main_premiere_import_keep.py` | `.\run_sequence_import_and_keep_standalone.bat .\sequence_import_and_keep_template.json` |
+| `run_sequence_keep_apply.bat` | Применить KEEP JSON: копия проекта или новая sequence | `.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json` |
+| `run_sequence_keep_apply_standalone.bat` | Тот же KEEP/apply через `main_premiere_import_keep.py` | `.\run_sequence_keep_apply_standalone.bat .\sequence_keep_apply_template.json` |
+| `run_sequence_media_import.bat` | Импортировать файлы в sequence или в новую sequence | `.\run_sequence_media_import.bat .\sequence_media_import_template.json` |
+| `run_sequence_media_import_standalone.bat` | Тот же media import через `main_premiere_import_keep.py` | `.\run_sequence_media_import_standalone.bat .\sequence_media_import_template.json` |
+| `run_sequence_music_recommendation.bat` | Video-only и персонализированный music report | `.\run_sequence_music_recommendation.bat .\sequence_music_recommendation_Alice.json` |
+| `run_sequence_trim_review.bat` | KEEP/DROP review, replay, keep, import или import-and-keep | `.\run_sequence_trim_review.bat .\sequence_trim_review_01.json` |
+| `run_video_prompt_story_export.bat` | Экспорт composer JSON после правок HTML-истории | `.\run_video_prompt_story_export.bat <LOCAL_PATH>` |
+| `run_video_prompt_story_generate.bat` | Сгенерировать reviewable HTML/JSON video story | `.\run_video_prompt_story_generate.bat` |
+
 ### `login_grok_profile.bat`
 
 Назначение:
@@ -121,6 +180,18 @@ run_full_grok_pipeline.bat --skip-video --generate-source-background --upload-ti
 run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300
 ```
 
+### `run_full_grok_pipeline_api.bat`
+
+Прямой xAI API вместо `run_full_grok_pipeline.bat`. Та же схема `input/` → `output/` → доставка, но без Chrome и Playwright: pipeline вызывает `grok-imagine-video` через `xai-sdk`. Нужен `XAI_API_KEY` в `.env`. Проверка ключа: `python .\scripts\xai_ping.py`.
+
+Примеры:
+
+```bat
+run_full_grok_pipeline_api.bat
+run_full_grok_pipeline_api.bat --config-file .\config_SF.json
+run_full_grok_pipeline_api.bat --skip-video --generate-source-background
+```
+
 ### `run_sequence_trim_review.bat`
 
 Назначение:
@@ -148,7 +219,7 @@ run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300
 - не трогать неперечисленные клипы, bins и имена sequence;
 - обрезать связанное аудио вместе с видео и сдвинуть следующие клипы.
 
-Это отдельный launcher для `"mode": "apply_keep_ranges"` и `"mode": "keep_to_new_sequence"`. Тот же JSON принимает и `run_sequence_trim_review.bat`.
+Это отдельный launcher для `"mode": "apply_keep_ranges"` и `"mode": "keep_to_new_sequence"`. Он вызывает `main_premiere_import_keep.py`. Тот же JSON принимает `run_sequence_keep_apply_standalone.bat` и `run_sequence_trim_review.bat`.
 
 Примеры:
 
@@ -168,7 +239,7 @@ run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300
 - создать `output_sequence_name` внутри того же `.prproj` и импортировать туда (`import_to_new_sequence`);
 - переиспользовать Media только если полный путь уже есть в проекте; то же имя в другой папке получает свой `MasterClip`.
 
-Это launcher для `"mode": "import_media"` и `"mode": "import_to_new_sequence"`. Тот же JSON принимает и `run_sequence_trim_review.bat`.
+Это launcher для `"mode": "import_media"` и `"mode": "import_to_new_sequence"`. Он вызывает `main_premiere_import_keep.py`. Тот же JSON принимает `run_sequence_media_import_standalone.bat` и `run_sequence_trim_review.bat`.
 
 Примеры:
 
@@ -186,7 +257,7 @@ run_full_grok_pipeline.bat --save-grok-debug-artifacts --upload-timeout 300
 - промежуточный `*_import.prproj` остаётся, итоговый проект — `*_keep.prproj`;
 - `project_path` из KEEP JSON не используется, keep всегда идёт от результата импорта.
 
-Это launcher для `"mode": "import_and_keep"`. Тот же JSON принимает и `run_sequence_trim_review.bat`.
+Это launcher для `"mode": "import_and_keep"`. Он вызывает `main_premiere_import_keep.py`. Тот же JSON принимает `run_sequence_import_and_keep_standalone.bat` и `run_sequence_trim_review.bat`.
 
 Примеры:
 
@@ -572,8 +643,9 @@ flowchart LR
   B5["run_chatgpt_portrait_batch_existing.bat / run_gemini_portrait_batch_existing.bat / run_grok_portrait_batch_existing.bat"] --> P6["main_chatgpt_portrait_batch.py"]
   B6["run_hero_definition.bat"] --> P7["main_hero_definition.py"]
   B7["run_sequence_trim_review.bat"] --> P8["main_sequence_trim_review.py"]
-  B8["run_sequence_keep_apply.bat"] --> P8
-  B9["run_sequence_media_import.bat"] --> P8
+  B8["run_sequence_keep_apply.bat / *_standalone.bat"] --> P9["main_premiere_import_keep.py"]
+  B9["run_sequence_media_import.bat / *_standalone.bat"] --> P9
+  B10["run_sequence_import_and_keep.bat / *_standalone.bat"] --> P9
 
   A1["CLI flags"] --> P1
   A2["CLI flags"] --> P2
@@ -585,7 +657,9 @@ flowchart LR
   C6["hero_definition_*.json\nhero_image_dir + human_detail_txt"] --> P7
   P7 --> H1["hero_def.json"]
   H1 --> P8
-  C7["sequence_trim_review_*.json\nsequence_keep_apply_*.json\nsequence_media_import_*.json\nsequence_import_and_keep_*.json"] --> P8
+  C7["sequence_trim_review_*.json"] --> P8
+  C8["sequence_keep_apply_*.json\nsequence_media_import_*.json\nsequence_import_and_keep_*.json"] --> P9
+  C8 --> P8
 
   C3["project_sequence_batch_*.json"] --> P3
   P3 --> P5["main_sequence_optimizer.py\n+ sequence reports\n+ human profile report"]
@@ -598,7 +672,8 @@ flowchart LR
   P5 --> O3["reports:\noptimized JSON/TXT/XML\n*_structure.txt\n*_transition_recommendations.txt\n*_human_profile_report.txt\nbatch_summary.*\ntemp_projects/*.prproj (temporary)\n+ source Proj/*.prproj (final optimized project)"]
   P4 --> O4["publication bundle:\nsource/**\ndocs/**\ndata/project_snapshot.json\ndata/publication_manifest.json\nREADME.md / VERSION / .gitignore"]
   P6 --> O5["portrait / image-edit results:\noutput/chatgpt_*/*.png\noutput/gemini_*/*.png\noutput/grok_*/*.png"]
-  P8 --> O6["trim review / keep-apply / media import:\nreview .prproj\ntrimmed keep .prproj\nin-place IMPORT/KEEP sequences\nJSON/TXT reports"]
+  P8 --> O6["trim review:\nreview .prproj\nJSON/TXT reports"]
+  P9 --> O7["keep-apply / media import:\ntrimmed keep .prproj\nin-place IMPORT/KEEP sequences\nJSON/TXT reports"]
 ```
 
 Левая часть схемы показывает запуск и источники параметров, а правая часть показывает, какие отчеты и результатные артефакты появляются на выходе.
@@ -962,7 +1037,7 @@ Operations JSON можно передать напрямую:
 
 ### Импорт списка файлов в новую sequence того же проекта
 
-Режим `"mode": "import_to_new_sequence"` создаёт `output_sequence_name` внутри существующего `.prproj` и кладёт туда файлы. Остальные sequence не меняются. Отдельный `.prproj` не создаётся, пока не задан `output_project_path`. `fail_if_sequence_exists` (по умолчанию `true` в этом режиме) останавливает запуск, если такое имя уже есть. Перед записью закройте Premiere. Одинаковое имя в двух папках — два клипа: каждый со своим `source_path`. Если `source_path` нет на диске, импорт пробует `__`↔`_` в той же папке, затем уникальный поиск под ближайшим существующим родителем.
+Режим `"mode": "import_to_new_sequence"` создаёт `output_sequence_name` внутри существующего `.prproj` и кладёт туда файлы. Остальные sequence не меняются. Отдельный `.prproj` не создаётся, пока не задан `output_project_path`. `fail_if_sequence_exists` (по умолчанию `true` в этом режиме) останавливает запуск, если такое имя уже есть. Перед записью закройте Premiere. Одинаковое имя в двух папках — два клипа: каждый со своим `source_path`. Если `source_path` нет на диске, импорт пробует `__`↔`_` в той же папке, затем уникальный поиск под ближайшим существующим родителем. В `items` можно указать `source_name` и искать его в `root_search_paths` (или `root_directory`) без абсолютного `source_path`; совпадение только по полному имени с расширением. Одно и то же `source_name` можно повторить, чтобы поставить несколько клипов из одного файла.
 
 Начните с шаблона, затем compact-пример в репозитории, затем полный job:
 
@@ -1356,11 +1431,14 @@ Premiere Sequence Trim Review:
 .\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
 .\run_sequence_keep_apply.bat .\sequence_keep_to_new_sequence_template.json
 .\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_macro_styles.json
+.\run_sequence_keep_apply_standalone.bat .\sequence_keep_apply_template.json
 .\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json
 .\run_sequence_media_import.bat .\sequence_media_import_yotam26_part2.json
 .\run_sequence_media_import.bat .\sequence_media_import_to_new_sequence_template.json
 .\run_sequence_media_import.bat .\sequence_media_import_yotam26_macro_styles.json
+.\run_sequence_media_import_standalone.bat .\sequence_media_import_template.json
 .\run_sequence_import_and_keep.bat <LOCAL_PATH>
+.\run_sequence_import_and_keep_standalone.bat .\sequence_import_and_keep_template.json
 ```
 
 Batch-оптимизация sequence Premiere:
@@ -1395,6 +1473,67 @@ python .\main_cleanup_artifacts.py --include-output-build-dirs --include-output-
 
 ```bat
 run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_20260314_101010_v_prompt_1.txt --upload-timeout 300
+```
+
+### Полный набор launcher'ов
+
+Каждый корневой `.bat` имеет один канонический пример. Неповторяющиеся комбинации параметров — в [`BATCH_RUN_HISTORY.md`](BATCH_RUN_HISTORY.md).
+
+```bat
+.\copy_sequence_images_sveta_igr_26_2.bat
+.\copy_sequence_media_sveta_igr_26_2.bat
+.\install_premiere_transition_panel.bat
+.\login_chatgpt_debug_profile.bat
+.\login_chatgpt_profile.bat
+.\login_gemini_profile.bat
+.\login_grok_profile.bat
+.\open_ai_work_window.bat
+.\open_ai_work_window_bookmarks_profile.bat
+.\open_ai_work_window_user_chrome.bat
+.\run_chatgpt_artistic_photo_portret_existing.bat --delivery-config-file config_Ziggi.json
+.\run_chatgpt_pair_batch_existing.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error
+.\run_chatgpt_pair_batch_work_window.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error
+.\run_chatgpt_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing
+.\run_chatgpt_portrait_batch_debug.bat --config-file chatgpt_portrait_config.json --skip-existing
+.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+.\run_chatgpt_portrait_batch_work_window.bat --config-file chatgpt_portrait_base_config.json --skip-existing
+run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --skip-existing --continue-on-error
+.\run_chatgpt_style_menu_existing.bat
+.\run_chatgpt_watercolor_on_paper_existing.bat --delivery-config-file config_Ziggi.json
+.\run_copy_minimal_to_laptop_dir.bat
+.\run_copy_sequence_images.bat --project <prproj> --sequence <sequence> --dest <image_dir>
+.\run_copy_sequence_media_batch.bat .\copy_sequence_media_sveta_igr_26_2.json
+.\run_full_grok_pipeline.bat --upload-timeout 300
+.\run_full_grok_pipeline_api.bat --config-file .\config_SF.json
+.\run_full_grok_pipeline_local.bat --skip-existing --upload-timeout 300
+.\run_full_grok_pipeline_work_window.bat --upload-timeout 300
+.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+.\run_grok_automation.bat --image .\input\photo.jpg --prompt .\output\photo_20260314_101010_v_prompt_1.txt --upload-timeout 300
+.\run_grok_automation_all.bat --skip-existing --upload-timeout 300
+.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error
+.\run_hero_definition.bat .\hero_definition_Alice.json
+.\run_laptop_env_compare.bat
+.\run_laptop_env_snapshot.bat
+.\run_local_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing
+.\run_openai_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing --api-model gpt-image-1.5
+.\run_premiere_transform_script.bat .\project_sequence_batch_igor_26_1A.json
+.\run_premiere_transition_script.bat .\project_sequence_batch_igor_26_1A.json
+.\run_project_publication_push.bat --source-root .
+.\run_project_publication_stage.bat --source-root . --dry-run
+.\run_project_sequence_batch.bat .\project_sequence_batch_igor_26_1A.json
+.\run_project_sequence_batch_igor_26_1A.bat
+.\run_project_sequence_batch_nicol_26_T2.bat
+.\run_project_sequence_batch_vika_26_1A.bat
+.\run_sequence_import_and_keep.bat .\sequence_import_and_keep_template.json
+.\run_sequence_import_and_keep_standalone.bat .\sequence_import_and_keep_template.json
+.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
+.\run_sequence_keep_apply_standalone.bat .\sequence_keep_apply_template.json
+.\run_sequence_media_import.bat .\sequence_media_import_template.json
+.\run_sequence_media_import_standalone.bat .\sequence_media_import_template.json
+.\run_sequence_music_recommendation.bat .\sequence_music_recommendation_Alice.json
+.\run_sequence_trim_review.bat .\sequence_trim_review_01.json
+.\run_video_prompt_story_export.bat <LOCAL_PATH>
+.\run_video_prompt_story_generate.bat
 ```
 
 ## Краткие рекомендации оператору
