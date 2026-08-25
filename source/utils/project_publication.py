@@ -87,6 +87,11 @@ def _jerusalem_timezone():
     try:
         return ZoneInfo("Asia/Jerusalem")
     except ZoneInfoNotFoundError:
+        local_timezone = datetime.now().astimezone().tzinfo
+        if local_timezone is not None:
+            local_offset = datetime.now(local_timezone).utcoffset()
+            if local_offset in {timedelta(hours=2), timedelta(hours=3)}:
+                return local_timezone
         return timezone(timedelta(hours=2), name="Asia/Jerusalem")
 
 

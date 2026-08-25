@@ -4,10 +4,10 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.08.25.01`
-- Git tag: `v2026.08.25.01`
+- Publication version: `2026.08.26.01`
+- Git tag: `v2026.08.26.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-08-25T23:54:53+02:00`
+- Last synchronized: `2026-08-26T00:57:41+03:00`
 - Source project: `img-style-ag_1`
 - Python files: `240`
 - Test files: `44`

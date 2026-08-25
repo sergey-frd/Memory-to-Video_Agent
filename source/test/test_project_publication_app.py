@@ -1,10 +1,16 @@
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
 import main_project_publication
 
-from utils.project_publication import DOC_TARGETS, PublicationResult, write_publication_bundle
+from utils.project_publication import (
+    DOC_TARGETS,
+    JERUSALEM_TZ,
+    PublicationResult,
+    write_publication_bundle,
+)
 
 
 def _write_required_docs(root: Path) -> None:
@@ -17,6 +23,11 @@ def _write_required_docs(root: Path) -> None:
 
 def _fake_openai_project_key() -> str:
     return "sk-proj-" + ("a" * 32)
+
+
+def test_publication_timezone_uses_jerusalem_summer_offset() -> None:
+    summer = datetime(2026, 8, 26, 12, 0, tzinfo=JERUSALEM_TZ)
+    assert summer.utcoffset() == timedelta(hours=3)
 
 
 def test_write_publication_bundle_creates_full_safe_source_mirror() -> None:

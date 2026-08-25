@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-25T23:54:53+02:00",
+  "generated_at": "2026-08-26T00:57:41+03:00",
   "source_project": "img-style-ag_1",
   "source_workspace": "img-style-ag_1",
-  "publication_version": "2026.08.25.01",
-  "publication_git_tag": "v2026.08.25.01",
+  "publication_version": "2026.08.26.01",
+  "publication_git_tag": "v2026.08.26.01",
   "managed_files": [
     "README.md",
     ".gitignore",
