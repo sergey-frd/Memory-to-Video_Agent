@@ -13,8 +13,8 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 
 ## Current version
 
-- Workspace `VERSION`: **`2026.08.26.01`** ([`VERSION`](VERSION))
-- Latest intended publication tag: **`v2026.08.26.01`**
+- Workspace `VERSION`: **`2026.08.26.02`** ([`VERSION`](VERSION))
+- Latest intended publication tag: **`v2026.08.26.02`**
 
 ## Published on GitHub (Internet)
 
@@ -22,13 +22,14 @@ Public repository:
 
 - https://github.com/sergey-frd/Memory-to-Video_Agent
 
-This release wave (**2026.08.26.01**) consolidates the Premiere import/KEEP desktop workflow:
+This release wave (**2026.08.26.02**) adds reusable JSON-driven Premiere sequence editing and Motion:
 
-- Dedicated `main_premiere_import_keep.py` runner for import, KEEP/apply, and combined jobs
-- Portable `*_standalone.bat` aliases alongside the existing desktop BAT files
-- Media lookup through `root_search_paths` and `items[].source_name`
-- Empty-project donor fallback fixes, updated templates, documentation, examples, and tests
-- Entry points: `run_sequence_keep_apply.bat`, `run_sequence_media_import.bat`, skill `sequence-trim-review`
+- `premiere_sequence_motion_animation` for relative intrinsic Scale/Position keyframes on a protected sequence copy
+- `premiere_sequence_insert_from_sequence_and_motion_animation` for frame-exact video-only insertion from another in-project sequence followed by static-only Motion
+- Explicit JSON decisions through `resolved_source_range_frames` and `resolved_destination_frame`
+- Non-ripple output audio removal, silent review export, dry-run plans, structural QA, and milestone sequence validation
+- Reusable templates, complete RU examples, synchronized RU/EN guides, and 74 passing Premiere regression tests
+- Entry point: `run_premiere_sequence_motion.bat`
 
 Also carries earlier waves already on the public repo (import / keep-apply / import-and-keep, expanded portrait banks, hero-aware Sequence Trim Review).
 
@@ -40,6 +41,7 @@ Also carries earlier waves already on the public repo (import / keep-apply / imp
 - [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md)
 - [`docs/PUBLISHING.md`](docs/PUBLISHING.md)
 - [`docs/BATCH_RUN_HISTORY.md`](docs/BATCH_RUN_HISTORY.md)
+- [`docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md`](docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md)
 - [`docs/portrait_styles_tables.md`](docs/portrait_styles_tables.md) — portrait `name` / `slug` table
 - [`CHANGELOG.md`](CHANGELOG.md) — what's new
 

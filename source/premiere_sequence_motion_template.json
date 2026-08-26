@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PREMIERE_SEQUENCE_MOTION_TEMPLATE",
+  "mode": "premiere_sequence_motion_animation",
+  "project": {
+    "project_file": "<LOCAL_PATH>",
+    "save_as_project_file": "<LOCAL_PATH>",
+    "never_overwrite_source_project": true,
+    "save_as_before_editing": true
+  },
+  "sequences": {
+    "source_sequence_name": "approved_source_sequence",
+    "output_sequence_name": "animated_output_sequence",
+    "source_sequence_read_only": true,
+    "abort_if_output_sequence_already_exists": true
+  },
+  "sequence_contract": {
+    "edit_timebase_fps": 25,
+    "expected_frame_size": {
+      "width": 3840,
+      "height": 2160
+    },
+    "expected_duration_seconds": 60.0,
+    "expected_frames": 1500
+  },
+  "target_selection": {
+    "include_ranges_seconds": [
+      [0.0, 60.0]
+    ],
+    "protected_ranges_seconds": [],
+    "minimum_visible_duration_frames": 21,
+    "minimum_visible_duration_seconds": 0.84
+  },
+  "motion_animation": {
+    "apply_values_relative_to_existing_baseline": true,
+    "motion_profiles": [
+      {
+        "name": "SHORT_SUBTLE",
+        "visible_duration_frames_min": 21,
+        "visible_duration_frames_max": 37,
+        "scale_delta_percent_of_baseline": 1.5,
+        "max_position_delta_percent_of_frame": 0.35
+      },
+      {
+        "name": "MEDIUM_GENTLE",
+        "visible_duration_frames_min": 38,
+        "visible_duration_frames_max": 75,
+        "scale_delta_percent_of_baseline": 3.0,
+        "max_position_delta_percent_of_frame": 0.7
+      },
+      {
+        "name": "LONG_BREATHING",
+        "visible_duration_frames_min": 76,
+        "visible_duration_frames_max": null,
+        "scale_delta_percent_of_baseline": 5.0,
+        "max_position_delta_percent_of_frame": 1.0
+      }
+    ],
+    "direction_cycle": [
+      "PUSH_IN",
+      "PUSH_OUT",
+      "GENTLE_PAN_LEFT_TO_RIGHT_WITH_SAFE_OVERSCAN",
+      "GENTLE_PAN_RIGHT_TO_LEFT_WITH_SAFE_OVERSCAN"
+    ]
+  },
+  "audio_policy": {
+    "mode": "OUTPUT_SILENT",
+    "remove_all_audio_clips_from_output_sequence": true,
+    "leave_empty_audio_tracks_available_for_future_soundtrack": true
+  },
+  "dry_run": {
+    "required": true,
+    "required_plan_filename": "premiere_sequence_motion_dry_run.json",
+    "expected_output_frames": 1500,
+    "expected_output_duration_seconds": 60.0
+  },
+  "review_export": {
+    "required": true,
+    "source_sequence": "animated_output_sequence",
+    "filename": "animated_output_sequence_640_360.mp4",
+    "actual_frame_size": {
+      "width": 640,
+      "height": 360
+    },
+    "frame_rate_fps": 25,
+    "expected_frames": 1500,
+    "expected_duration_seconds": 60.0,
+    "audio_stream_required": false
+  }
+}

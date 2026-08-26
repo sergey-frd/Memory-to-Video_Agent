@@ -12,6 +12,14 @@ from utils.sequence_import_and_keep import (
 )
 from utils.sequence_keep_apply import is_keep_apply_config, run_sequence_keep_apply_from_config
 from utils.sequence_media_import import is_media_import_config, run_sequence_media_import_from_config
+from utils.premiere_sequence_motion import (
+    is_premiere_sequence_motion_config,
+    run_premiere_sequence_motion_from_config,
+)
+from utils.premiere_sequence_insert_motion import (
+    is_premiere_sequence_insert_motion_config,
+    run_premiere_sequence_insert_motion_from_config,
+)
 
 
 def _configure_stdio() -> None:
@@ -31,7 +39,23 @@ def _configure_stdio() -> None:
 def try_run_premiere_import_keep(
     config_path: Path,
     payload: object,
+    *,
+    dry_run: bool = False,
 ) -> tuple[str, Path, Path, Path | None] | None:
+    if is_premiere_sequence_insert_motion_config(payload):
+        json_path, txt_path, project_path = (
+            run_premiere_sequence_insert_motion_from_config(
+                config_path,
+                dry_run_only=dry_run,
+            )
+        )
+        return "Premiere sequence insert and motion", json_path, txt_path, project_path
+    if is_premiere_sequence_motion_config(payload):
+        json_path, txt_path, project_path = run_premiere_sequence_motion_from_config(
+            config_path,
+            dry_run_only=dry_run,
+        )
+        return "Premiere sequence motion", json_path, txt_path, project_path
     if is_import_and_keep_config(payload):
         json_path, txt_path, project_path = run_sequence_import_and_keep_from_config(config_path)
         return "Import and keep", json_path, txt_path, project_path
@@ -49,10 +73,17 @@ def parse_args() -> argparse.Namespace:
         description=(
             "Import listed media files onto a Premiere sequence, import into a new sequence "
             "in the same project, apply a manual KEEP JSON, copy a source sequence and "
-            "KEEP-trim the copy, or import and keep-trim in one pass."
+            "KEEP-trim the copy, import and keep-trim in one pass, or apply frame-exact "
+            "intrinsic Motion animation, optionally with a sequence-range insert, "
+            "to a duplicated sequence."
         )
     )
     parser.add_argument("--config", type=Path, required=True, help="Path to import/keep JSON config.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate and write a motion plan without creating a Premiere project.",
+    )
     return parser.parse_args()
 
 
@@ -70,13 +101,19 @@ def main() -> None:
             ) from exc
         if not isinstance(payload, dict):
             raise ValueError(f"Config {args.config} must be a JSON object.")
-        result = try_run_premiere_import_keep(args.config, payload)
+        result = try_run_premiere_import_keep(
+            args.config,
+            payload,
+            dry_run=args.dry_run,
+        )
         if result is None:
             mode = payload.get("mode")
             raise ValueError(
                 f"Unsupported mode in {args.config}: {mode!r}. "
                 "Use import_media, import_to_new_sequence, apply_keep_ranges, "
-                "keep_to_new_sequence, or import_and_keep. "
+                "keep_to_new_sequence, import_and_keep, or "
+                "premiere_sequence_motion_animation, or "
+                "premiere_sequence_insert_from_sequence_and_motion_animation. "
                 "Trim review configs belong to main_sequence_trim_review.py."
             )
         label, json_path, txt_path, project_path = result

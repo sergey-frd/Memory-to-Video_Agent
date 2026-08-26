@@ -2,6 +2,15 @@
 
 Краткая история заметных пользовательских изменений. Подробные инструкции находятся в [`docs/`](docs/).
 
+## 2026.08.26.02
+
+- Добавлен JSON-режим `premiere_sequence_motion_animation`: безопасный Save As, дублирование sequence, frame-exact intrinsic Motion Scale/Position, protected ranges, non-ripple удаление output-аудио и silent review.
+- Добавлен комбинированный режим `premiere_sequence_insert_from_sequence_and_motion_animation`: video-only диапазон берётся из другой sequence того же `.prproj`, последующие picture items сдвигаются ровно на длительность вставки, а Motion применяется только к статичным кадрам.
+- Frame-exact решения вставки сохраняются в JSON через `resolved_source_range_frames: [IN, OUT_EXCLUSIVE]` и `resolved_destination_frame`; correction source никогда не трактуется как внешний медиафайл.
+- Добавлены `run_premiere_sequence_motion.bat`, два reusable JSON-шаблона, dry-run/QA, protected property snapshots, milestone validation и устойчивый ffmpeg renderer для MP4 с нестандартными color metadata.
+- Документация, batch history, project structure, parameter matrix и RU/EN user guides синхронизированы; полные примеры находятся в `docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md`.
+- Premiere import/KEEP/Motion regression suite расширен до 74 проходящих тестов.
+
 ## 2026.08.26.01
 
 - Import/keep BAT-файлы вызывают отдельный runner `main_premiere_import_keep.py`; trim-review JSON по-прежнему идёт через `main_sequence_trim_review.py`.

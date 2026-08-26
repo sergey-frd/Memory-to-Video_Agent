@@ -7,7 +7,8 @@
 - [USER_GUIDE_RU.md](USER_GUIDE_RU.md) — руководство пользователя на русском.
 - [USER_GUIDE_EN.md](USER_GUIDE_EN.md) — English user guide.
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — архитектура и карта подсистем.
-- [PARAMETER_PROGRAM_BATCH_MATRIX_RU.md](PARAMETER_PROGRAM_BATCH_MATRIX_RU.md) — параметр → программа → batch → результат, включая `apply_keep_ranges`, `keep_to_new_sequence`, `import_media`, `import_to_new_sequence`, `import_and_keep`.
+- [PARAMETER_PROGRAM_BATCH_MATRIX_RU.md](PARAMETER_PROGRAM_BATCH_MATRIX_RU.md) — параметр → программа → batch → результат, включая import/KEEP и оба Premiere Motion JSON-режима.
+- [PREMIERE_JSON_EDIT_AND_MOTION_RU.md](PREMIERE_JSON_EDIT_AND_MOTION_RU.md) — frame-exact модификация Premiere sequence, intrinsic Motion и sequence-range insert с полными JSON-примерами.
 - [portrait_styles_tables.md](portrait_styles_tables.md) — таблица `name` / `slug` для полного portrait-банка.
 
 ## Эксплуатация

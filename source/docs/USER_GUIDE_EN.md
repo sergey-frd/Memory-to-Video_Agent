@@ -100,6 +100,7 @@ Complete inventory of every root `.bat`. Unique extra-parameter examples live in
 | `run_laptop_env_snapshot.bat` | Snapshot the laptop watercolor environment | `.\run_laptop_env_snapshot.bat` |
 | `run_local_portrait_batch.bat` | Local stylizer portrait batch without ChatGPT UI | `.\run_local_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing` |
 | `run_openai_portrait_batch.bat` | Portrait batch through OpenAI Images API | `.\run_openai_portrait_batch.bat --config-file chatgpt_portrait_config.json --skip-existing --api-model gpt-image-1.5` |
+| `run_premiere_sequence_motion.bat` | Duplicate a Premiere sequence, add intrinsic Motion, and render a silent review | `.\run_premiere_sequence_motion.bat .\premiere_sequence_motion_template.json --dry-run` |
 | `run_premiere_transform_script.bat` | Generate Premiere transform JSX from a sequence batch config | `.\run_premiere_transform_script.bat .\project_sequence_batch_igor_26_1A.json` |
 | `run_premiere_transition_script.bat` | Generate Premiere transition JSX from a sequence batch config | `.\run_premiere_transition_script.bat .\project_sequence_batch_igor_26_1A.json` |
 | `run_project_publication_push.bat` | Refresh, commit, tag, and push the public bundle | `.\run_project_publication_push.bat --source-root .` |
@@ -248,6 +249,48 @@ Examples:
 .\run_sequence_trim_review.bat .\sequence_trim_review_Alice_1.json
 .\run_sequence_trim_review.bat .\sequence_trim_review_Alice_replay_levels.json
 .\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json
+```
+
+### `run_premiere_sequence_motion.bat`
+
+The `"mode": "premiere_sequence_motion_animation"` workflow:
+- validates `schema_version: "1.0"`, source/output sequence names, fps, frame size, duration, and online media;
+- writes a detailed project-safe plan first when launched with `--dry-run`;
+- performs Save As, duplicates the source sequence, and edits only the duplicate;
+- adds two frame-exact intrinsic Motion Scale/Position keyframes relative to each existing baseline;
+- leaves protected ranges unchanged, removes only output audio clips, and preserves empty audio tracks;
+- performs structural QA and renders a silent review MP4.
+
+```bat
+.\run_premiere_sequence_motion.bat .\premiere_sequence_motion_template.json --dry-run
+.\run_premiere_sequence_motion.bat .\premiere_sequence_motion_template.json
+```
+
+The same launcher supports
+`"mode": "premiere_sequence_insert_from_sequence_and_motion_animation"`:
+
+- resolve a frame-exact video-only range from another named sequence in the project;
+- insert it into a duplicate of the approved main sequence and shift later picture items exactly;
+- keep both source sequences unchanged;
+- exclude the inserted live range and other natural-motion video from Motion;
+- apply JSON-driven intrinsic Motion only to eligible static images;
+- remove output audio non-ripple and render a silent review.
+
+```bat
+.\run_premiere_sequence_motion.bat .\premiere_sequence_insert_motion_template.json --dry-run
+.\run_premiere_sequence_motion.bat .\premiere_sequence_insert_motion_template.json
+```
+
+Use `resolved_source_range_frames: [IN, OUT_EXCLUSIVE]` and
+`resolved_destination_frame` for explicit frame-exact decisions. The
+`correction_source_sequence_name` value is always an in-project sequence, not
+an external media filename. A complete Russian reference with both JSON
+examples is available in `docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md`.
+
+The same JSON can be run directly:
+
+```powershell
+python .\main_premiere_import_keep.py --config .\premiere_sequence_motion_template.json --dry-run
 ```
 
 ### `run_sequence_keep_apply.bat`
@@ -1471,6 +1514,13 @@ Premiere Sequence Trim Review:
 .\run_sequence_trim_review.bat .\sequence_trim_review_01.json
 .\run_sequence_trim_review.bat .\sequence_trim_review_Alice_1.json
 .\run_sequence_trim_review.bat .\sequence_trim_review_Alice_replay_levels.json
+```
+
+Premiere intrinsic Motion or sequence-range insert plus Motion:
+
+```bat
+.\run_premiere_sequence_motion.bat .\premiere_sequence_motion_template.json --dry-run
+.\run_premiere_sequence_motion.bat .\premiere_sequence_insert_motion_template.json --dry-run
 ```
 
 Apply a manual KEEP JSON to a Premiere project copy:

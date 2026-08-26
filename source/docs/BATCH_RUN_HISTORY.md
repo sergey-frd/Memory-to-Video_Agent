@@ -83,6 +83,8 @@
 | B065 | `run_sequence_media_import_standalone.bat` | Тот же media import через `main_premiere_import_keep.py` | `.\run_sequence_media_import_standalone.bat .\sequence_media_import_template.json` |
 | B066 | `run_sequence_keep_apply_standalone.bat` | Тот же KEEP/apply через `main_premiere_import_keep.py` | `.\run_sequence_keep_apply_standalone.bat .\sequence_keep_apply_template.json` |
 | B067 | `run_sequence_import_and_keep_standalone.bat` | Тот же import-and-keep через `main_premiere_import_keep.py` | `.\run_sequence_import_and_keep_standalone.bat .\sequence_import_and_keep_template.json` |
+| B068 | `run_premiere_sequence_motion.bat` | Дублировать sequence и применить JSON-driven intrinsic Motion | `.\run_premiere_sequence_motion.bat .\premiere_sequence_motion_template.json --dry-run` |
+| B069 | `run_premiere_sequence_motion.bat` | Вставить video-only диапазон из другой in-project sequence и анимировать только статичные кадры | `.\run_premiere_sequence_motion.bat .\premiere_sequence_insert_motion_template.json --dry-run` |
 
 ## GitHub publication note (2026-08-26)
 

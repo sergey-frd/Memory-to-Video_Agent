@@ -7,6 +7,20 @@ description: Run the Premiere sequence optimization batch (`main_project_sequenc
 
 Reorders clips inside a Premiere Pro `.prproj`, optionally writes companion JSX scripts for transitions and still-image transforms, and produces a full report bundle (structure, transitions, music-first, human profile).
 
+For frame-exact intrinsic Motion on an already approved sequence, use
+`mode: "premiere_sequence_motion_animation"` through
+`run_premiere_sequence_motion.bat`. It validates and writes a dry-run plan,
+duplicates the source sequence, applies relative Scale/Position keyframes only
+to the duplicate, can remove output audio, and renders a silent review MP4.
+
+For a frame-exact video-only insert from another sequence in the same project,
+followed by static-only Motion, use
+`mode: "premiere_sequence_insert_from_sequence_and_motion_animation"` with
+`premiere_sequence_insert_motion_template.json`. Set
+`resolved_source_range_frames: [IN, OUT_EXCLUSIVE]` and optionally
+`resolved_destination_frame`; the correction source is always an in-project
+sequence, never an external media filename.
+
 ## Two entry points
 
 | Script | When to use |
@@ -63,6 +77,15 @@ Direct Python call:
 
 ```powershell
 python .\main_project_sequence_batch.py --config .\project_sequence_batch_igor_26_1A.json
+```
+
+Intrinsic Motion dry-run and execution:
+
+```bat
+.\run_premiere_sequence_motion.bat .\premiere_sequence_motion_template.json --dry-run
+.\run_premiere_sequence_motion.bat .\premiere_sequence_motion_template.json
+.\run_premiere_sequence_motion.bat .\premiere_sequence_insert_motion_template.json --dry-run
+.\run_premiere_sequence_motion.bat .\premiere_sequence_insert_motion_template.json
 ```
 
 Pre-baked wrappers for specific projects:
@@ -133,5 +156,9 @@ To apply a finished KEEP JSON to a Premiere project copy before optimization, us
 - `utils/project_sequence_music_recommendation.py` - config resolution and personalized music orchestration.
 - `utils/sequence_optimizer*.py`, `utils/premiere_xml.py`, `utils/premiere_project.py` - optimizer internals.
 - `utils/premiere_transition_script.py`, `utils/premiere_transform_script.py` - JSX generators.
+- `utils/premiere_sequence_motion.py`, `models/premiere_sequence_motion.py` - intrinsic Motion JSON mode, dry-run, output-only audio removal, QA, and silent review.
+- `utils/premiere_sequence_insert_motion.py` - in-project sequence-range insert plus static-only Motion mode.
+- `run_premiere_sequence_motion.bat`, `premiere_sequence_motion_template.json`, `premiere_sequence_insert_motion_template.json` - launcher and reusable config templates.
+- `docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md` - complete JSON field guide and examples.
 - `styles/List of Video transform effects.txt` - Transform effect inventory.
 - `docs/USER_GUIDE_EN.md` -> "Sequence Optimization Batch" / "Rebuild Reports..." - full prose.

@@ -2,20 +2,20 @@
 
 This document is generated from the source project and is intended for the external project-information repository.
 
-- Generated at: `2026-08-26T00:57:41+03:00`
+- Generated at: `2026-08-26T14:17:04+03:00`
 - Source project: `img-style-ag_1`
 
 ## Snapshot
 
-- Files scanned: `568`
-- Python files: `240`
-- Test files: `44`
+- Files scanned: `577`
+- Python files: `245`
+- Test files: `46`
 - Config JSON files: `40`
-- Markdown docs: `28`
+- Markdown docs: `29`
 - Entry points: `31`
 - API modules: `17`
-- Utils modules: `46`
-- Model modules: `6`
+- Utils modules: `48`
+- Model modules: `7`
 
 ## Entry Points
 

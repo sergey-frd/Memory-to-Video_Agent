@@ -39,12 +39,12 @@ Never `git push origin main` from the publication clone, and never push the dev 
 
 ## GitHub sync status (2026-08-26)
 
-Publication **`2026.08.26.01`** targets the Internet:
+Publication **`2026.08.26.02`** targets the Internet:
 
 - Repository: https://github.com/sergey-frd/Memory-to-Video_Agent
 - Dev remote: https://github.com/sergey-frd/img-style-ag_1
-- Tag: `v2026.08.26.01`
+- Tag: `v2026.08.26.02`
 
-Headline feature: dedicated Premiere import/KEEP runner, portable standalone BAT launchers, multi-root media lookup, and empty-project donor fixes.
+Headline feature: reusable JSON-driven Premiere intrinsic Motion and frame-exact in-project sequence-range insertion, with dry-run/QA, non-ripple silent output, templates, and complete examples.
 
 Do **not** read version from nested `source/data/project_snapshot.json`; that stale copy is no longer published. Older tags are historical snapshots only; `main` and the latest tag reflect the current bundle.

@@ -1,0 +1,129 @@
+{
+  "schema_version": "1.0",
+  "task_id": "PREMIERE_SEQUENCE_INSERT_AND_MOTION_TEMPLATE",
+  "mode": "premiere_sequence_insert_from_sequence_and_motion_animation",
+  "project": {
+    "project_filename_exact": "source.prproj",
+    "project_file": "<LOCAL_PATH>",
+    "save_as_project_file": "<LOCAL_PATH>",
+    "never_overwrite_source_project": true,
+    "save_as_before_editing": true
+  },
+  "sequences": {
+    "main_source_sequence_name": "approved_main_sequence_v09",
+    "correction_source_sequence_name": "correction_sequence",
+    "output_sequence_name": "approved_main_sequence_v10",
+    "correction_source_is_sequence_not_media_file": true,
+    "source_sequences_read_only": true,
+    "abort_if_output_sequence_already_exists": true
+  },
+  "sequence_versioning": {
+    "automated_milestone_increment": 5,
+    "current_output_milestone": 10,
+    "future_output_milestones": [15, 20, 25],
+    "never_overwrite_existing_sequence": true
+  },
+  "sequence_contract": {
+    "expected_edit_timebase_fps": 25,
+    "preserve_main_source_sequence_settings": true,
+    "preserve_existing_main_clip_order_except_shift_after_insertion": true,
+    "preserve_existing_non_motion_effects": true,
+    "no_other_insertions_deletions_trims_or_retimes": true
+  },
+  "semantic_source_range_resolution": {
+    "sequence": "correction_sequence",
+    "video_only": true,
+    "requested_moment": "Describe the selected live action here.",
+    "approximate_search_window_seconds": [6.0, 11.5],
+    "candidate_ranges_frames": [
+      [160, 248],
+      [166, 254],
+      [175, 263]
+    ],
+    "resolved_source_range_frames": [166, 254],
+    "preferred_visible_duration_seconds": {
+      "min": 2.5,
+      "target": 3.5,
+      "max": 4.5
+    }
+  },
+  "destination_insertion": {
+    "main_sequence": "approved_main_sequence_v09",
+    "policy": "INSERT_IMMEDIATELY_BEFORE_FINAL_STYLIZED_CODA",
+    "resolved_destination_frame": 1849
+  },
+  "insert_operation": {
+    "source_type": "SEQUENCE_RANGE",
+    "source_sequence": "correction_sequence",
+    "destination_sequence": "approved_main_sequence_v10",
+    "include_video": true,
+    "include_audio": false,
+    "preserve_source_range_in_out": true,
+    "preserve_source_speed": true,
+    "do_not_apply_motion_animation_to_inserted_live_range": true
+  },
+  "motion_animation": {
+    "effect": "Premiere Pro intrinsic Motion",
+    "minimum_visible_duration_frames": 21,
+    "temporal_interpolation": "LINEAR_OR_NEAR_LINEAR_WITH_NO_STATIONARY_HEAD_OR_TAIL",
+    "motion_profiles": [
+      {
+        "name": "SHORT_VISIBLE",
+        "visible_duration_frames_min": 21,
+        "visible_duration_frames_max": 37,
+        "scale_delta_percent_of_baseline": 3.0,
+        "max_position_delta_percent_of_frame": 0.8
+      },
+      {
+        "name": "MEDIUM_LIVELY",
+        "visible_duration_frames_min": 38,
+        "visible_duration_frames_max": 75,
+        "scale_delta_percent_of_baseline": 5.5,
+        "max_position_delta_percent_of_frame": 1.5
+      },
+      {
+        "name": "LONG_EXPRESSIVE",
+        "visible_duration_frames_min": 76,
+        "visible_duration_frames_max": null,
+        "scale_delta_percent_of_baseline": 8.0,
+        "max_position_delta_percent_of_frame": 2.5
+      }
+    ],
+    "direction_cycle": [
+      "PUSH_IN",
+      "PUSH_OUT",
+      "PAN_LEFT_TO_RIGHT_WITH_SAFE_OVERSCAN",
+      "PAN_RIGHT_TO_LEFT_WITH_SAFE_OVERSCAN"
+    ]
+  },
+  "audio_policy": {
+    "mode": "OUTPUT_SILENT",
+    "remove_all_audio_clips_from_output_sequence": true,
+    "audio_removal_must_be_non_ripple": true,
+    "leave_empty_audio_tracks_available_for_future_manual_soundtrack": true
+  },
+  "dry_run": {
+    "required": true,
+    "required_plan_filename": "premiere_sequence_insert_motion_dry_run.json",
+    "must_have_zero_blocked_items_before_execution": true
+  },
+  "review_export": {
+    "required": true,
+    "source_sequence": "approved_main_sequence_v10",
+    "filename": "approved_main_sequence_v10_640_360.mp4",
+    "actual_frame_size": {
+      "width": 640,
+      "height": 360
+    },
+    "frame_rate_fps": 25,
+    "audio_stream_required": false
+  },
+  "deliverables": {
+    "required_implementation_report": "premiere_sequence_insert_motion_implementation.txt",
+    "required_dry_run_plan": "premiere_sequence_insert_motion_dry_run.json",
+    "required_saved_project": "source_insert_motion.prproj",
+    "required_output_sequence": "approved_main_sequence_v10",
+    "required_review_export": "approved_main_sequence_v10_640_360.mp4",
+    "required_qa_report": "premiere_sequence_insert_motion_qa.txt"
+  }
+}

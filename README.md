@@ -4,18 +4,18 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.08.26.01`
-- Git tag: `v2026.08.26.01`
+- Publication version: `2026.08.26.02`
+- Git tag: `v2026.08.26.02`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-08-26T00:57:41+03:00`
+- Last synchronized: `2026-08-26T14:17:04+03:00`
 - Source project: `img-style-ag_1`
-- Python files: `240`
-- Test files: `44`
+- Python files: `245`
+- Test files: `46`
 - Entry points: `31`
 
 ## Published Source Mirror
 
-- Mirrored source files: `503`
+- Mirrored source files: `512`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/CHANGELOG.md`
@@ -124,6 +124,8 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/open_ai_work_window_bookmarks_profile.bat`
 - `source/open_ai_work_window_user_chrome.bat`
 - `source/premiere_extensions`
+- `source/premiere_sequence_insert_motion_template.json`
+- `source/premiere_sequence_motion_template.json`
 - `source/project_sequence_batch_Ivan_26_1w_v02.json`
 - `source/project_sequence_batch_Ivan_26_1w_v03.json`
 - `source/project_sequence_batch_Ivan_26_1w_v03_visible_transitions.json`
@@ -167,6 +169,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/run_laptop_env_snapshot.bat`
 - `source/run_local_portrait_batch.bat`
 - `source/run_openai_portrait_batch.bat`
+- `source/run_premiere_sequence_motion.bat`
 - `source/run_premiere_transform_script.bat`
 - `source/run_premiere_transition_script.bat`
 - `source/run_project_publication_push.bat`
