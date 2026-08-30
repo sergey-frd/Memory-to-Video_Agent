@@ -14,6 +14,8 @@ EXCLUDED_DIR_NAMES = {
     ".browser-profile",
     ".git",
     ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
     ".venv",
     "__pycache__",
     "cleanup_archive",
@@ -24,8 +26,11 @@ EXCLUDED_DIR_NAMES = {
     "output",
     "project_publication",
     "test_runtime",
+    "tmp",
+    "temp",
+    "source",
 }
-EXCLUDED_DIR_PREFIXES = ("pytest-cache-files-",)
+EXCLUDED_DIR_PREFIXES = ("pytest-cache-files-", "pytest-temp", "tmp_", "input_", "output_", "TASK_")
 EXCLUDED_FILE_NAMES = {".env"}
 EXCLUDED_FILE_PREFIXES = (".env.",)
 EXCLUDED_SOURCE_RELATIVE_FILES = {
@@ -40,7 +45,9 @@ PUBLISHED_SOURCE_SUFFIXES = {
     ".ini",
     ".js",
     ".json",
+    ".jsonc",
     ".md",
+    ".mjs",
     ".ps1",
     ".py",
     ".sh",
@@ -67,10 +74,13 @@ DOC_TARGETS = {
     "docs/MINI_LAPTOP_WATERCOLOR.md": "docs/MINI_LAPTOP_WATERCOLOR.md",
     "docs/Seedance_2.0_Director.md": "docs/Seedance_2.0_Director.md",
     "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md": "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md",
+    "docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md": "docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md",
+    "docs/PREMIERE_TASK_WORKFLOWS_RU.md": "docs/PREMIERE_TASK_WORKFLOWS_RU.md",
+    "docs/portrait_styles_tables.md": "docs/portrait_styles_tables.md",
 }
 PUBLICATION_VERSION_RE = re.compile(r"^(?P<date>\d{4}\.\d{2}\.\d{2})\.(?P<index>\d{2})$")
 WINDOWS_QUOTED_PATH_RE = re.compile(r'"[A-Za-z]:\\[^"\n]+"')
-WINDOWS_INLINE_PATH_RE = re.compile(r"(?<![A-Za-z0-9_])(?:[A-Za-z]:\\[^\s`]+)")
+WINDOWS_INLINE_PATH_RE = re.compile(r'''(?<![A-Za-z0-9_])(?:[A-Za-z]:\\[^\s`"'<>()\[\]{},;]+)''')
 SECRET_PATTERNS = {
     "openai_project_key": re.compile(r"sk-proj-[A-Za-z0-9_-]{20,}"),
     "openai_key": re.compile(r"sk-[A-Za-z0-9_-]{20,}"),
@@ -530,6 +540,9 @@ def write_publication_bundle(source_root: Path, target_dir: Path, registry_path:
         target_path = target_dir / target_relpath
         target_path.parent.mkdir(parents=True, exist_ok=True)
         public_text = _sanitize_public_text(_read_text_with_fallbacks(source_path))
+        if target_relpath.startswith("docs/"):
+            public_text = public_text.replace("](../examples/", "](../source/examples/")
+            public_text = public_text.replace('href="../examples/', 'href="../source/examples/')
         texts_to_validate[target_relpath] = public_text
         signature_inputs[target_relpath] = public_text
         target_path.write_text(public_text, encoding="utf-8")

@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Memory-to-Video Agent | Project Structure</title>
+  <meta name="source" content="docs/PROJECT_STRUCTURE.md">
+  <title>Memory-to-Video Agent | Project Structure Web Map</title>
   <style>
     :root {
       --bg: #f7f8fb;
@@ -323,255 +324,778 @@
 </head>
 <body>
   <div class="shell">
-    <aside>
-      <h2>Project Structure</h2>
-      <p>Memory-to-Video Agent web map</p>
-      <nav aria-label="Project navigation">
-        <a href="#overview">Overview</a>
-        <a href="#architecture">Architecture</a>
-        <a href="#subsystems">Subsystem Cards</a>
-        <a href="#flows">Data Flows</a>
-        <a href="#launch">Launch Map</a>
-        <a href="#invariants">Invariants</a>
-        <a href="#change-control">Change Control</a>
-        <a href="#risks">High-Risk Zones</a>
-        <a href="#tests">Test Matrix</a>
-        <a href="#registry">Registry</a>
-        <a href="#publication">Publication Sync</a>
-      </nav>
-    </aside>
+    <aside class="sidebar"><nav><a class="level-2" href="#architecture-1">Architecture</a>
+<a class="level-3" href="#four-core-contracts">Four Core Contracts</a>
+<a class="level-2" href="#subsystem-cards-1">Subsystem Cards</a>
+<a class="level-3" href="#рабочие-дополнения-на-2026-08-30">Рабочие дополнения на 2026-08-30</a>
+<a class="level-2" href="#data-flows-1">Data Flows</a>
+<a class="level-3" href="#full-generation-route">Full Generation Route</a>
+<a class="level-3" href="#grok-runtime-route">Grok Runtime Route</a>
+<a class="level-3" href="#full-sequential-route">Full Sequential Route</a>
+<a class="level-3" href="#sequence-optimization-route">Sequence Optimization Route</a>
+<a class="level-3" href="#multi-scene-prompt-composer-route">Multi-Scene Prompt Composer Route</a>
+<a class="level-3" href="#multi-scene-video-story-preview-route">Multi-Scene Video Story Preview Route</a>
+<a class="level-3" href="#portraitimage-batch-route">Portrait/Image Batch Route</a>
+<a class="level-2" href="#launch-map-1">Launch Map</a>
+<a class="level-3" href="#common-commands">Common Commands</a>
+<a class="level-2" href="#invariants-1">Invariants</a>
+<a class="level-2" href="#change-control-1">Change Control</a>
+<a class="level-3" href="#required-workflow">Required Workflow</a>
+<a class="level-3" href="#impact-areas">Impact Areas</a>
+<a class="level-2" href="#high-risk-zones">High-Risk Zones</a>
+<a class="level-2" href="#test-matrix-1">Test Matrix</a>
+<a class="level-2" href="#machine-readable-registry">Machine-Readable Registry</a>
+<a class="level-2" href="#publication-sync-1">Publication Sync</a></nav></aside>
+    <main><article class="content">
+<h1 id="project-structure-web-map">Project Structure Web Map</h1>
+<section id="hero">
 
-    <main>
-      <header class="hero" id="overview">
-        <h1>Memory-to-Video Agent</h1>
-        <p>Живая HTML-карта проекта: пайплайны, подсистемы, точки риска, batch-команды, инварианты и обязательные проверки.</p>
-      </header>
+<h1 id="memory-to-video-agent">Memory-to-Video Agent</h1>
+<p><strong>Живая карта проекта, пайплайнов, точек риска и обязательных проверок.</strong></p>
+<p>Этот файл переписан как web-страница внутри Markdown: его удобно читать сверху вниз, открывать как документацию в браузере/GitHub и использовать как стартовую панель для изменений.</p>
+<table>
+<thead>
+<tr>
+<th>Быстрый ответ</th>
+<th>Где смотреть</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Как устроен проект</td>
+<td><a href="#architecture">Architecture</a></td>
+</tr>
+<tr>
+<td>Какие есть подсистемы</td>
+<td><a href="#subsystem-cards">Subsystem Cards</a></td>
+</tr>
+<tr>
+<td>Как идут данные</td>
+<td><a href="#data-flows">Data Flows</a></td>
+</tr>
+<tr>
+<td>Как запускать <code>.bat</code></td>
+<td><a href="#launch-map">Launch Map</a></td>
+</tr>
+<tr>
+<td>Что нельзя ломать</td>
+<td><a href="#invariants">Invariants</a></td>
+</tr>
+<tr>
+<td>Что проверять при изменениях</td>
+<td><a href="#change-control">Change Control</a></td>
+</tr>
+<tr>
+<td>Где тесты</td>
+<td><a href="#test-matrix">Test Matrix</a></td>
+</tr>
+<tr>
+<td>Как публиковать внешний bundle</td>
+<td><a href="#publication-sync">Publication Sync</a></td>
+</tr>
+</tbody></table>
+</section>
 
-      <section>
-        <div class="kpi">
-          <div class="card"><strong>1</strong>центральный объект: <code>stage_id</code></div>
-          <div class="card"><strong>3</strong>основных runtime-сервиса: Grok, ChatGPT, Gemini</div>
-          <div class="card"><strong>5</strong>слоев: input, analysis, prompts, execution, delivery</div>
-          <div class="card"><strong>safe</strong>restart через <code>--skip-existing</code></div>
-        </div>
-      </section>
+<hr>
+<section id="architecture">
 
-      <section id="architecture">
-        <h2>Architecture</h2>
-        <p class="lead">Проект состоит из связанных pipeline-маршрутов вокруг <code>stage_id</code>. Каждый stage начинается с изображения, создает анализ и prompts, выполняет генерацию, доставляет результаты и затем участвует в post-production workflow.</p>
+<h2 id="architecture-1">Architecture</h2>
+<p>Проект состоит из связанных pipeline-маршрутов вокруг одного базового объекта: <strong><code>stage_id</code></strong>.</p>
+<table>
+<tr>
+<th>Слой</th>
+<th>Назначение</th>
+<th>Главные файлы</th>
+</tr>
+<tr>
+<td>Input</td>
+<td>Входные изображения из <code>input/</code> или явно переданный файл.</td>
+<td><code>input/</code>, <code>main.py</code>, <code>main_full_pipeline.py</code></td>
+</tr>
+<tr>
+<td>Analysis</td>
+<td>Локальный анализ изображения и scene-analysis через OpenAI.</td>
+<td><code>utils/image_analysis.py</code>, <code>api/openai_scene.py</code>, <code>models/scene_analysis.py</code></td>
+</tr>
+<tr>
+<td>Prompting</td>
+<td>Описание сцены, motion, video prompt, background prompt, final-frame prompt, music prompt.</td>
+<td><code>utils/prompt_builder.py</code>, <code>api/openai_prompt_synthesizer.py</code>, <code>utils/grok_prompt_json.py</code></td>
+</tr>
+<tr>
+<td>Execution</td>
+<td>Генерация через Grok Web, ChatGPT, Gemini, OpenAI Images API или локальный stylizer.</td>
+<td><code>api/grok_web.py</code>, <code>api/chatgpt_desktop_v2.py</code>, <code>api/gemini_desktop.py</code>, <code>api/openai_image.py</code></td>
+</tr>
+<tr>
+<td>Delivery</td>
+<td>Доставка видео и non-video артефактов в финальные каталоги.</td>
+<td><code>utils/project_delivery.py</code>, <code>final_videos_dir</code>, <code>final_output_dir</code>, <code>regeneration_assets_dir</code></td>
+</tr>
+<tr>
+<td>Post</td>
+<td>Sequence optimization, Premiere XML/PRPROJ export, reports.</td>
+<td><code>main_sequence_optimizer.py</code>, <code>main_project_sequence_batch.py</code>, <code>utils/premiere_*.py</code></td>
+</tr>
+</table>
 
-        <table>
-          <thead>
-            <tr><th>Слой</th><th>Назначение</th><th>Главные файлы</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Input</td><td>Входные изображения из <code>input/</code> или явно переданный файл.</td><td><code>input/</code>, <code>main.py</code>, <code>main_full_pipeline.py</code></td></tr>
-            <tr><td>Analysis</td><td>Локальный анализ изображения и scene-analysis через OpenAI.</td><td><code>utils/image_analysis.py</code>, <code>api/openai_scene.py</code>, <code>models/scene_analysis.py</code></td></tr>
-            <tr><td>Prompting</td><td>Описание сцены, motion, video prompt, background prompt, final-frame prompt, music prompt.</td><td><code>utils/prompt_builder.py</code>, <code>api/openai_prompt_synthesizer.py</code>, <code>utils/grok_prompt_json.py</code></td></tr>
-            <tr><td>Execution</td><td>Генерация через Grok Web, ChatGPT, Gemini, OpenAI Images API или local stylizer.</td><td><code>api/grok_web.py</code>, <code>api/chatgpt_desktop_v2.py</code>, <code>api/gemini_desktop.py</code>, <code>api/openai_image.py</code></td></tr>
-            <tr><td>Delivery</td><td>Доставка видео, portrait/image PNG и non-video артефактов в финальные каталоги.</td><td><code>utils/project_delivery.py</code>, <code>final_videos_dir</code>, <code>final_output_dir</code>, <code>regeneration_assets_dir</code></td></tr>
-            <tr><td>Post</td><td>Sequence optimization, Premiere XML/PRPROJ export, reports.</td><td><code>main_sequence_optimizer.py</code>, <code>main_project_sequence_batch.py</code>, <code>utils/premiere_*.py</code></td></tr>
-          </tbody>
-        </table>
+<h3 id="four-core-contracts">Four Core Contracts</h3>
+<ol>
+<li><code>GenerationConfig</code> в <code>config.py</code> является единой точкой правды для generation-флагов.</li>
+<li>Все артефакты одного этапа имеют общий префикс <code>stage_id</code>.</li>
+<li><code>output/</code> является временной рабочей зоной; итоговая доставка идет через <code>utils/project_delivery.py</code>.</li>
+<li>Sequence-утилиты используют stage-based артефакты из <code>regeneration_assets_dir</code>.</li>
+</ol>
+</section>
 
-        <div class="grid cols-2">
-          <div class="card">
-            <h3>Four Core Contracts</h3>
-            <ol>
-              <li><code>GenerationConfig</code> в <code>config.py</code> — единая точка правды для generation-флагов.</li>
-              <li>Все артефакты одного этапа имеют общий префикс <code>stage_id</code>.</li>
-              <li><code>output/</code> — временная зона; итоговая доставка идет через <code>utils/project_delivery.py</code>.</li>
-              <li>Sequence-утилиты читают stage-based артефакты из <code>regeneration_assets_dir</code>.</li>
-            </ol>
-          </div>
-          <div class="warning">
-            <h3>High-Risk Lifecycle</h3>
-            <p><code>main_full_pipeline.py</code> и <code>main_grok_batch.py</code> могут очищать рабочие папки или удалять обработанные input-файлы. Любое изменение cleanup-поведения требует отдельной проверки.</p>
-          </div>
-        </div>
-      </section>
+<hr>
+<section id="subsystem-cards">
 
-      <section id="subsystems">
-        <h2>Subsystem Cards</h2>
-        <div class="grid cols-3">
-          <article class="card"><h3>Config & Paths</h3><p><code>config.py</code>, <code>config.json</code>, <code>config_BASE.json</code>, <code>config_*.json</code></p><p>Флаги, validation, canonical paths.</p></article>
-          <article class="card"><h3>Image & Scene Analysis</h3><p><code>utils/image_analysis.py</code>, <code>api/openai_scene.py</code>, <code>models/scene_analysis.py</code></p><p>Visual metadata и scene payload.</p></article>
-          <article class="card"><h3>Prompt Synthesis</h3><p><code>utils/prompt_builder.py</code>, <code>api/openai_prompt_synthesizer.py</code>, <code>utils/grok_prompt_json.py</code></p><p>Video, background, final-frame, music prompts.</p></article>
-          <article class="card"><h3>Grok Runtime</h3><p><code>api/grok_web.py</code>, <code>main_grok_web.py</code>, <code>main_grok_batch.py</code></p><p>Background image и video generation.</p></article>
-          <article class="card"><h3>Full Pipeline</h3><p><code>main_full_pipeline.py</code></p><p>Prompt generation + Grok-run по каждому input image.</p></article>
-          <article class="card"><h3>Delivery</h3><p><code>utils/project_delivery.py</code>, <code>utils/artifact_cleanup.py</code></p><p>Финальная доставка в <code>final_videos_dir</code>, <code>final_output_dir</code>, cleanup, error folders.</p></article>
-          <article class="card"><h3>Sequence Optimization</h3><p><code>main_sequence_optimizer.py</code>, <code>utils/sequence_optimizer.py</code>, <code>utils/premiere_*.py</code></p><p>Новый порядок клипов, XML/PRPROJ export.</p></article>
-          <article class="card"><h3>Sequence Timing Extension</h3><p><code>utils/sequence_edit_plan.py</code>, <code>utils/premiere_project_export.py</code>, <code>utils/premiere_transform_script.py</code></p><p>Recommended still/video durations, mixed visual transitions, and content/neighbor-aware still-image Transform plans for effects such as <code>Grow</code>, <code>Shrink</code>, <code>Move</code>, and <code>Offset</code>.</p></article>
-          <article class="card"><h3>Reports</h3><p><code>main_sequence_reports.py</code>, <code>main_human_sequence_report.py</code>, <code>utils/transition_recommendations.py</code>, <code>utils/premiere_transition_script.py</code></p><p>Structure reports, personalized reports, transitions, and Premiere JSX scripts.</p></article>
-          <article class="card"><h3>Portrait/Image Batch</h3><p><code>main_chatgpt_portrait_batch.py</code>, <code>api/chatgpt_desktop_v2.py</code>, <code>api/gemini_desktop.py</code>, <code>api/grok_web.py</code></p><p>ChatGPT, Gemini, Grok, OpenAI API, local stylizer.</p></article>
-        </div>
-      </section>
+<h2 id="subsystem-cards-1">Subsystem Cards</h2>
+<h3 id="рабочие-дополнения-на-2026-08-30">Рабочие дополнения на 2026-08-30</h3>
+<table>
+<thead>
+<tr>
+<th>Подсистема</th>
+<th>Точки входа / примеры</th>
+<th>Контракт</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>xAI API pipeline</td>
+<td><code>main_full_pipeline_api.py</code>, <code>api/grok_video_runner.py</code>, <code>examples/config_api_single_image.example.json</code>, <code>examples/scripts/api_single_image.ps1</code></td>
+<td>Внешний <code>--image</code> ищется в своей папке; <code>--no-submit</code> не отключает preparation/cleanup</td>
+</tr>
+<tr>
+<td>Переносимый Motion</td>
+<td><code>main_premiere_import_keep.py</code>, <code>premiere_sequence_motion_template.json</code>, <code>premiere_sequence_insert_motion_template.json</code></td>
+<td>Save As; intrinsic Motion; silent review; JSON contract + dry-run</td>
+</tr>
+<tr>
+<td>TASK timeline edits</td>
+<td><code>main_premiere_timeline_assembly.py</code>, <code>main_premiere_sequence_delete_only.py</code>, <code>main_premiere_sequence_coarse_insert.py</code>, <code>main_premiere_sequence_ripple_delete.py</code>, <code>main_premiere_sequence_insert_only.py</code>, <code>main_premiere_sequence_replace_only.py</code></td>
+<td>Фиксированные TASK_019–023; новые sequence в исходном проекте после backup</td>
+</tr>
+<tr>
+<td>SHORT / dual refinement</td>
+<td><code>main_premiere_short_core.py</code>, <code>main_premiere_short_expansion.py</code>, <code>main_premiere_task_028_dual_refinement.py</code>, <code>examples/premiere/</code></td>
+<td>TASK_024/025/028; source и output frames не взаимозаменяемы; actual JSON из сохранённого проекта</td>
+</tr>
+<tr>
+<td>Adaptive animation / color</td>
+<td><code>main_premiere_task_029_adaptive_animation.py</code>, <code>main_premiere_task_030_color_finish.py</code></td>
+<td>Фиксированные пути/версии, audit-only, сохранение музыки, отдельные helper sequences; планы являются выходами</td>
+</tr>
+<tr>
+<td>Alla</td>
+<td><code>main_premiere_alla_first_assembly.py</code>, <code>main_premiere_alla_client_motion_v02.py</code></td>
+<td>Фиксированные source/output проекты; material bank, skeleton, client Motion; нет config/dry-run</td>
+</tr>
+</tbody></table>
+<p>Подробная карта ограничений: <a href="PREMIERE_TASK_WORKFLOWS_RU.md">PREMIERE_TASK_WORKFLOWS_RU.md</a>.
+<code>source/</code> и <code>data/project_snapshot.json</code> — публикационные снимки; не используйте
+их как перечень свежих рабочих изменений. Новые CLI лежат в корне и <code>utils/</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Подсистема</th>
+<th>Основные файлы</th>
+<th>Ответственность</th>
+<th>Выходы</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Config &amp; Paths</td>
+<td><code>config.py</code>, <code>config.json</code>, <code>config_BASE.json</code>, <code>config_*.json</code></td>
+<td>Описание флагов, validation, canonical paths</td>
+<td><code>GenerationConfig</code>, <code>Settings</code></td>
+</tr>
+<tr>
+<td>Image &amp; Scene Analysis</td>
+<td><code>utils/image_analysis.py</code>, <code>api/openai_scene.py</code>, <code>models/scene_analysis.py</code>, <code>main_scene.py</code></td>
+<td>Visual metadata и scene payload</td>
+<td><code>*_scene_analysis.json</code>, summaries</td>
+</tr>
+<tr>
+<td>Prompt Synthesis</td>
+<td><code>utils/prompt_builder.py</code>, <code>utils/grok_prompt_json.py</code>, <code>api/openai_prompt_synthesizer.py</code>, <code>api/openai_motion_selector.py</code>, <code>utils/camera_movements.py</code></td>
+<td>Video/background/final-frame/music prompts, Grok multiscene JSON, motion selection</td>
+<td><code>*_v_prompt_*.txt</code>, <code>*_v_prompt_*.json</code>, <code>*_bg_prompt.txt</code>, <code>*_assoc_bg_prompt.txt</code>, <code>*_final_frame_prompt_*.txt</code>, <code>*_m_prompt.txt</code></td>
+</tr>
+<tr>
+<td>Multi-Scene Composer</td>
+<td><code>main_video_prompt_composer.py</code>, <code>video_prompt_config.py</code>, <code>api/openai_video_prompt_composer.py</code>, <code>utils/video_prompt_composer.py</code>, <code>docs/Seedance_2.0_Director.md</code></td>
+<td>Один EN/RU prompt, Seedance EN/RU JSON, scenario variants</td>
+<td><code>Gen_Video_&lt;ts&gt;.txt</code>, <code>Gen_Video_RU_&lt;ts&gt;.txt</code>, <code>Gen_Video_Seedance_&lt;VariantId&gt;_&lt;ts&gt;.json</code>, <code>Gen_Video_Seedance_RU_&lt;VariantId&gt;_&lt;ts&gt;.json</code></td>
+</tr>
+<tr>
+<td>Main Generation</td>
+<td><code>main.py</code></td>
+<td>Склеивает analysis, scene, motion, prompt generation, optional final frames</td>
+<td>stage-артефакты в <code>output/</code></td>
+</tr>
+<tr>
+<td>API Final Frames</td>
+<td><code>main_desktop_pipeline.py</code></td>
+<td>Многокадровый pipeline, manifest, non-video sync</td>
+<td><code>*_api_pipeline_manifest.json</code>, final-frame outputs</td>
+</tr>
+<tr>
+<td>Grok Runtime</td>
+<td><code>api/grok_web.py</code>, <code>main_grok_web.py</code></td>
+<td>Background image/video generation для одной prompt-пары через web-UI Playwright; <code>GrokWebConfig.duration_seconds</code> управляет выбором кнопки длительности</td>
+<td><code>*_bg_image_16x9.png</code>, <code>*_video_*.mp4</code></td>
+</tr>
+<tr>
+<td>Grok API Runtime</td>
+<td><code>api/grok_video.py</code>, <code>api/grok_video_runner.py</code></td>
+<td>Прямой вызов xAI Video API (<code>grok-imagine-video</code>) через <code>xai-sdk</code>; используется тем же <code>AgentRunner</code>-протоколом, что и web-вариант</td>
+<td><code>*_video_*.mp4</code></td>
+</tr>
+<tr>
+<td>Grok Batch</td>
+<td><code>main_grok_batch.py</code></td>
+<td>Пакетный Grok-run по готовым <code>*_v_prompt_*</code></td>
+<td>videos и bg-images по всем stages</td>
+</tr>
+<tr>
+<td>Full Sequential Pipeline</td>
+<td><code>main_full_pipeline.py</code>, <code>main_full_pipeline_api.py</code></td>
+<td>Prompt generation + Grok-run для каждого изображения из <code>input/</code>; <code>main_full_pipeline_api.py</code> использует <code>GrokVideoAPISessionRunner</code> вместо браузера</td>
+<td>delivered stage outputs, cleanup of <code>input/</code> and <code>output/</code></td>
+</tr>
+<tr>
+<td>Delivery &amp; Lifecycle</td>
+<td><code>utils/project_delivery.py</code>, <code>utils/artifact_cleanup.py</code>, <code>main_cleanup_artifacts.py</code></td>
+<td>Доставка, очистка, перенос ошибок, архивирование</td>
+<td><code>final_videos_dir</code>, <code>final_output_dir</code>, <code>regeneration_assets_dir</code>, <code>error/</code>, cleanup reports</td>
+</tr>
+<tr>
+<td>Sequence Optimization &amp; Music</td>
+<td><code>main_sequence_optimizer.py</code>, <code>main_sequence_music_first.py</code>, <code>utils/sequence_optimizer.py</code>, <code>utils/project_sequence_music_recommendation.py</code>, <code>utils/human_profile_sequence_report.py</code>, <code>utils/premiere_xml.py</code>, <code>utils/premiere_project.py</code>, <code>models/video_sequence.py</code></td>
+<td>Рекомендованный порядок клипов, video-only и персонализированные музыкальные рекомендации</td>
+<td>optimized JSON/TXT/XML/PRPROJ, <code>*_music_first.txt</code>, <code>*_personalized_music.txt</code></td>
+</tr>
+<tr>
+<td>Sequence Trim Review / Premiere Motion</td>
+<td><code>main_sequence_trim_review.py</code>, <code>main_premiere_import_keep.py</code>, <code>utils/sequence_trim_review.py</code>, <code>utils/sequence_trim_classifier.py</code>, <code>utils/sequence_trim_semantic.py</code>, <code>utils/premiere_trim_review_export.py</code>, <code>utils/sequence_keep_apply.py</code>, <code>utils/premiere_keep_apply_export.py</code>, <code>utils/sequence_media_import.py</code>, <code>utils/premiere_media_import_export.py</code>, <code>utils/sequence_import_and_keep.py</code>, <code>utils/premiere_sequence_motion.py</code>, <code>utils/premiere_sequence_insert_motion.py</code>, <code>utils/video_frame_extract.py</code>, <code>api/openai_trim_semantic.py</code>, <code>models/sequence_trim_review.py</code>, <code>models/sequence_keep_apply.py</code>, <code>models/sequence_media_import.py</code>, <code>models/premiere_sequence_motion.py</code>, <code>premiere_sequence_motion_template.json</code>, <code>premiere_sequence_insert_motion_template.json</code></td>
+<td>Per-clip KEEP/DROP, keep-range apply, media import, frame-exact intrinsic Motion, and video-only range insertion from another in-project sequence followed by static-only Motion and non-ripple output audio removal</td>
+<td>review/trim/import/motion <code>.prproj</code>, milestone sequences, dry-run/QA reports, silent review MP4</td>
+</tr>
+<tr>
+<td>Reports &amp; Batch Orchestration</td>
+<td><code>main_project_sequence_batch.py</code>, <code>main_sequence_reports.py</code>, <code>main_human_sequence_report.py</code>, <code>utils/project_sequence_batch.py</code>, <code>utils/current_sequence_reports.py</code>, <code>utils/human_profile_sequence_report.py</code>, <code>utils/sequence_structure_report.py</code>, <code>utils/transition_recommendations.py</code>, <code>utils/premiere_transition_script.py</code>, <code>utils/premiere_transform_script.py</code>, <code>utils/fcp_translation_results.py</code></td>
+<td>Reports, batch delivery, human-profile overlays, transition and transform scripts</td>
+<td>reports, batch summaries, transition reports, Premiere JSX scripts</td>
+</tr>
+<tr>
+<td>Desktop/Web Automation</td>
+<td><code>main_desktop.py</code>, <code>api/chatgpt_desktop.py</code>, <code>api/chatgpt_desktop_v2.py</code>, <code>api/gemini_desktop.py</code>, <code>api/chatgpt_web.py</code>, <code>api/grok_web.py</code></td>
+<td>Prompt-driven interaction with external UIs</td>
+<td>submitted prompts, saved media</td>
+</tr>
+<tr>
+<td>Portrait/Image Batch</td>
+<td><code>main_chatgpt_portrait_batch.py</code>, <code>api/chatgpt_desktop_v2.py</code>, <code>api/gemini_desktop.py</code>, <code>api/grok_web.py</code>, <code>chatgpt_portrait_config.json</code>, <code>chatgpt_portrait_base_config.json</code>, <code>chatgpt_all_styles_config.json</code>, <code>chatgpt_pair_base_config.json</code>, <code>run_chatgpt_portrait_batch_existing.bat</code>, <code>run_chatgpt_pair_batch_existing.bat</code>, <code>run_gemini_portrait_batch_existing.bat</code>, <code>run_grok_portrait_batch_existing.bat</code></td>
+<td>Batch generation of artistic portraits, pair portraits, and image-edit tasks through ChatGPT, Gemini, Grok, OpenAI API, or local stylizer</td>
+<td><code>output/chatgpt_*</code>, <code>output/gemini_*</code>, <code>output/grok_*</code>, <code>output/pair</code>, optional <code>final_output_dir</code> copy, optional response text</td>
+</tr>
+</tbody></table>
+</section>
 
-      <section id="flows">
-        <h2>Data Flows</h2>
+<hr>
+<section id="data-flows">
 
-        <h3>Full Generation Route</h3>
-        <div class="flow" aria-label="Full generation flow">
-          <span>input image</span><b>→</b><span>main.py</span><b>→</b><span>analysis</span><b>→</b><span>prompt synthesis</span><b>→</b><span>output/ stage artifacts</span><b>→</b><span>Grok runtime</span><b>→</b><span>delivery</span>
-        </div>
+<h2 id="data-flows-1">Data Flows</h2>
+<h3 id="full-generation-route">Full Generation Route</h3>
+<pre><code class="language-mermaid">flowchart LR
+  I[&quot;input image&quot;] --&gt; M[&quot;main.py&quot;]
+  M --&gt; A[&quot;image + scene analysis&quot;]
+  A --&gt; P[&quot;prompt synthesis&quot;]
+  P --&gt; O[&quot;output/ stage artifacts&quot;]
+  O --&gt; G[&quot;main_grok_batch.py / api/grok_web.py&quot;]
+  G --&gt; D[&quot;utils/project_delivery.py&quot;]
+  D --&gt; F[&quot;final_videos_dir&quot;]
+  D --&gt; R[&quot;regeneration_assets_dir/stage_id&quot;]
+</code></pre>
+<h3 id="grok-runtime-route">Grok Runtime Route</h3>
+<ol>
+<li><code>main_grok_web.py</code> получает исходное изображение и <code>*_v_prompt_*.txt</code> или <code>*_v_prompt_*.json</code>.</li>
+<li>Если включен <code>generate_source_background</code>, сначала создается background image.</li>
+<li>Затем Grok генерирует video.</li>
+<li><code>utils/project_delivery.py</code> копирует media в <code>final_videos_dir</code>.</li>
+<li><code>main_grok_batch.py</code> повторяет это по всем prompt-файлам.</li>
+</ol>
+<h3 id="full-sequential-route">Full Sequential Route</h3>
+<ol>
+<li><code>main_full_pipeline.py</code> читает изображения из <code>input/</code>.</li>
+<li>Для каждого изображения вызывает <code>_run_generation()</code> из <code>main.py</code>.</li>
+<li>Запускает Grok через <code>main_grok_batch.py</code>.</li>
+<li>После успешной доставки может удалить обработанный input-файл.</li>
+<li>После стадии очищает <code>output/</code>.</li>
+</ol>
+<p>This route is high-risk: any lifecycle change can affect source-file safety.</p>
+<h3 id="sequence-optimization-route">Sequence Optimization Route</h3>
+<ol>
+<li><code>main_sequence_optimizer.py</code> читает XML или PRPROJ.</li>
+<li>Parser извлекает clips и связывает их со stage-артефактами в <code>regeneration_assets_dir</code>.</li>
+<li><code>utils/sequence_optimizer.py</code> вычисляет новый порядок.</li>
+<li>Exporters создают JSON/TXT и, если нужно, XML/PRPROJ.</li>
+<li>Reporting utilities создают structure reports, transition recommendations, human-profile overlays.</li>
+<li>Финальный optimized <code>.prproj</code> сохраняется рядом с исходным <code>project_path</code>; <code>reports/temp_projects</code> хранит только временную batch-копию.</li>
+</ol>
+<p>Sequence timing extension:</p>
+<ul>
+<li><code>utils/sequence_edit_plan.py</code> adds media kind, recommended clip duration, next-transition metadata, and content/neighbor-aware still-image transform metadata to <code>SequenceRecommendationEntry</code>.</li>
+<li><code>main_sequence_optimizer.py</code> exposes <code>--include-visual-media</code>, <code>--enable-auto-durations</code>, <code>--enable-visual-transitions</code>, and <code>--enable-auto-transforms</code>.</li>
+<li><code>utils/premiere_project_export.py</code> can apply the edit plan to <code>.prproj</code> exports, including mixed <code>image -&gt; image</code>, <code>image -&gt; video</code>, <code>video -&gt; image</code>, and <code>video -&gt; video</code> transition pairs when enabled.</li>
+<li><code>utils/premiere_transition_script.py</code> and <code>utils/premiere_transform_script.py</code> generate Premiere JSX files that can be run from the CEP panel after opening the optimized sequence in Premiere.</li>
+</ul>
+<h3 id="multi-scene-prompt-composer-route">Multi-Scene Prompt Composer Route</h3>
+<ol>
+<li><code>main_video_prompt_composer.py</code> читает JSON request или полный <code>--config-file</code> JSON/JSONC.</li>
+<li><code>utils/video_prompt_composer.py</code> берет stage descriptions и scene-analysis из <code>regeneration_assets_dir</code>.</li>
+<li><code>video_prompt_config.py</code> валидирует параметры и применяет defaults.</li>
+<li><code>api/openai_video_prompt_composer.py</code> строит один EN prompt и один RU prompt с <code>Shot N:</code>.</li>
+<li>При <code>--seedance-json</code> создаются Seedance EN/RU control JSON.</li>
+<li>Для video-generation задач EN и RU artifacts должны появляться в одном запуске.</li>
+</ol>
+<h3 id="multi-scene-video-story-preview-route">Multi-Scene Video Story Preview Route</h3>
+<ol>
+<li><code>main_video_prompt_story.py</code> читает <code>video_prompt_story_config_*.json</code> и при <code>--generate</code> вызывает OpenAI для черновика истории.</li>
+<li><code>utils/video_prompt_story.py</code> находит restored images в <code>chatgpt_photo_restoration</code>, сопоставляет их с <code>regeneration_assets</code>, рендерит HTML review и парсит правки обратно в draft JSON.</li>
+<li><code>api/openai_video_prompt_story.py</code> синтезирует <code>technical_preamble</code> и тексты сцен с inline <code>@imageN</code> и правилами <strong>динамического видео</strong> (не слайдшоу: движение персонажей, handheld/match cut; запрет dissolve/crossfade/Ken Burns/static hold).</li>
+<li><code>--export-config</code> пишет <code>video_prompt_config_*.json</code> для <code>main_video_prompt_composer.py</code>.</li>
+<li>Composer создает <code>Gen_Video_Seedance_Variant_*_&lt;timestamp&gt;.json</code> и парные RU control JSON.</li>
+<li>Cursor skill: <code>.cursor/skills/video-prompt-story/SKILL.md</code>.</li>
+</ol>
+<h3 id="portraitimage-batch-route">Portrait/Image Batch Route</h3>
+<pre><code class="language-mermaid">flowchart LR
+  I[&quot;input/*.{png,jpg,jpeg,webp,bmp}&quot;] --&gt; B[&quot;main_chatgpt_portrait_batch.py&quot;]
+  C[&quot;chatgpt_portrait_*.json&quot;] --&gt; B
+  B --&gt; CG[&quot;ChatGPT desktop&quot;]
+  B --&gt; GM[&quot;Gemini desktop&quot;]
+  B --&gt; GR[&quot;Grok web image mode&quot;]
+  B --&gt; API[&quot;OpenAI Images API&quot;]
+  B --&gt; L[&quot;local stylizer&quot;]
+  CG --&gt; O1[&quot;output/chatgpt_*&quot;]
+  GM --&gt; O2[&quot;output/gemini_*&quot;]
+  GR --&gt; O3[&quot;output/grok_*&quot;]
+  API --&gt; O4[&quot;custom/api output&quot;]
+  L --&gt; O5[&quot;local output&quot;]
+</code></pre>
+<p>Portrait batch rules:</p>
+<ol>
+<li><code>main_chatgpt_portrait_batch.py</code> builds one job for each image/style pair.</li>
+<li>Result filename is <code>&lt;image_stem&gt;_&lt;style_slug&gt;.png</code>.</li>
+<li><code>--skip-existing</code> is the restart contract.</li>
+<li>Gemini and Grok mirror <code>output/chatgpt_*</code> config folders into <code>output/gemini_*</code> and <code>output/grok_*</code> when <code>--output-dir</code> is not explicit.</li>
+<li>ChatGPT and Gemini desktop flows depend on dedicated single-tab Chrome windows.</li>
+<li>Grok uses <code>.browser-profile/grok-web</code> and <code>https://grok.com/imagine</code> through Playwright image mode.</li>
+<li><code>--delivery-config-file config_*.json</code> preserves the project-side restart copy in <code>output/...</code> and also copies every newly saved PNG into <code>final_output_dir</code> while mirroring the same relative subfolder path, such as <code>output/grok_portraits/...</code> -&gt; <code>final_output_dir/grok_portraits/...</code>.</li>
+</ol>
+<p>Pair portrait rules:</p>
+<ol>
+<li><code>run_chatgpt_pair_batch_existing.bat</code> uses <code>input_pair/&lt;pair_id&gt;/</code> folders, where each folder must contain two source images.</li>
+<li>The pair prompt bank lives in <code>chatgpt_pair_base_config.json</code>.</li>
+<li>For desktop reliability, the two source photos are first combined into one temporary side-by-side reference image under <code>output/pair/_pair_references</code>.</li>
+<li>Results are saved to <code>output/pair</code> as <code>&lt;pair_id&gt;_art_pair_&lt;YYYYMMDD_HHMMSS&gt;.png</code>, for example <code>01_art_pair_20260522_153000.png</code>.</li>
+<li>With <code>--delivery-config-file config_SF.json</code>, the same file is copied to <code>final_output_dir/pair/...</code>, for example <code><LOCAL_PATH></code>.</li>
+</ol>
+</section>
 
-        <h3>Grok Runtime Route</h3>
-        <ol>
-          <li><code>main_grok_web.py</code> получает image и <code>*_v_prompt_*</code>.</li>
-          <li>Если включен <code>generate_source_background</code>, сначала создается background image.</li>
-          <li>Grok генерирует video.</li>
-          <li><code>utils/project_delivery.py</code> копирует media в <code>final_videos_dir</code>.</li>
-          <li><code>main_grok_batch.py</code> повторяет это по всем prompt-файлам.</li>
-        </ol>
+<hr>
+<section id="launch-map">
 
-        <h3>Portrait/Image Batch Route</h3>
-        <div class="flow" aria-label="Portrait image batch flow">
-          <span>input images</span><b>→</b><span>main_chatgpt_portrait_batch.py</span><b>→</b><span>ChatGPT</span><span>Gemini</span><span>Grok</span><span>OpenAI API</span><b>→</b><span>output/chatgpt_*</span><span>output/gemini_*</span><span>output/grok_*</span>
-        </div>
-        <ul>
-          <li>One job is created for each image/style pair.</li>
-          <li>Result filename: <code>&lt;image_stem&gt;_&lt;style_slug&gt;.png</code>.</li>
-          <li><code>--skip-existing</code> is the restart contract.</li>
-          <li>Gemini and Grok mirror <code>output/chatgpt_*</code> into <code>output/gemini_*</code> and <code>output/grok_*</code> unless <code>--output-dir</code> is explicit.</li>
-          <li><code>--delivery-config-file config_*.json</code> keeps restart copies in project <code>output/...</code> and also copies each saved PNG into <code>final_output_dir</code> with the same relative subfolder path, such as <code>output/grok_portraits/...</code> → <code>final_output_dir/grok_portraits/...</code>.</li>
-          <li>Pair portraits use two source images from each <code>input_pair/&lt;pair_id&gt;/</code> folder, create one temporary side-by-side reference image in <code>output/pair/_pair_references</code>, use the prompt bank <code>chatgpt_pair_base_config.json</code>, and save to <code>output/pair</code> as <code>&lt;pair_id&gt;_art_pair_&lt;YYYYMMDD_HHMMSS&gt;.png</code>.</li>
-          <li>With a delivery config, pair portraits are mirrored to <code>final_output_dir/pair</code>, for example <code><LOCAL_PATH> when using <code>config_SF.json</code>.</li>
-        </ul>
-      </section>
+<h2 id="launch-map-1">Launch Map</h2>
+<pre><code class="language-mermaid">flowchart LR
+  B1[&quot;run_full_grok_pipeline*.bat&quot;] --&gt; P1[&quot;main_full_pipeline.py&quot;]
+  B1A[&quot;run_full_grok_pipeline_api.bat&quot;] --&gt; P1A[&quot;main_full_pipeline_api.py&quot;]
+  B2[&quot;run_grok_automation*.bat&quot;] --&gt; P2[&quot;main_grok_web.py / main_grok_batch.py&quot;]
+  B3[&quot;run_project_sequence_batch*.bat&quot;] --&gt; P3[&quot;main_project_sequence_batch.py&quot;]
+  B4[&quot;run_project_publication*.bat&quot;] --&gt; P4[&quot;main_project_publication_push.py&quot;]
+  B5[&quot;run_chatgpt_portrait_batch_existing.bat&quot;] --&gt; P6[&quot;main_chatgpt_portrait_batch.py&quot;]
+  B6[&quot;run_gemini_portrait_batch_existing.bat&quot;] --&gt; P6
+  B7[&quot;run_grok_portrait_batch_existing.bat&quot;] --&gt; P6
+  B8[&quot;run_chatgpt_pair_batch_existing.bat&quot;] --&gt; P6
+  B9[&quot;run_sequence_trim_review.bat&quot;] --&gt; P8[&quot;main_sequence_trim_review.py&quot;]
+  B10[&quot;run_sequence_keep_apply.bat / *_standalone.bat&quot;] --&gt; P9[&quot;main_premiere_import_keep.py&quot;]
+  B11[&quot;run_sequence_media_import.bat / *_standalone.bat&quot;] --&gt; P9
+  B12[&quot;run_sequence_import_and_keep.bat / *_standalone.bat&quot;] --&gt; P9
 
-      <section id="launch">
-        <h2>Launch Map</h2>
-        <table>
-          <thead>
-            <tr><th>Wrapper</th><th>Program</th><th>Primary Outputs</th></tr>
-          </thead>
-          <tbody>
-            <tr><td><code>run_full_grok_pipeline*.bat</code></td><td><code>main_full_pipeline.py</code></td><td><code>final_videos_dir</code>, <code>regeneration_assets_dir</code></td></tr>
-            <tr><td><code>run_grok_automation*.bat</code></td><td><code>main_grok_web.py</code> / <code>main_grok_batch.py</code></td><td><code>*_video_*.mp4</code>, <code>*_bg_image_16x9.*</code></td></tr>
-            <tr><td><code>run_project_sequence_batch*.bat</code></td><td><code>main_project_sequence_batch.py</code></td><td>reports, optimized sequence artifacts</td></tr>
-            <tr><td><code>run_project_publication*.bat</code></td><td><code>main_project_publication_push.py</code></td><td>publication bundle</td></tr>
-            <tr><td><code>run_chatgpt_portrait_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/chatgpt_*</code>, optional <code>final_output_dir</code> copy</td></tr>
-            <tr><td><code>run_chatgpt_pair_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/pair</code>, optional <code>final_output_dir/pair</code> copy</td></tr>
-            <tr><td><code>run_gemini_portrait_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/gemini_*</code>, optional <code>final_output_dir</code> copy</td></tr>
-            <tr><td><code>run_grok_portrait_batch_existing.bat</code></td><td><code>main_chatgpt_portrait_batch.py</code></td><td><code>output/grok_*</code>, optional <code>final_output_dir</code> copy</td></tr>
-          </tbody>
-        </table>
+  C1[&quot;config.json / config.local.json / config_*.json&quot;] --&gt; G1[&quot;GenerationConfig&quot;]
+  G1 --&gt; P1
+  G1 --&gt; P1A
+  G1 --&gt; P2
+  ENV[&quot;XAI_API_KEY (.env)&quot;] --&gt; P1A
 
-        <h3>Common Commands</h3>
-        <pre><code>.\run_full_grok_pipeline.bat --config-file .\config_Yakov.json --upload-timeout 300</code></pre>
-        <pre><code>.\run_grok_automation_all.bat --skip-existing --upload-timeout 300</code></pre>
-        <pre><code>.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
-        <pre><code>.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
-        <pre><code>.\run_chatgpt_pair_batch_existing.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error</code></pre>
-        <pre><code>.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer</code></pre>
-        <pre><code>.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error</code></pre>
+  C5[&quot;chatgpt_portrait_config.json\nchatgpt_portrait_base_config.json\nchatgpt_all_styles_config.json\nspecial portrait configs&quot;] --&gt; P6
+  C6[&quot;chatgpt_pair_base_config.json&quot;] --&gt; P6
+  C7[&quot;sequence_trim_review_*.json&quot;] --&gt; P8
+  C8[&quot;sequence_keep_apply_*.json\nsequence_media_import_*.json\nsequence_import_and_keep_*.json&quot;] --&gt; P9
+  C8 --&gt; P8
 
-        <div class="note">
-          <strong>Parameter precedence:</strong> hardcoded `.bat` arguments → forwarded `%*` arguments → JSON config values → Python defaults.
-        </div>
-      </section>
+  P1 --&gt; O1[&quot;final_videos_dir\nregeneration_assets_dir&quot;]
+  P2 --&gt; O2[&quot;*_video_*.mp4\n*_bg_image_16x9.*&quot;]
+  P3 --&gt; O3[&quot;reports\noptimized sequence artifacts&quot;]
+  P4 --&gt; O4[&quot;publication bundle&quot;]
+  P6 --&gt; O5[&quot;output/chatgpt_*\noutput/gemini_*\noutput/grok_*&quot;]
+  P6 --&gt; O6[&quot;output/pair\nfinal_output_dir/pair&quot;]
+  P8 --&gt; O7[&quot;review .prproj\nJSON/TXT reports&quot;]
+  P9 --&gt; O8[&quot;trimmed keep .prproj\nimport .prproj\nJSON/TXT reports&quot;]
+</code></pre>
+<h3 id="common-commands">Common Commands</h3>
+<pre><code class="language-bat">.\run_full_grok_pipeline.bat --config-file .\config_Yakov.json --upload-timeout 300
+</code></pre>
+<pre><code class="language-bat">.\run_full_grok_pipeline_api.bat --config-file .\config_SF.json
+</code></pre>
+<pre><code class="language-bat">.\run_grok_automation_all.bat --skip-existing --upload-timeout 300
+</code></pre>
+<pre><code class="language-bat">.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+</code></pre>
+<pre><code class="language-bat">.\run_chatgpt_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --delivery-config-file .\config_Yakov.json --skip-existing --desktop-reactivate-delay 0 --desktop-click-composer
+</code></pre>
+<pre><code class="language-bat">.\run_chatgpt_pair_batch_existing.bat --delivery-config-file .\config_SF.json --skip-existing --continue-on-error
+</code></pre>
+<pre><code class="language-bat">.\run_gemini_portrait_batch_existing.bat --config-file chatgpt_portrait_config.json --skip-existing --continue-on-error --desktop-reactivate-delay 0 --desktop-click-composer
+</code></pre>
+<pre><code class="language-bat">.\run_grok_portrait_batch_existing.bat --config-file chatgpt_portrait_base_config.json --skip-existing --continue-on-error
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_trim_review.bat .\sequence_trim_review_01.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_2_min.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_keep_apply.bat .\sequence_keep_apply_template.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_keep_apply.bat .\sequence_keep_to_new_sequence_template.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_keep_apply.bat .\sequence_keep_apply_yotam26_macro_styles.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_trim_review.bat .\sequence_keep_apply_yotam26_2_min.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_media_import.bat .\sequence_media_import_yotam26_part2.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_media_import.bat .\sequence_media_import_to_new_sequence_template.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_media_import.bat .\sequence_media_import_yotam26_macro_styles.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_import_and_keep.bat .\sequence_import_and_keep_template.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_media_import_standalone.bat .\sequence_media_import_template.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_keep_apply_standalone.bat .\sequence_keep_apply_template.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_import_and_keep_standalone.bat .\sequence_import_and_keep_template.json
+</code></pre>
+<pre><code class="language-bat">.\run_copy_sequence_media_batch.bat .\copy_sequence_media_sveta_igr_26_2.json
+</code></pre>
+<pre><code class="language-bat">.\run_hero_definition.bat .\hero_definition_Alice.json
+</code></pre>
+<pre><code class="language-bat">.\run_sequence_music_recommendation.bat .\sequence_music_recommendation_Alice.json
+</code></pre>
+<pre><code class="language-bat">.\open_ai_work_window.bat
+.\run_full_grok_pipeline_work_window.bat --upload-timeout 300
+</code></pre>
+<p>The complete launcher inventory lives in <a href="USER_GUIDE_EN.html"><code>docs/USER_GUIDE_EN.md</code></a> / <a href="USER_GUIDE_RU.html"><code>docs/USER_GUIDE_RU.md</code></a> under BAT Files, with unique extra-parameter examples in <a href="BATCH_RUN_HISTORY.md"><code>docs/BATCH_RUN_HISTORY.md</code></a>.</p>
+<p>Parameter precedence:</p>
+<ol>
+<li>Hardcoded <code>.bat</code> arguments.</li>
+<li>Extra arguments forwarded through <code>%*</code>.</li>
+<li>JSON config values.</li>
+<li>Python defaults.</li>
+</ol>
+</section>
 
-      <section id="invariants">
-        <h2>Invariants</h2>
-        <details open><summary>Configuration</summary><div><ul><li>Every new generation flag must be added to <code>config.py</code>.</li><li>Update the field set, <code>GenerationConfig</code>, <code>from_dict()</code>, <code>override()</code>, docs, and tests.</li><li>Only one framing mode may be enabled at a time.</li><li><code>ai_optimal_then_identity_safe_ai_optimal_percent</code> is a ratio parameter, not a separate mode.</li></ul></div></details>
-        <details open><summary>Artifacts</summary><div><ul><li>Stage artifacts must share the same <code>stage_id</code> prefix.</li><li>Naming changes must be checked everywhere filenames are written, read, parsed, synced, or reported.</li></ul></div></details>
-        <details open><summary>Lifecycle</summary><div><ul><li><code>main_grok_batch.py</code> clears <code>input/</code> and <code>output/</code> after successful batch unless <code>--keep-workdirs</code> is set.</li><li><code>main_full_pipeline.py</code> can remove processed input images.</li><li>Cleanup behavior changes are high-risk.</li></ul></div></details>
-        <details open><summary>Prompts</summary><div><ul><li>Prompt semantics must stay aligned across OpenAI synthesizer, local <code>PromptBuilder</code>, manifests, docs, and tests.</li><li>If EN and RU prompt artifacts are written, semantic changes must not affect only one language branch silently.</li></ul></div></details>
-        <details open><summary>Delivery</summary><div><ul><li><code>.mp4</code> files go to <code>final_videos_dir</code>.</li><li>Portrait/image-edit PNG copies go to <code>final_output_dir</code> when <code>--delivery-config-file</code> is present, preserving the project <code>output/...</code> subfolder structure.</li><li>Non-video stage assets go to <code>regeneration_assets_dir/&lt;stage_id&gt;/</code>.</li><li>Background image handling must not break non-video sync.</li></ul></div></details>
-      </section>
+<hr>
+<section id="invariants">
 
-      <section id="change-control">
-        <h2>Change Control</h2>
-        <ol>
-          <li>Classify the change: config, prompt, scene schema, naming, Grok runtime, delivery, optimizer, reports, portrait batch.</li>
-          <li>Open <code>project_structure_registry.json</code>.</li>
-          <li>Select the matching <code>change_type</code>.</li>
-          <li>Review all <code>must_touch</code> and <code>must_review</code> files.</li>
-          <li>Update user-facing docs if behavior changes.</li>
-          <li>Add or update tests for changed contracts.</li>
-          <li>Run at least one targeted test.</li>
-          <li>For high-risk changes, run an integration route to a real artifact.</li>
-        </ol>
+<h2 id="invariants-1">Invariants</h2>
+<details open>
+<summary><strong>Configuration</strong></summary>
 
-        <table>
-          <thead>
-            <tr><th>Change Type</th><th>Must Review</th><th>Minimum Check</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Generation flag</td><td><code>config.py</code>, profile configs, <code>main.py</code>, prompt builders, user guides</td><td>Config load, CLI override, manifest serialization, prompt output, targeted tests</td></tr>
-            <tr><td>Scene-analysis schema</td><td>Scene models, OpenAI scene API, prompt builders, sequence/report readers</td><td>Save/read <code>*_scene_analysis.json</code>, compatibility, parse/prompt tests</td></tr>
-            <tr><td>Naming / <code>stage_id</code></td><td>Main apps, Grok apps, delivery, Premiere exporters, reports</td><td>End-to-end artifact naming and sync check</td></tr>
-            <tr><td>Grok automation</td><td><code>api/grok_web.py</code>, <code>main_grok_web.py</code>, <code>main_grok_batch.py</code>, <code>main_full_pipeline.py</code></td><td>Single-stage, batch, background-only, <code>--no-submit</code></td></tr>
-            <tr><td>Delivery / cleanup</td><td>Delivery and cleanup tools</td><td>Final copy, regeneration assets sync, <code>error/</code> behavior, no surprise input deletion</td></tr>
-            <tr><td>Portrait/image batch</td><td><code>main_chatgpt_portrait_batch.py</code>, ChatGPT/Gemini/Grok adapters, portrait configs, launchers</td><td>Config/job dry-run, output mirroring, selected backend sanity check</td></tr>
-          </tbody>
-        </table>
-      </section>
+<ul>
+<li>Every new generation flag must be added to <code>config.py</code>.</li>
+<li>Update the matching field set, <code>GenerationConfig</code>, <code>from_dict()</code>, <code>override()</code>, docs, and tests.</li>
+<li>Only one framing mode may be enabled at a time:<ul>
+<li><code>prefer_face_closeups</code></li>
+<li><code>use_ai_optimal_framing</code></li>
+<li><code>use_ai_optimal_then_identity_safe_framing</code></li>
+<li><code>generate_dual_framing_videos</code></li>
+<li><code>generate_identity_safe_closeup_videos</code></li>
+<li><code>generate_triple_framing_videos</code></li>
+</ul>
+</li>
+<li><code>ai_optimal_then_identity_safe_ai_optimal_percent</code> is a ratio parameter, not a separate mode.</li>
+</ul>
+</details>
 
-      <section id="risks">
-        <h2>High-Risk Zones</h2>
-        <table>
-          <thead><tr><th>Area</th><th>Why It Is Risky</th></tr></thead>
-          <tbody>
-            <tr><td><code>config.py</code></td><td>Breaks every generation pipeline if a field is parsed or overridden incorrectly.</td></tr>
-            <tr><td><code>main.py</code></td><td>Central assembly point for stage artifacts.</td></tr>
-            <tr><td><code>api/grok_web.py</code></td><td>Real browser automation and media saving.</td></tr>
-            <tr><td><code>main_full_pipeline.py</code></td><td>Can alter lifecycle of input files and output cleanup.</td></tr>
-            <tr><td><code>utils/project_delivery.py</code></td><td>Controls final result preservation.</td></tr>
-            <tr><td><code>api/chatgpt_desktop_v2.py</code> / <code>api/gemini_desktop.py</code></td><td>UI automation depends on focus, DPI, monitors, localization, and service UI changes.</td></tr>
-            <tr><td><code>main_chatgpt_portrait_batch.py</code></td><td>Defines <code>input/</code> to <code>output/chatgpt_*</code>, <code>output/gemini_*</code>, and <code>output/grok_*</code> contracts.</td></tr>
-          </tbody>
-        </table>
-      </section>
+<details open>
+<summary><strong>Artifacts</strong></summary>
 
-      <section id="tests">
-        <h2>Test Matrix</h2>
-        <table>
-          <thead><tr><th>Class</th><th>Tests</th></tr></thead>
-          <tbody>
-            <tr><td>Prompt/config</td><td><code>test/test_config_cli_defaults.py</code>, <code>test/test_scene_pipeline_integration.py</code>, <code>test/test_motion_selection.py</code>, <code>test/test_video_framing_modes.py</code>, <code>tests/test_selfie_phone_prompt.py</code></td></tr>
-            <tr><td>Grok pipeline</td><td><code>test/test_grok_web_app.py</code>, <code>test/test_grok_batch_app.py</code>, <code>test/test_full_pipeline.py</code>, <code>test/test_project_delivery.py</code></td></tr>
-            <tr><td>Scene analysis</td><td><code>test/test_openai_scene.py</code>, <code>test/test_scene_app.py</code>, <code>test/test_scene_pipeline_integration.py</code></td></tr>
-            <tr><td>Sequence/reporting</td><td><code>test/test_sequence_optimizer_app.py</code>, <code>test/test_project_delivery.py</code></td></tr>
-            <tr><td>Portrait/image batch</td><td><code>test/test_chatgpt_portrait_batch.py</code> plus syntax checks for desktop/Grok adapters</td></tr>
-          </tbody>
-        </table>
-        <pre><code>python -m pytest -p no:cacheprovider test\test_chatgpt_portrait_batch.py</code></pre>
-        <pre><code>python -m pytest -p no:cacheprovider test\test_grok_web_app.py test\test_grok_batch_app.py</code></pre>
-        <pre><code>python -m pytest -p no:cacheprovider test\test_full_pipeline.py test\test_project_delivery.py</code></pre>
-      </section>
+<ul>
+<li>Stage artifacts must share the same <code>stage_id</code> prefix.</li>
+<li>Naming changes must be checked everywhere filenames are written, read, parsed, synced, or reported.</li>
+<li>Sequence tools and delivery functions depend on stable naming.</li>
+</ul>
+</details>
 
-      <section id="registry">
-        <h2>Machine-Readable Registry</h2>
-        <p>The companion registry is <code>project_structure_registry.json</code>. Use it when the next change raises the question: what else may be affected?</p>
-        <pre><code>python .\main_change_impact.py --change-type generation_flag --changed-file config.py --changed-file utils\prompt_builder.py</code></pre>
-        <pre><code>python .\main_change_impact.py --changed-file main_grok_web.py</code></pre>
-        <pre><code>python .\main_change_impact.py --change-type grok_runtime --changed-file main_grok_web.py --json</code></pre>
-      </section>
+<details open>
+<summary><strong>Lifecycle</strong></summary>
 
-      <section id="publication">
-        <h2>Publication Sync</h2>
-        <p>Use this flow to refresh the external project-information repository bundle.</p>
-        <pre><code>python .\main_project_publication.py --target-dir .\project_publication\Memory-to-Video_Agent</code></pre>
-        <pre><code>python .\main_project_publication.py --target-dir &lt;path-to-local-Memory-to-Video_Agent-clone&gt;</code></pre>
-        <h3>Managed Bundle</h3>
-        <ul>
-          <li><code>README.md</code>, <code>CHANGELOG.md</code>, <code>.gitignore</code></li>
-          <li><code>source/**</code></li>
-          <li><code>docs/PROJECT_OVERVIEW.md</code>, <code>docs/CHANGE_IMPACT.md</code>, <code>docs/PROJECT_STRUCTURE.md</code>, <code>docs/PROJECT_STRUCTURE.html</code></li>
-          <li><code>docs/USER_GUIDE_EN.md/.html</code>, <code>docs/USER_GUIDE_RU.md/.html</code>, and the remaining canonical references in <code>docs/</code></li>
-          <li><code>data/project_snapshot.json</code>, <code>data/project_structure_registry.json</code>, <code>data/publication_manifest.json</code></li>
-        </ul>
-        <pre><code>python .\main_project_publication_push.py --repo-dir &lt;path-to-local-Memory-to-Video_Agent-clone&gt; --stage
-python .\main_project_publication_push.py --repo-dir &lt;path-to-local-Memory-to-Video_Agent-clone&gt; --commit-message "Update project publication" --push</code></pre>
-        <pre><code>.\run_project_publication_stage.bat
-.\run_project_publication_push.bat</code></pre>
-      </section>
+<ul>
+<li><code>main_grok_batch.py</code> clears <code>input/</code> and <code>output/</code> after a successful batch unless <code>--keep-workdirs</code> is set.</li>
+<li><code>main_full_pipeline.py</code> can remove processed input images.</li>
+<li>Any cleanup behavior change is high-risk.</li>
+</ul>
+</details>
 
-      <footer>
-        <p>Generated from the project structure documentation. Open this file directly in Chrome or any browser.</p>
-      </footer>
-    </main>
+<details open>
+<summary><strong>Prompts</strong></summary>
+
+<ul>
+<li>Prompt semantics must stay aligned across OpenAI synthesizer, local <code>PromptBuilder</code>, manifests, docs, and tests.</li>
+<li>If both English and Russian prompt artifacts are written, semantic changes must not silently affect only one language branch.</li>
+</ul>
+</details>
+
+<details open>
+<summary><strong>Delivery</strong></summary>
+
+<ul>
+<li><code>.mp4</code> files go to <code>final_videos_dir</code>.</li>
+<li>Portrait/image-edit PNG copies go to <code>final_output_dir</code> when <code>--delivery-config-file</code> is present, preserving the project <code>output/...</code> subfolder structure.</li>
+<li>Non-video stage assets go to <code>regeneration_assets_dir/&lt;stage_id&gt;/</code>.</li>
+<li>Background image handling must not break non-video sync.</li>
+</ul>
+</details>
+
+</section>
+
+<hr>
+<section id="change-control">
+
+<h2 id="change-control-1">Change Control</h2>
+<h3 id="required-workflow">Required Workflow</h3>
+<ol>
+<li>Classify the change: config, prompt, scene schema, naming, Grok runtime, delivery, optimizer, reports, portrait batch.</li>
+<li>Open <code>project_structure_registry.json</code>.</li>
+<li>Select the matching <code>change_type</code>.</li>
+<li>Review all <code>must_touch</code> and <code>must_review</code> files.</li>
+<li>Update user-facing docs if behavior changes.</li>
+<li>Add or update tests for changed contracts.</li>
+<li>Run at least one targeted test.</li>
+<li>For high-risk changes, run an integration route to a real artifact.</li>
+</ol>
+<h3 id="impact-areas">Impact Areas</h3>
+<table>
+<thead>
+<tr>
+<th>Change Type</th>
+<th>Must Review</th>
+<th>Minimum Check</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Generation flag</td>
+<td><code>config.py</code>, <code>config.json</code>, <code>config_BASE.json</code>, profile configs, <code>main.py</code>, <code>main_desktop_pipeline.py</code>, <code>main_full_pipeline.py</code>, <code>api/openai_prompt_synthesizer.py</code>, <code>utils/prompt_builder.py</code>, user guides</td>
+<td>Config load, CLI override, manifest serialization, prompt output, targeted tests</td>
+</tr>
+<tr>
+<td>Scene-analysis schema</td>
+<td><code>models/scene_analysis.py</code>, <code>api/openai_scene.py</code>, <code>main_scene.py</code>, <code>main.py</code>, prompt builders, sequence/report readers</td>
+<td>Save/read <code>*_scene_analysis.json</code>, compatibility if required, parse/prompt tests</td>
+</tr>
+<tr>
+<td>Naming / <code>stage_id</code></td>
+<td><code>main.py</code>, <code>main_desktop_pipeline.py</code>, <code>main_grok_web.py</code>, <code>main_grok_batch.py</code>, <code>main_full_pipeline.py</code>, delivery, Premiere exporters, reports</td>
+<td>End-to-end artifact naming and sync check</td>
+</tr>
+<tr>
+<td>Grok automation</td>
+<td><code>api/grok_web.py</code>, <code>main_grok_web.py</code>, <code>main_grok_batch.py</code>, <code>main_full_pipeline.py</code>, timeout/options</td>
+<td>Single-stage run, batch run, background-only run, <code>--no-submit</code></td>
+</tr>
+<tr>
+<td>Delivery / cleanup</td>
+<td><code>utils/project_delivery.py</code>, <code>main_grok_batch.py</code>, <code>main_full_pipeline.py</code>, cleanup tools</td>
+<td>Final file copy, <code>regeneration_assets_dir</code> sync, <code>error/</code> behavior, no surprise input deletion</td>
+</tr>
+<tr>
+<td>Sequence optimization</td>
+<td>sequence models, optimizer, runtime, XML/PRPROJ exporters, reports</td>
+<td>JSON/TXT output, XML/PRPROJ export if touched, optimizer/report tests</td>
+</tr>
+<tr>
+<td>Portrait/image batch</td>
+<td><code>main_chatgpt_portrait_batch.py</code>, <code>api/chatgpt_desktop_v2.py</code>, <code>api/gemini_desktop.py</code>, <code>api/grok_web.py</code>, portrait configs, launchers</td>
+<td>Config/job dry-run, output folder mirroring, selected backend sanity check</td>
+</tr>
+</tbody></table>
+</section>
+
+<hr>
+<section id="risk-zones">
+
+<h2 id="high-risk-zones">High-Risk Zones</h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Why It Is Risky</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>config.py</code></td>
+<td>Breaks every generation pipeline if a field is parsed or overridden incorrectly.</td>
+</tr>
+<tr>
+<td><code>main.py</code></td>
+<td>Central assembly point for stage artifacts.</td>
+</tr>
+<tr>
+<td><code>main_grok_web.py</code> and <code>api/grok_web.py</code></td>
+<td>Real browser automation and media saving.</td>
+</tr>
+<tr>
+<td><code>main_full_pipeline.py</code></td>
+<td>Can alter lifecycle of input files and output cleanup.</td>
+</tr>
+<tr>
+<td><code>utils/project_delivery.py</code></td>
+<td>Controls final result preservation.</td>
+</tr>
+<tr>
+<td><code>api/chatgpt_desktop_v2.py</code> and <code>api/gemini_desktop.py</code></td>
+<td>UI automation depends on focus, DPI, monitors, localization, and service UI changes.</td>
+</tr>
+<tr>
+<td><code>main_chatgpt_portrait_batch.py</code></td>
+<td>Defines <code>input/</code> to <code>output/chatgpt_*</code>, <code>output/gemini_*</code>, and <code>output/grok_*</code> contracts.</td>
+</tr>
+<tr>
+<td>Naming contracts and <code>stage_id</code></td>
+<td>Used across delivery, regeneration assets, reports, and Premiere sequence tools.</td>
+</tr>
+<tr>
+<td><code>models/scene_analysis.py</code> and <code>models/video_sequence.py</code></td>
+<td>Data contracts shared by multiple subsystems.</td>
+</tr>
+</tbody></table>
+</section>
+
+<hr>
+<section id="test-matrix">
+
+<h2 id="test-matrix-1">Test Matrix</h2>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Tests</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Prompt/config</td>
+<td><code>test/test_config_cli_defaults.py</code>, <code>test/test_scene_pipeline_integration.py</code>, <code>test/test_motion_selection.py</code>, <code>test/test_video_framing_modes.py</code>, <code>tests/test_selfie_phone_prompt.py</code></td>
+</tr>
+<tr>
+<td>Grok pipeline</td>
+<td><code>test/test_grok_web_app.py</code>, <code>test/test_grok_batch_app.py</code>, <code>test/test_full_pipeline.py</code>, <code>test/test_project_delivery.py</code></td>
+</tr>
+<tr>
+<td>Scene analysis</td>
+<td><code>test/test_openai_scene.py</code>, <code>test/test_scene_app.py</code>, <code>test/test_scene_pipeline_integration.py</code></td>
+</tr>
+<tr>
+<td>Sequence/reporting</td>
+<td><code>test/test_sequence_optimizer_app.py</code>, <code>test/test_sequence_trim_review_app.py</code>, <code>test/test_sequence_keep_apply.py</code>, <code>test/test_sequence_media_import.py</code>, <code>test/test_sequence_import_and_keep.py</code>, <code>test/test_project_sequence_music_recommendation.py</code>, <code>test/test_project_delivery.py</code></td>
+</tr>
+<tr>
+<td>Portrait/image batch</td>
+<td><code>test/test_chatgpt_portrait_batch.py</code>, syntax check for <code>api/chatgpt_desktop_v2.py</code>, <code>api/gemini_desktop.py</code>, <code>api/grok_web.py</code>, <code>main_chatgpt_portrait_batch.py</code></td>
+</tr>
+</tbody></table>
+<p>Useful targeted commands:</p>
+<pre><code class="language-powershell">python -m pytest -p no:cacheprovider test\test_chatgpt_portrait_batch.py
+</code></pre>
+<pre><code class="language-powershell">python -m pytest -p no:cacheprovider test\test_grok_web_app.py test\test_grok_batch_app.py
+</code></pre>
+<pre><code class="language-powershell">python -m pytest -p no:cacheprovider test\test_full_pipeline.py test\test_project_delivery.py
+</code></pre>
+</section>
+
+<hr>
+<section id="registry">
+
+<h2 id="machine-readable-registry">Machine-Readable Registry</h2>
+<p>The companion registry is:</p>
+<ul>
+<li><code>project_structure_registry.json</code></li>
+</ul>
+<p>Use it when the next change raises the question: <strong>what else may be affected?</strong></p>
+<pre><code class="language-powershell">python .\main_change_impact.py --change-type generation_flag --changed-file config.py --changed-file utils\prompt_builder.py
+</code></pre>
+<p>If the change type is unknown:</p>
+<pre><code class="language-powershell">python .\main_change_impact.py --changed-file main_grok_web.py
+</code></pre>
+<p>JSON mode:</p>
+<pre><code class="language-powershell">python .\main_change_impact.py --change-type grok_runtime --changed-file main_grok_web.py --json
+</code></pre>
+</section>
+
+<hr>
+<section id="publication-sync">
+
+<h2 id="publication-sync-1">Publication Sync</h2>
+<p>Use this flow to refresh the external project-information repository bundle.</p>
+<pre><code class="language-powershell">python .\main_project_publication.py --target-dir .\project_publication\Memory-to-Video_Agent
+</code></pre>
+<p>If you have a local clone of the external repository:</p>
+<pre><code class="language-powershell">python .\main_project_publication.py --target-dir &lt;path-to-local-Memory-to-Video_Agent-clone&gt;
+</code></pre>
+<p>Managed bundle:</p>
+<ul>
+<li><code>README.md</code></li>
+<li><code>CHANGELOG.md</code></li>
+<li><code>.gitignore</code></li>
+<li><code>source/**</code></li>
+<li><code>docs/README.md</code></li>
+<li><code>docs/BATCH_RUN_HISTORY.md</code></li>
+<li><code>docs/MINI_LAPTOP_WATERCOLOR.md</code></li>
+<li><code>docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md</code></li>
+<li><code>docs/portrait_styles_tables.md</code></li>
+<li><code>docs/PUBLISHING.md</code></li>
+<li><code>docs/PROJECT_OVERVIEW.md</code></li>
+<li><code>docs/CHANGE_IMPACT.md</code></li>
+<li><code>docs/PROJECT_STRUCTURE.md</code></li>
+<li><code>docs/Seedance_2.0_Director.md</code></li>
+<li><code>docs/USER_GUIDE_EN.md</code></li>
+<li><code>docs/USER_GUIDE_RU.md</code></li>
+<li><code>data/project_snapshot.json</code></li>
+<li><code>data/project_structure_registry.json</code></li>
+<li><code>data/publication_manifest.json</code></li>
+</ul>
+<p>Guarded stage/commit/push:</p>
+<pre><code class="language-powershell">python .\main_project_publication_push.py --repo-dir &lt;path-to-local-Memory-to-Video_Agent-clone&gt; --stage
+python .\main_project_publication_push.py --repo-dir &lt;path-to-local-Memory-to-Video_Agent-clone&gt; --commit-message &quot;Update project publication&quot; --push
+</code></pre>
+<p>Short wrappers:</p>
+<pre><code class="language-powershell">.\run_project_publication_stage.bat
+.\run_project_publication_push.bat
+</code></pre>
+<p>Publication safety:</p>
+<ul>
+<li>verifies that target is a git repository;</li>
+<li>verifies <code>origin</code> against <code>Memory-to-Video_Agent</code>;</li>
+<li>updates only the managed publication bundle;</li>
+<li>removes only stale managed files from the previous manifest;</li>
+<li>stages only managed files;</li>
+<li>blocks push of new staged publication changes without explicit <code>--commit-message</code>.</li>
+</ul>
+</section>
+
+
+      <p class="source-note">Source: <a href="PROJECT_STRUCTURE.md">docs/PROJECT_STRUCTURE.md</a>.</p>
+    </article></main>
   </div>
 </body>
 </html>

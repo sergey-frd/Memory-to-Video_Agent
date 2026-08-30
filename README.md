@@ -4,18 +4,18 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.08.26.02`
-- Git tag: `v2026.08.26.02`
+- Publication version: `2026.08.30.01`
+- Git tag: `v2026.08.30.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-08-26T14:17:04+03:00`
+- Last synchronized: `2026-08-30T12:02:28+03:00`
 - Source project: `img-style-ag_1`
-- Python files: `245`
-- Test files: `46`
-- Entry points: `31`
+- Python files: `184`
+- Test files: `50`
+- Entry points: `44`
 
 ## Published Source Mirror
 
-- Mirrored source files: `512`
+- Mirrored source files: `416`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/CHANGELOG.md`
@@ -54,6 +54,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/config_Ivan.json`
 - `source/config_Kira_M.json`
 - `source/config_Nicol.json`
+- `source/config_Nicol_expanded.jsonc`
 - `source/config_Nicol_identity_safe_closeup.json`
 - `source/config_Nicol_triple_framing.json`
 - `source/config_Nicol_x3.json`
@@ -64,6 +65,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/config_Yakov.json`
 - `source/config_Yura.json`
 - `source/config_Ziggi.json`
+- `source/config_alla_15_humor_api.json`
 - `source/config_eZiggi.json`
 - `source/config_igor.json`
 - `source/config_kira.json`
@@ -82,6 +84,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/deploy_and_run.ps1`
 - `source/docs`
 - `source/env_baseline_chatgpt_watercolor.json`
+- `source/examples`
 - `source/hero_definition_Alice.json`
 - `source/install_premiere_transition_panel.bat`
 - `source/login_chatgpt_debug_profile.bat`
@@ -105,7 +108,20 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/main_grok_web.py`
 - `source/main_hero_definition.py`
 - `source/main_human_sequence_report.py`
+- `source/main_premiere_alla_client_motion_v02.py`
+- `source/main_premiere_alla_first_assembly.py`
 - `source/main_premiere_import_keep.py`
+- `source/main_premiere_sequence_coarse_insert.py`
+- `source/main_premiere_sequence_delete_only.py`
+- `source/main_premiere_sequence_insert_only.py`
+- `source/main_premiere_sequence_replace_only.py`
+- `source/main_premiere_sequence_ripple_delete.py`
+- `source/main_premiere_short_core.py`
+- `source/main_premiere_short_expansion.py`
+- `source/main_premiere_task_028_dual_refinement.py`
+- `source/main_premiere_task_029_adaptive_animation.py`
+- `source/main_premiere_task_030_color_finish.py`
+- `source/main_premiere_timeline_assembly.py`
 - `source/main_premiere_transform_script.py`
 - `source/main_premiere_transition_script.py`
 - `source/main_project_publication.py`
@@ -208,13 +224,13 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/sequence_trim_review_template.json`
 - `source/services`
 - `source/setup_project.ps1`
-- `source/source`
 - `source/styles`
 - `source/test`
 - `source/test_openai.py`
 - `source/tests`
 - `source/tools`
 - `source/utils`
+- `source/video_prompt_composer_config_example.jsonc`
 - `source/video_prompt_config.py`
 - `source/video_prompt_config_alex_army_travel_two_variants.json`
 - `source/video_prompt_config_alex_chronology_two_variants.json`
@@ -244,6 +260,8 @@ This repository is intended to store the current architecture, guides, change-im
 - `docs/CHANGE_IMPACT.md`
 - `docs/MINI_LAPTOP_WATERCOLOR.md`
 - `docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md`
+- `docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md`
+- `docs/PREMIERE_TASK_WORKFLOWS_RU.md`
 - `docs/PROJECT_OVERVIEW.md`
 - `docs/PROJECT_STRUCTURE.html`
 - `docs/PROJECT_STRUCTURE.md`
@@ -254,6 +272,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `docs/USER_GUIDE_EN.md`
 - `docs/USER_GUIDE_RU.html`
 - `docs/USER_GUIDE_RU.md`
+- `docs/portrait_styles_tables.md`
 
 ## Repository Safety Files
 

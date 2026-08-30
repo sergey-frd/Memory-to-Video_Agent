@@ -25,7 +25,10 @@
   },
   "target_selection": {
     "include_ranges_seconds": [
-      [0.0, 60.0]
+      [
+        0.0,
+        60.0
+      ]
     ],
     "protected_ranges_seconds": [],
     "minimum_visible_duration_frames": 21,
@@ -61,7 +64,8 @@
       "PUSH_OUT",
       "GENTLE_PAN_LEFT_TO_RIGHT_WITH_SAFE_OVERSCAN",
       "GENTLE_PAN_RIGHT_TO_LEFT_WITH_SAFE_OVERSCAN"
-    ]
+    ],
+    "temporal_interpolation": "LINEAR_OR_NEAR_LINEAR_WITH_NO_STATIONARY_HEAD_OR_TAIL"
   },
   "audio_policy": {
     "mode": "OUTPUT_SILENT",

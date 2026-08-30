@@ -1,0 +1,72 @@
+{
+  "task_id": "TASK_020",
+  "stage": "A_DELETE_ONLY",
+  "stop_after_stage": true,
+  "source_sequence": "SF_26_BD_Keep_08",
+  "target_sequence": {
+    "name": "SF_26_BD_KEEP_DELETE_ONLY_TEST_v01",
+    "fps": 25
+  },
+  "keep_ranges": [
+    {
+      "id": "K1",
+      "source_in_frame": 0,
+      "source_out_frame": 1550,
+      "duration_frames": 1550
+    },
+    {
+      "id": "K2",
+      "source_in_frame": 2040,
+      "source_out_frame": 2495,
+      "duration_frames": 455
+    },
+    {
+      "id": "K3",
+      "source_in_frame": 2878,
+      "source_out_frame": 4015,
+      "duration_frames": 1137
+    },
+    {
+      "id": "K4",
+      "source_in_frame": 4315,
+      "source_out_frame": 5000,
+      "duration_frames": 685
+    }
+  ],
+  "removed_ranges": [
+    {
+      "id": "R1",
+      "source_in_frame": 1550,
+      "source_out_frame": 2040,
+      "duration_frames": 490
+    },
+    {
+      "id": "R2",
+      "source_in_frame": 2495,
+      "source_out_frame": 2878,
+      "duration_frames": 383
+    },
+    {
+      "id": "R3",
+      "source_in_frame": 4015,
+      "source_out_frame": 4315,
+      "duration_frames": 300
+    }
+  ],
+  "expected_actual": {
+    "video_clip_count": 4,
+    "audio_clip_count": 0,
+    "duration_frames": 3827,
+    "removed_frames": 1173,
+    "forbidden_source_sequences": [
+      "SF_26_BD_Family_1",
+      "SF_26_BD_Nuri_1"
+    ]
+  },
+  "project_path": "<LOCAL_PATH>",
+  "protected_sequences": [
+    "SF_26_BD_Keep_08",
+    "SF_26_BD_Family_1",
+    "SF_26_BD_Nuri_1"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "generate_video": true,
+  "video_count": 1,
+  "camera_segments": 4,
+  "video_duration_seconds": 6,
+  "motion_source": "ai",
+  "motion_model": "gpt-4.1",
+  "generate_source_background": false,
+  "save_grok_debug_artifacts": false,
+  "final_videos_dir": "<LOCAL_PATH>",
+  "regeneration_assets_dir": "<LOCAL_PATH>",
+  "continue_after_failure": false,
+  "write_description": true,
+  "generate_final_frames": false,
+  "read_input_list": false,
+  "generate_music": false,
+  "hide_phone_in_selfie": true,
+  "prefer_loving_kindness_tone": true
+}

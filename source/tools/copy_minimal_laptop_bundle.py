@@ -124,7 +124,7 @@ def parse_args() -> argparse.Namespace:
         "--target",
         type=Path,
         default=DEFAULT_TARGET,
-        help=r"Target project root (default: <LOCAL_PATH>
+        help=r"Target project root (default: <LOCAL_PATH>).",
     )
     parser.add_argument(
         "--run-compare",

@@ -4,7 +4,7 @@ chcp 65001 >nul
 
 cd /d "%~dp0"
 
-set "REPO_DIR=<LOCAL_PATH>
+set "REPO_DIR=<LOCAL_PATH>"
 set "COMMIT_MESSAGE=Update project publication"
 
 python ".\main_project_publication_push.py" --repo-dir "%REPO_DIR%" --commit-message "%COMMIT_MESSAGE%" --push %*

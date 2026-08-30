@@ -223,7 +223,7 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
 
                 grok_args = SimpleNamespace(
                     prompt_dir=settings.output_dir,
-                    input_dir=settings.input_dir,
+                    input_dir=image_path.parent,
                     config_file=args.config_file,
                     profile_dir=args.profile_dir,
                     target_url=args.target_url,

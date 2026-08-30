@@ -1,0 +1,493 @@
+{
+  "task_id": "TASK_028",
+  "revision": 1,
+  "title": "Sergey 76 dual editorial refinement: SHORT v04 and LONG v11",
+  "project": {
+    "number": 1,
+    "name": "SF_26_BD_1",
+    "path": "<LOCAL_PATH>"
+  },
+  "global_rules": {
+    "fps": 25,
+    "resolution": [
+      3840,
+      2160
+    ],
+    "range_convention": "half_open_[in_inclusive,out_exclusive)",
+    "make_project_backup_first": true,
+    "duplicate_inputs_before_editing": true,
+    "source_sequences_must_remain_unchanged": true,
+    "preserve_existing_music": true,
+    "preview_audio_required": true,
+    "no_new_music": true,
+    "no_global_animation_pass": true,
+    "no_identity_based_family_deletion": true,
+    "reopen_and_reparse_saved_project_before_reporting": true
+  },
+  "protected_sequences": [
+    "SF_26_BD_SHORT_76S_v03",
+    "SF_26_BD_LONG_FAMILY_NURI_v10",
+    "SF_26_BD_LONG_FAMILY_NURI_v09",
+    "SF_26_BD_Keep_08",
+    "SF_26_BD_Family_1",
+    "SF_26_BD_Nuri_1"
+  ],
+  "short_job": {
+    "input_sequence": "SF_26_BD_SHORT_76S_v03",
+    "output_sequence": "SF_26_BD_SHORT_76S_v04",
+    "input_expected": {
+      "frames": 1878,
+      "duration_seconds": 75.12,
+      "timecode": "00:01:15:03",
+      "foreground_clips": 31,
+      "background_clips": 1,
+      "audio_clips": 2
+    },
+    "output_expected": {
+      "frames": 1878,
+      "duration_seconds": 75.12,
+      "timecode": "00:01:15:03",
+      "foreground_clips": 26,
+      "background_clips": 1,
+      "audio_clips": 2
+    },
+    "editorial_arc": [
+      "Nuri/new life",
+      "desert, road and car",
+      "childhood, age and present Sergey",
+      "two readable time flashes",
+      "family with unequal dramatic weights",
+      "present life and open space",
+      "Sergey walking toward the viewer and a deliberate final hold"
+    ],
+    "required_changes": [
+      "Remove NURI_THREE_GENERATIONS from the SHORT only; S01-S02 already establish Nuri clearly.",
+      "Shorten DESERT_APPROACH from 70 to its first 50 frames.",
+      "Remove CAR_STOP entirely; preserve CAR_DRIVER and CAR_INTERIOR so the car remains but the technical action is not repeated.",
+      "Replace PRESENT_SERGEY_MEMORY Keep_08 [350,438) with the cleaner final subrange [388,438).",
+      "Replace five 12-frame flashes with exactly two readable 30-frame stills.",
+      "Give the strongest family images more screen time without deleting any of the eight represented family roles.",
+      "Remove OPEN_SPACE_EXTENSION; OPEN_SPACE remains.",
+      "Extend the final meaning with a 47-frame hold on the last valid FINAL_WALK frame. No black frame."
+    ],
+    "audio": {
+      "mode": "copy_existing_two_music_clips_from_v03_without_timeline_change",
+      "expected_clip_1": {
+        "timeline_in": 0,
+        "timeline_out": 188
+      },
+      "expected_clip_2": {
+        "timeline_in": 93,
+        "timeline_out": 1878
+      },
+      "preserve_existing_level_crossfade": true,
+      "do_not_add_diegetic_audio": true
+    },
+    "background": {
+      "mode": "rebuild_matching_full_timeline_blurred_background_from_the_new_short_foreground",
+      "foreground_track": "V2",
+      "background_track": "V1",
+      "match_every_new_foreground_boundary": true,
+      "preserve_v03_visual_style": true,
+      "no_black_side_fields": true
+    },
+    "expected_final_segments": [
+      {
+        "order": 1,
+        "id": "NURI_A",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Nuri_1",
+        "source_in_frame": 1351,
+        "source_out_frame": 1426,
+        "duration_frames": 75,
+        "timeline_in_frame": 0,
+        "timeline_out_frame": 75
+      },
+      {
+        "order": 2,
+        "id": "NURI_B",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 4518,
+        "source_out_frame": 4608,
+        "duration_frames": 90,
+        "timeline_in_frame": 75,
+        "timeline_out_frame": 165
+      },
+      {
+        "order": 3,
+        "id": "DESERT_APPROACH",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 813,
+        "source_out_frame": 863,
+        "duration_frames": 50,
+        "timeline_in_frame": 165,
+        "timeline_out_frame": 215
+      },
+      {
+        "order": 4,
+        "id": "SERGEY_IN_DESERT",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 883,
+        "source_out_frame": 955,
+        "duration_frames": 72,
+        "timeline_in_frame": 215,
+        "timeline_out_frame": 287
+      },
+      {
+        "order": 5,
+        "id": "CAR_DRIVER",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 1081,
+        "source_out_frame": 1161,
+        "duration_frames": 80,
+        "timeline_in_frame": 287,
+        "timeline_out_frame": 367
+      },
+      {
+        "order": 6,
+        "id": "CAR_INTERIOR",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 1425,
+        "source_out_frame": 1530,
+        "duration_frames": 105,
+        "timeline_in_frame": 367,
+        "timeline_out_frame": 472
+      },
+      {
+        "order": 7,
+        "id": "CHILDHOOD",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 0,
+        "source_out_frame": 75,
+        "duration_frames": 75,
+        "timeline_in_frame": 472,
+        "timeline_out_frame": 547
+      },
+      {
+        "order": 8,
+        "id": "YOUNG_SERGEY",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 120,
+        "source_out_frame": 200,
+        "duration_frames": 80,
+        "timeline_in_frame": 547,
+        "timeline_out_frame": 627
+      },
+      {
+        "order": 9,
+        "id": "SERGEY_MEMORY",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 275,
+        "source_out_frame": 350,
+        "duration_frames": 75,
+        "timeline_in_frame": 627,
+        "timeline_out_frame": 702
+      },
+      {
+        "order": 10,
+        "id": "PRESENT_SERGEY_MEMORY",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 388,
+        "source_out_frame": 438,
+        "duration_frames": 50,
+        "timeline_in_frame": 702,
+        "timeline_out_frame": 752
+      },
+      {
+        "order": 11,
+        "id": "TIME_FLASH_1",
+        "source_mode": "direct_still_asset",
+        "source_asset_name": "20250602_184517.png",
+        "duration_frames": 30,
+        "timeline_in_frame": 752,
+        "timeline_out_frame": 782
+      },
+      {
+        "order": 12,
+        "id": "TIME_FLASH_2",
+        "source_mode": "direct_still_asset",
+        "source_asset_name": "20250602_185128.jpg",
+        "duration_frames": 30,
+        "timeline_in_frame": 782,
+        "timeline_out_frame": 812
+      },
+      {
+        "order": 13,
+        "id": "KSENIA_LATE",
+        "source_mode": "direct_still_asset",
+        "source_asset_name": "trio_SF_M_A_260822.png",
+        "duration_frames": 95,
+        "timeline_in_frame": 812,
+        "timeline_out_frame": 907
+      },
+      {
+        "order": 14,
+        "id": "FAMILY_YOUNG_MAN_PARK",
+        "source_mode": "direct_still_asset",
+        "source_asset_name": "796455e6-aa1e-4733-93ab-8c06388594bb.png",
+        "duration_frames": 95,
+        "timeline_in_frame": 907,
+        "timeline_out_frame": 1002
+      },
+      {
+        "order": 15,
+        "id": "MALE_FAMILY_PORTRAIT",
+        "source_mode": "direct_still_asset",
+        "source_asset_name": "IMG-20250528-WA0002.jpg",
+        "duration_frames": 60,
+        "timeline_in_frame": 1002,
+        "timeline_out_frame": 1062
+      },
+      {
+        "order": 16,
+        "id": "FAMILY_WOMAN_GLASSES",
+        "source_mode": "direct_still_asset",
+        "source_asset_name": "pair_280819_02.png",
+        "duration_frames": 60,
+        "timeline_in_frame": 1062,
+        "timeline_out_frame": 1122
+      },
+      {
+        "order": 17,
+        "id": "BAR_MITZVAH_THREE_MEN",
+        "source_mode": "direct_still_asset",
+        "source_asset_name": "IMG_0859.jpg",
+        "duration_frames": 100,
+        "timeline_in_frame": 1122,
+        "timeline_out_frame": 1222,
+        "protected_meaning": "Sergey with sons Sasha and Dima at grandson Elika's bar mitzvah"
+      },
+      {
+        "order": 18,
+        "id": "FAMILY_YOUNG_MAN_BUS",
+        "source_mode": "direct_still_asset",
+        "source_asset_name": "20250917_143939.jpg",
+        "duration_frames": 95,
+        "timeline_in_frame": 1222,
+        "timeline_out_frame": 1317
+      },
+      {
+        "order": 19,
+        "id": "GRANDCHILDREN_ONE_IMAGE",
+        "source_mode": "direct_still_asset",
+        "source_asset_name": "f7fb62a0-6b95-4150-8ccf-96330dfd1bea.png",
+        "duration_frames": 95,
+        "timeline_in_frame": 1317,
+        "timeline_out_frame": 1412
+      },
+      {
+        "order": 20,
+        "id": "FAMILY_YOUNG_MAN_HOME",
+        "source_mode": "direct_still_asset",
+        "source_asset_name": "IMG-20250923-WA0011.jpg",
+        "duration_frames": 60,
+        "timeline_in_frame": 1412,
+        "timeline_out_frame": 1472
+      },
+      {
+        "order": 21,
+        "id": "CURRENT_LIFE_A",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 3223,
+        "source_out_frame": 3320,
+        "duration_frames": 97,
+        "timeline_in_frame": 1472,
+        "timeline_out_frame": 1569
+      },
+      {
+        "order": 22,
+        "id": "CURRENT_LIFE_B",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 3400,
+        "source_out_frame": 3491,
+        "duration_frames": 91,
+        "timeline_in_frame": 1569,
+        "timeline_out_frame": 1660
+      },
+      {
+        "order": 23,
+        "id": "URBAN_WALK_ECHO",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 3870,
+        "source_out_frame": 3903,
+        "duration_frames": 33,
+        "timeline_in_frame": 1660,
+        "timeline_out_frame": 1693
+      },
+      {
+        "order": 24,
+        "id": "OPEN_SPACE",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 3921,
+        "source_out_frame": 3996,
+        "duration_frames": 75,
+        "timeline_in_frame": 1693,
+        "timeline_out_frame": 1768
+      },
+      {
+        "order": 25,
+        "id": "FINAL_WALK",
+        "source_mode": "nested_sequence",
+        "source_sequence": "SF_26_BD_Keep_08",
+        "source_in_frame": 3587,
+        "source_out_frame": 3650,
+        "duration_frames": 63,
+        "timeline_in_frame": 1768,
+        "timeline_out_frame": 1831
+      },
+      {
+        "order": 26,
+        "id": "FINAL_HOLD",
+        "source_mode": "frame_hold_from_previous_last_valid_frame",
+        "source_frame": "FINAL_WALK source frame 3649",
+        "duration_frames": 47,
+        "timeline_in_frame": 1831,
+        "timeline_out_frame": 1878,
+        "black_frames_forbidden": true
+      }
+    ]
+  },
+  "long_job": {
+    "input_sequence": "SF_26_BD_LONG_FAMILY_NURI_v10",
+    "output_sequence": "SF_26_BD_LONG_FAMILY_NURI_v11",
+    "input_expected": {
+      "frames": 4140,
+      "duration_seconds": 165.6,
+      "timecode": "00:02:45:15",
+      "foreground_clips": 33,
+      "background_clips": 1,
+      "audio_clips": 2
+    },
+    "output_expected": {
+      "frames": 4103,
+      "duration_seconds": 164.12,
+      "timecode": "00:02:44:03",
+      "audio_clips": 2
+    },
+    "required_changes": [
+      "KEEP the short camel interval v10 [1080,1101) unchanged. Camels are allowed as a brief desert/road sign.",
+      "Remove only the illness/hospital interval v10 [1396,1421).",
+      "Remove only the separate hospital clip v10 [3319,3331).",
+      "Keep S32 Nuri/newborn v10 [3583,3658) as an explicit birth-context exception.",
+      "Move the complete non-hospital coda v10 [3658,4140) before S32 so Nuri becomes the final image.",
+      "Do not remove, rename or infer identities for any family image.",
+      "Keep the bar-mitzvah image once."
+    ],
+    "authoritative_video_ranges_in_output_order": [
+      {
+        "order": 1,
+        "v10_in": 0,
+        "v10_out": 1396,
+        "duration_frames": 1396,
+        "output_in": 0,
+        "output_out": 1396
+      },
+      {
+        "order": 2,
+        "v10_in": 1421,
+        "v10_out": 3319,
+        "duration_frames": 1898,
+        "output_in": 1396,
+        "output_out": 3294
+      },
+      {
+        "order": 3,
+        "v10_in": 3331,
+        "v10_out": 3583,
+        "duration_frames": 252,
+        "output_in": 3294,
+        "output_out": 3546
+      },
+      {
+        "order": 4,
+        "v10_in": 3658,
+        "v10_out": 4140,
+        "duration_frames": 482,
+        "output_in": 3546,
+        "output_out": 4028,
+        "role": "mixed present-life coda moved before Nuri"
+      },
+      {
+        "order": 5,
+        "v10_in": 3583,
+        "v10_out": 3658,
+        "duration_frames": 75,
+        "output_in": 4028,
+        "output_out": 4103,
+        "role": "protected Nuri birth image and required LONG final"
+      }
+    ],
+    "audio": {
+      "mode": "preserve_existing_non_diegetic_music_continuously_from_v10",
+      "do_not_reorder_audio_with_video": true,
+      "preserve_start_and_crossfade": true,
+      "trim_only_the_final_tail_to_frame": 4103,
+      "final_audio_must_not_cut_abruptly": true
+    },
+    "background": {
+      "mode": "rebuild_matching_full_timeline_blurred_background_from_the_new_long_foreground",
+      "foreground_track": "V2",
+      "background_track": "V1",
+      "preserve_v10_scale_and_blur_style": true,
+      "match_every_new_foreground_boundary": true,
+      "no_black_side_fields": true
+    }
+  },
+  "forbidden_actions": [
+    "Mutating SHORT v03 or LONG v10.",
+    "Deleting all camels.",
+    "Deleting S32 Nuri because the room may be medical.",
+    "Deleting an unidentified relative.",
+    "Adding transitions everywhere.",
+    "Adding new music, titles, narration or sound effects.",
+    "Running a global photo-animation pass in this task.",
+    "Claiming DONE before Muza visual QA and Premiere desktop open-check."
+  ],
+  "required_outputs": {
+    "preview_files": [
+      "SF_26_BD_SHORT_76S_v04_640_360.mp4",
+      "SF_26_BD_LONG_FAMILY_NURI_v11_640_360.mp4"
+    ],
+    "qa_files": [
+      "TASK_028_SHORT_TIMELINE_ACTUAL.json",
+      "TASK_028_LONG_TIMELINE_ACTUAL.json",
+      "TASK_028_FFPROBE.json",
+      "TASK_028_SHORT_NEW_JOINS_CONTACT_SHEET.jpg",
+      "TASK_028_LONG_NEW_JOINS_CONTACT_SHEET.jpg",
+      "TASK_028_DUAL_OVERVIEW_CONTACT_SHEET.jpg",
+      "TASK_028_QA.txt",
+      "TASK_028_WAITING_MUZA_QA.txt"
+    ],
+    "preview_video": {
+      "width": 640,
+      "height": 360,
+      "fps": 25,
+      "audio": "AAC stereo required"
+    }
+  },
+  "hard_fail_conditions": [
+    "Any protected sequence changes.",
+    "SHORT output is not exactly 1878 frames.",
+    "LONG output is not exactly 4103 frames.",
+    "SHORT does not begin with Nuri or does not end with FINAL_WALK/FINAL_HOLD.",
+    "LONG does not end with S32 Nuri.",
+    "Camels are completely removed from LONG.",
+    "S04 or S26 hospital material remains in LONG.",
+    "Any black gap exists.",
+    "Preview audio is absent or ends with a technical cut.",
+    "Background does not correspond to the reordered foreground."
+  ]
+}

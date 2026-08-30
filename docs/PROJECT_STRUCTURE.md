@@ -84,6 +84,22 @@
 
 ## Subsystem Cards
 
+### Рабочие дополнения на 2026-08-30
+
+| Подсистема | Точки входа / примеры | Контракт |
+| --- | --- | --- |
+| xAI API pipeline | `main_full_pipeline_api.py`, `api/grok_video_runner.py`, `examples/config_api_single_image.example.json`, `examples/scripts/api_single_image.ps1` | Внешний `--image` ищется в своей папке; `--no-submit` не отключает preparation/cleanup |
+| Переносимый Motion | `main_premiere_import_keep.py`, `premiere_sequence_motion_template.json`, `premiere_sequence_insert_motion_template.json` | Save As; intrinsic Motion; silent review; JSON contract + dry-run |
+| TASK timeline edits | `main_premiere_timeline_assembly.py`, `main_premiere_sequence_delete_only.py`, `main_premiere_sequence_coarse_insert.py`, `main_premiere_sequence_ripple_delete.py`, `main_premiere_sequence_insert_only.py`, `main_premiere_sequence_replace_only.py` | Фиксированные TASK_019–023; новые sequence в исходном проекте после backup |
+| SHORT / dual refinement | `main_premiere_short_core.py`, `main_premiere_short_expansion.py`, `main_premiere_task_028_dual_refinement.py`, `examples/premiere/` | TASK_024/025/028; source и output frames не взаимозаменяемы; actual JSON из сохранённого проекта |
+| Adaptive animation / color | `main_premiere_task_029_adaptive_animation.py`, `main_premiere_task_030_color_finish.py` | Фиксированные пути/версии, audit-only, сохранение музыки, отдельные helper sequences; планы являются выходами |
+| Alla | `main_premiere_alla_first_assembly.py`, `main_premiere_alla_client_motion_v02.py` | Фиксированные source/output проекты; material bank, skeleton, client Motion; нет config/dry-run |
+
+Подробная карта ограничений: [PREMIERE_TASK_WORKFLOWS_RU.md](PREMIERE_TASK_WORKFLOWS_RU.md).
+`source/` и `data/project_snapshot.json` — публикационные снимки; не используйте
+их как перечень свежих рабочих изменений. Новые CLI лежат в корне и `utils/`.
+
+
 | Подсистема | Основные файлы | Ответственность | Выходы |
 | --- | --- | --- | --- |
 | Config & Paths | `config.py`, `config.json`, `config_BASE.json`, `config_*.json` | Описание флагов, validation, canonical paths | `GenerationConfig`, `Settings` |

@@ -2,19 +2,19 @@
 
 This document is generated from the source project and is intended for the external project-information repository.
 
-- Generated at: `2026-08-26T14:17:04+03:00`
+- Generated at: `2026-08-30T12:02:28+03:00`
 - Source project: `img-style-ag_1`
 
 ## Snapshot
 
-- Files scanned: `577`
-- Python files: `245`
-- Test files: `46`
-- Config JSON files: `40`
-- Markdown docs: `29`
-- Entry points: `31`
+- Files scanned: `421`
+- Python files: `184`
+- Test files: `50`
+- Config JSON files: `30`
+- Markdown docs: `27`
+- Entry points: `44`
 - API modules: `17`
-- Utils modules: `48`
+- Utils modules: `52`
 - Model modules: `7`
 
 ## Entry Points
@@ -36,7 +36,20 @@ This document is generated from the source project and is intended for the exter
 - `main_grok_web.py`
 - `main_hero_definition.py`
 - `main_human_sequence_report.py`
+- `main_premiere_alla_client_motion_v02.py`
+- `main_premiere_alla_first_assembly.py`
 - `main_premiere_import_keep.py`
+- `main_premiere_sequence_coarse_insert.py`
+- `main_premiere_sequence_delete_only.py`
+- `main_premiere_sequence_insert_only.py`
+- `main_premiere_sequence_replace_only.py`
+- `main_premiere_sequence_ripple_delete.py`
+- `main_premiere_short_core.py`
+- `main_premiere_short_expansion.py`
+- `main_premiere_task_028_dual_refinement.py`
+- `main_premiere_task_029_adaptive_animation.py`
+- `main_premiere_task_030_color_finish.py`
+- `main_premiere_timeline_assembly.py`
 - `main_premiere_transform_script.py`
 - `main_premiere_transition_script.py`
 - `main_project_publication.py`
@@ -63,6 +76,7 @@ This document is generated from the source project and is intended for the exter
 | `sequence_optimization` | Парсинг sequence, оптимизация порядка, экспорт XML/PRPROJ и отчеты. |
 | `hero_definition` | Создание проверяемого визуального определения героя из эталонных изображений и human-detail текста. |
 | `sequence_trim_review` | KEEP/DROP-анализ Premiere sequence через heuristic, semantic, hero, report_replay, ручное применение KEEP JSON, импорт списка медиа и import-and-keep за один проход. |
+| `premiere_motion_and_task_edits` | Переносимые Motion JSON-режимы и специализированные TASK/Alla монтаж, анимация, цвет; backup, saved-project QA, preview. |
 
 ## Change Types
 

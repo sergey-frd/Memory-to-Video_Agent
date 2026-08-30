@@ -4,9 +4,9 @@ chcp 65001 >nul
 
 set "SCRIPT_DIR=%~dp0"
 
-set "PROJECT=<LOCAL_PATH>
+set "PROJECT=<LOCAL_PATH>"
 set "SEQUENCE=Svt_Igr_262_e01"
-set "DEST=<LOCAL_PATH>
+set "DEST=<LOCAL_PATH>"
 set "MANIFEST=%SCRIPT_DIR%output\Svt_Igr_26_2_e01_image_copy_manifest.json"
 
 echo Project:     %PROJECT%

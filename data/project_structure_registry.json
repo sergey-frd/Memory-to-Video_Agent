@@ -17,7 +17,9 @@
     "docs/MINI_LAPTOP_WATERCOLOR.md",
     "docs/Seedance_2.0_Director.md",
     "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md",
-    "docs/portrait_styles_tables.md"
+    "docs/portrait_styles_tables.md",
+    "docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md",
+    "docs/PREMIERE_TASK_WORKFLOWS_RU.md"
   ],
   "core_invariants": [
     "GenerationConfig в config.py является единой точкой правды для generation-флагов.",
@@ -98,7 +100,12 @@
         "api/grok_web.py",
         "main_grok_web.py",
         "main_grok_batch.py",
-        "main_full_pipeline.py"
+        "main_full_pipeline.py",
+        "main_full_pipeline_api.py",
+        "api/grok_video_runner.py",
+        "api/grok_video.py",
+        "examples/config_api_single_image.example.json",
+        "examples/scripts/api_single_image.ps1"
       ],
       "tests": [
         "test/test_grok_web_app.py",
@@ -106,7 +113,9 @@
         "test/test_full_pipeline.py"
       ],
       "must_review_when_changed": [
-        "utils/project_delivery.py"
+        "utils/project_delivery.py",
+        "docs/USER_GUIDE_RU.md",
+        "docs/USER_GUIDE_EN.md"
       ]
     },
     {
@@ -232,6 +241,39 @@
         "sequence_import_and_keep_*.json",
         "docs/USER_GUIDE_EN.md",
         "docs/USER_GUIDE_RU.md",
+        "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md"
+      ]
+    },
+    {
+      "id": "premiere_motion_and_task_edits",
+      "purpose": "Переносимые Motion JSON-режимы и специализированные TASK/Alla монтаж, анимация, цвет; backup, saved-project QA, preview.",
+      "files": [
+        "main_premiere_import_keep.py",
+        "main_premiere_sequence_*.py",
+        "main_premiere_timeline_assembly.py",
+        "main_premiere_short_*.py",
+        "main_premiere_task_*.py",
+        "main_premiere_alla_*.py",
+        "utils/premiere_sequence_*.py",
+        "models/premiere_sequence_motion.py",
+        "premiere_sequence_*_template.json",
+        "examples/premiere/*.json",
+        "examples/scripts/premiere_task_dry_run.ps1"
+      ],
+      "tests": [
+        "test/test_premiere_sequence_motion.py",
+        "test/test_premiere_sequence_insert_motion.py",
+        "test/test_premiere_sequence_timeline_assembly.py",
+        "test/test_premiere_sequence_delete_only.py",
+        "test/test_premiere_sequence_coarse_insert.py",
+        "test/test_premiere_sequence_ripple_delete.py",
+        "test/test_parameter_documentation.py"
+      ],
+      "must_review_when_changed": [
+        "docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md",
+        "docs/PREMIERE_TASK_WORKFLOWS_RU.md",
+        "docs/USER_GUIDE_RU.md",
+        "docs/USER_GUIDE_EN.md",
         "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md"
       ]
     }

@@ -1,5 +1,58 @@
 ﻿# User Guide
 
+## Latest workspace changes: Premiere and external API images
+
+As of 2026-08-30, task-specific executors cover TASK_019–025, TASK_028–030 and
+Alla: timeline assembly, delete/insert/replace, SHORT edits, dual refinement,
+adaptive still Motion and Lumetri finishing. The detailed command/contract map
+and JSON examples are in [PREMIERE_TASK_WORKFLOWS_RU.md](PREMIERE_TASK_WORKFLOWS_RU.md).
+These scripts are not additional `mode` values for the import/KEEP entry point.
+TASK executors can update the input `.prproj` after backup; portable Motion
+modes use Save As. TASK_028–030 preserve music, while portable Motion requires
+`OUTPUT_SILENT`. TASK_029/030 and Alla accept neither `--dry-run` nor `--config`;
+029/030 provide `--audit-only`, which writes reports but does not edit the project.
+Their paths and sequence versions are fixed in Python. There are manual stages
+between the documented versions; do not run them as one automatic chain.
+
+### API: a single image outside input
+
+`main_full_pipeline_api.py` now passes the actual `image_path.parent` to the
+Grok batch, allowing `--image` outside `input/` to resolve correctly. Specify
+`--single-image` to override a config that enables `read_input_list`.
+Copy [config_api_single_image.example.json](../source/examples/config_api_single_image.example.json),
+replace its delivery paths, then run:
+
+```powershell
+.\run_full_grok_pipeline_api.bat --config-file .\examples\config_api_single_image.example.json --image "<LOCAL_PATH>" --single-image --result-timeout 900
+```
+
+Prompt/scene preparation needs `OPENAI_API_KEY`; generation needs `XAI_API_KEY`.
+Keep secrets in the environment or `.env`, never in example JSON.
+`config_alla_15_humor_api.json` is a project-specific preset: one six-second
+video, four camera segments, no background/final-frame/music generation and
+local delivery paths. It does not configure the Alla Premiere scripts.
+
+`--no-submit` skips xAI generation only. OpenAI preparation, manifest writes,
+`output/` cleanup and input-queue handling can still happen. Successful queue
+inputs are deleted; an external image is preserved by success cleanup. On
+failure with `continue_after_failure=true`, even an external image can move to
+`error/input`; with `false`, the handler moves queued `input/` files and stops.
+Use copies and keep unrelated files out of runtime folders. This flag is not
+a side-effect-free dry run.
+
+Preview arguments without calling the pipeline:
+
+```powershell
+.\examples\scripts\api_single_image.ps1 -Image "<LOCAL_PATH>" -Config .\examples\config_api_single_image.example.json
+```
+
+Only `-Run` starts generation from this PowerShell example. Browser-only
+arguments such as `--profile-dir`, `--chrome-debug-port` and
+`--reuse-existing-grok-page` are ignored by the API CLI. `--result-timeout`
+controls the result wait. Structural tests and FFmpeg previews do not replace
+opening the saved project in Premiere and reviewing picture/audio; `WAITING_*`
+artifacts do not imply completion or an upload.
+
 ## One-Minute Quick Start
 
 1. Put source images into `input`.
@@ -1451,6 +1504,16 @@ Recommended cycle:
 8. When the sequence is final, rebuild reports from the final current order and keep them in `reports`.
 
 ## Typical Commands
+
+New API/TASK examples (adapt paths/configs first):
+
+```powershell
+.\examples\scripts\api_single_image.ps1 -Image "<LOCAL_PATH>"
+.\examples\scripts\premiere_task_dry_run.ps1 -Task TASK_021 -Config .\examples\premiere\task_021_ripple_delete.example.json
+python .\main_premiere_task_029_adaptive_animation.py --audit-only
+python .\main_premiere_task_030_color_finish.py --audit-only
+```
+
 
 Full cycle:
 

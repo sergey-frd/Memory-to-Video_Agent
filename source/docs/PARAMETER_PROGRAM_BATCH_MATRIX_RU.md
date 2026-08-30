@@ -461,6 +461,96 @@ run_project_sequence_batch.bat project_sequence_batch_Alice.json
 | `full_recommendations` | `false` | Дополнительно создать structure и transitions | то же | то же |
 | `scene_model` | `gpt-4.1-mini` из environment/default | OpenAI vision-модель scene analysis | то же | то же |
 
+## 8. Premiere Motion JSON
+
+Оба режима исполняет `main_premiere_import_keep.py` через
+`run_premiere_sequence_motion.bat`. Полные исполняемые примеры:
+[PREMIERE_JSON_EDIT_AND_MOTION_RU.md](PREMIERE_JSON_EDIT_AND_MOTION_RU.md).
+Сначала замените пути/имена/длительности в соответствующем шаблоне, затем
+выполните `--dry-run`; общий generation-файл `config.json` здесь не подходит.
+
+| Параметры | Назначение / ограничения |
+| --- | --- |
+| `schema_version`, `mode` | Версия `1.0`; `premiere_sequence_motion_animation` либо `premiere_sequence_insert_from_sequence_and_motion_animation` |
+| `project.project_file`, `project.save_as_project_file` | Исходный проект и отдельный Save As; исходник не перезаписывается |
+| `sequences.source_sequence_name`, `sequences.output_sequence_name` | Motion-only: разные source/output имена |
+| `sequences.main_source_sequence_name`, `sequences.correction_source_sequence_name`, `sequences.correction_source_is_sequence_not_media_file` | Insert+Motion: два источника внутри одного `.prproj`; correction — sequence, не MP4 |
+| `sequence_contract.edit_timebase_fps`, `sequence_contract.expected_frames`, `sequence_contract.expected_duration_seconds`, `sequence_contract.expected_frame_size.width`, `sequence_contract.expected_frame_size.height` | Motion-only: проверяемые параметры исходной sequence; frames/fps должны соответствовать duration |
+| `sequence_contract.expected_edit_timebase_fps` | Insert+Motion: поле fps называется иначе, чем в Motion-only |
+| `sequence_versioning.automated_milestone_increment`, `sequence_versioning.current_output_milestone` | Insert+Motion: выходное имя заканчивается `_v<number>` и соответствует шагу milestone |
+| `target_selection.include_ranges_seconds`, `target_selection.protected_ranges_seconds`, `target_selection.minimum_visible_duration_frames` | Motion-only: выбор кадров; protected range исключает весь пересекающий клип |
+| `motion_animation.minimum_visible_duration_frames` | Insert+Motion: минимальная видимая длительность для анимации |
+| `motion_animation.motion_profiles[].name`, `motion_animation.motion_profiles[].visible_duration_frames_min`, `motion_animation.motion_profiles[].visible_duration_frames_max` | Профиль выбирается по числу видимых кадров; `null` у верхней границы означает отсутствие верхнего ограничения |
+| `motion_animation.motion_profiles[].scale_delta_percent_of_baseline`, `motion_animation.motion_profiles[].max_position_delta_percent_of_frame` | Изменение Scale относительно baseline; предел смещения Position относительно размера кадра |
+| `motion_animation.direction_cycle` | Цикл направлений push/pan; анимация применяется к подходящим still items |
+| `motion_animation.temporal_interpolation` | В актуальных шаблонах явно `LINEAR_OR_NEAR_LINEAR_WITH_NO_STATIONARY_HEAD_OR_TAIL`; Motion-only без поля использует `BEZIER_EASE_IN_OUT` |
+| `semantic_source_range_resolution.candidate_ranges_frames`, `semantic_source_range_resolution.resolved_source_range_frames` | Кандидаты и выбранный `[IN, OUT_EXCLUSIVE]` на correction timeline |
+| `destination_insertion.resolved_destination_frame` | Точная граница picture item в основной sequence; при отсутствии используется начало последней непрерывной группы изображений |
+| `audio_policy.mode` | Только `OUTPUT_SILENT`; аудио output удаляется non-ripple |
+| `dry_run.required`, `dry_run.required_plan_filename`, `dry_run.expected_output_frames`, `dry_run.expected_output_duration_seconds` | Dry-run и ожидаемые длительности Motion-only; `required` не заменяет CLI-флаг `--dry-run` |
+| `review_export.filename`, `review_export.actual_frame_size.width`, `review_export.actual_frame_size.height`, `review_export.frame_rate_fps`, `review_export.expected_frames`, `review_export.expected_duration_seconds`, `review_export.audio_stream_required` | FFmpeg review; в примерах 640×360, 25 fps, без аудио; frames/duration согласуются с выходом |
+| `deliverables` | Имена артефактов insert+Motion: план, сохранённый проект, implementation/QA и review |
+
+## 9. Специализированные TASK/Alla
+
+Эти сценарии имеют отдельные entry points, а не новые значения `mode`.
+Полная таблица исполнителей, чисел кадров, флагов и проверок:
+[PREMIERE_TASK_WORKFLOWS_RU.md](PREMIERE_TASK_WORKFLOWS_RU.md).
+
+| Программа | JSON / CLI | Результат и ограничения |
+| --- | --- | --- |
+| `main_premiere_timeline_assembly.py` | `--config`, `--dry-run`; `revision`, `timebase_fps`, `local_project.path`, `local_output.directory`, `source_truth.required_sequences`, `target_sequence`, `expected_result`, `keep_segments`, `family_montage.segments`, `nuri_segment` | Только TASK_019 revision 3; video-only nested ranges; исходный проект обновляется после backup |
+| `main_premiere_sequence_delete_only.py` | `--config`, `--dry-run`; `task_id`, `stage`, `stop_after_stage`, `project_path`, `source_sequence`, `target_sequence.name`, `target_sequence.fps`, `protected_sequences`, `keep_ranges`, `removed_ranges`, `expected_actual` | TASK_020 Stage A; четыре KEEP, 3827 кадров, 1173 удалено; пример `examples/premiere/task_020_delete_only.example.json` |
+| `main_premiere_sequence_coarse_insert.py` | `--config`, `--dry-run`; `task_id`, `stage`, `authorized_by_user`, `project_path`, `target_sequence`, `protected_sequences`, `segments`, `timeline_order`, `groups`, `expected` | Только разрешённый Stage B; 28 клипов, 4754 кадра; не универсальный insert |
+| `main_premiere_sequence_ripple_delete.py` | `--config`, `--dry-run`; `project.path`, `timeline`, `edit_policy`, `delete_ranges_on_original_v02`, `expected_keep_map`, `protected_sequences` | TASK_021; 3483 → 2876; пример `examples/premiere/task_021_ripple_delete.example.json` |
+| `main_premiere_sequence_insert_only.py` | Позиционный `plan`, `--dry-run`; `project.path`, `timeline`, `insertions_descending_execution_order`, `protected_sequences` | TASK_022; 3 вставки / +195 кадров; source IN/OUT отдельно от destination |
+| `main_premiere_sequence_replace_only.py` | Позиционный `plan`, `--dry-run`; `project.path`, `timeline`, `replacement.old`, `replacement.new`, `replacement.timeline_in_frame`, `replacement.timeline_out_frame`, `protected_sequences` | TASK_023; замена 75 кадров без изменения 3071-кадровой длительности |
+| `main_premiere_short_core.py` | Позиционный `spec`, `--dry-run`; `task_id`, `premiere_project.project_path` | TASK_024; диапазоны в Python; пример `examples/premiere/task_024_short_core.example.json` |
+| `main_premiere_short_expansion.py` | Позиционный `spec`, `--dry-run`; `task_id`, `premiere_project.project_path`, `expected_final_segments`, `protected_sequences` | TASK_025; 31 сегмент / 1878 кадров |
+| `main_premiere_task_028_dual_refinement.py` | Позиционный `spec`, `--dry-run`; `revision`, `project.path`, `protected_sequences`, `short_job`, `long_job` | TASK_028: SHORT 1878 / LONG 4103 кадров; музыка сохранена; пример `examples/premiere/task_028_dual_refinement.example.json` |
+| `main_premiere_task_029_adaptive_animation.py` | `--audit-only`, `--restrengthen`, `--all-stills`; без JSON CLI | Фиксированные пути/sequence; без флагов записывает анимацию; animation maps — выходы |
+| `main_premiere_task_030_color_finish.py` | `--audit-only`, `--finalize-only`, `--strong-pass`, `--extreme-pass`, `--extreme-finalize`, `--extreme-qa-only`; без JSON CLI | Фиксированный `SF_26_BD_2.prproj`; базовый запуск пересоздаёт планы; STRONG/EXTREME — отдельные варианты |
+| `main_premiere_alla_first_assembly.py`, `main_premiere_alla_client_motion_v02.py` | Только `--help`; пути и план в Python; нет config/dry-run | Без флагов выполняют сборку; первый создаёт V01, второй требует подготовленную V02 |
+
+PowerShell-пример `examples/scripts/premiere_task_dry_run.ps1` принимает
+`-Task` и `-Config`, выбирает позиционный аргумент или `--config` и всегда
+добавляет `--dry-run`. TASK_029/030/Alla намеренно не включены.
+
+В диапазонах `source_out_frame`/`end_frame_exclusive` последний кадр не входит;
+`duration_frames = OUT - IN`. `timeline_in_frame`/`timeline_out_frame` задают
+координаты выхода. В ripple-delete поля `source_v02_start`/`source_v02_end_exclusive`
+задают исходник, а `output_v03_start`/`output_v03_end_exclusive` — сжатую timeline.
+В TASK_028 `short_job.expected_final_segments` задаёт 26 сегментов;
+`long_job.authoritative_video_ranges_in_output_order` — пять диапазонов LONG v10
+в порядке выхода v11. Метаданные/текстовые правила в spec не заменяют проверки
+в Python и не превращают фиксированный исполнитель в универсальный.
+
+## 10. API single-image и конфиг генерации
+
+Программа: `main_full_pipeline_api.py`; launcher: `run_full_grok_pipeline_api.bat`.
+Переносимый пример: `examples/config_api_single_image.example.json`.
+Проектный пресет: `config_alla_15_humor_api.json` (локальные пути Alla).
+
+| Параметры | Значение / назначение примера |
+| --- | --- |
+| `generate_video`, `video_count` | `true`, `1`: один ролик |
+| `video_duration_seconds`, `camera_segments` | 6 секунд и 4 camera segments |
+| `motion_source`, `motion_model` | `ai`, `gpt-4.1`: настройки выбора motion из текущего project preset |
+| `generate_source_background`, `generate_final_frames`, `generate_music` | `false`: без дополнительных background/final-frame/music этапов |
+| `read_input_list` | `false`; также задайте CLI `--single-image` |
+| `write_description`, `hide_phone_in_selfie`, `prefer_loving_kindness_tone` | `true`: описание и параметры prompt |
+| `save_grok_debug_artifacts` | `false`: без дополнительных debug-артефактов |
+| `final_videos_dir`, `regeneration_assets_dir` | Заменяемые пути финального видео и сохранённых stage-артефактов |
+| `continue_after_failure` | В переносимом примере `false`; в Alla-пресете `true`; правила перемещения error/input см. в руководстве |
+| `--config-file`, `--image`, `--single-image` | Generation JSON, существующий файл вне/внутри input, запрет обхода очереди |
+| `--result-timeout` | Ожидание результата xAI в секундах |
+| `--no-submit` | Пропускает xAI; OpenAI preparation и cleanup остаются возможны |
+| `OPENAI_API_KEY`, `XAI_API_KEY` | Окружение или `.env`; не JSON и не публикуемые примеры |
+
+`examples/scripts/api_single_image.ps1` принимает `-Image`, `-Config`, `-Run`.
+Без `-Run` только читает входные пути/JSON и печатает аргументы. Это удобнее
+для предварительной проверки команды, чем запуск pipeline с `--no-submit`.
+
 ## Правила сопровождения
 
 При добавлении или переименовании параметра необходимо одновременно обновить:

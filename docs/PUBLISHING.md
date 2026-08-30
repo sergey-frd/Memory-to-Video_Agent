@@ -37,6 +37,23 @@ python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Vi
 
 Never `git push origin main` from the publication clone, and never push the dev workspace root to `publication`.
 
+## Release 2026.08.30.01
+
+Includes the task-specific Premiere executors, external-image API fix,
+updated RU/EN documentation and JSON/PowerShell examples.
+
+Temporary caches and test fixtures are removed before publishing. Actual
+TASK_026/027 analysis materials are preserved under `TASK_ARCHIVE/` in the
+private development repository, along with TASK_028–030 results. The public
+bundle excludes all `TASK_*` directories, `tmp*`, runtime input/output folders,
+secrets and the old nested `source/` snapshot. Run public scripts from the
+publication repository's `source/` directory; task-specific inputs may require
+private local assets and are not supplied as public media.
+
+Root publication docs link examples under `source/examples/`. The bundle also
+includes JSONC configs and the documentation renderer. Use the guarded flow
+above; review the managed-file list before commit/push.
+
 ## GitHub sync status (2026-08-26)
 
 Publication **`2026.08.26.02`** targets the Internet:

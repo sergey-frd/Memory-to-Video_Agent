@@ -18,6 +18,54 @@ run_full_grok_pipeline.bat --upload-timeout 300
 7. Затем нужно запустить оптимизацию sequence и открывать итоговый `.prproj` уже из той же папки, где лежит исходный `project_path`; `reports\temp_projects` хранит только временную рабочую batch-копию.
 8. Если после оптимизации вы руками снова меняете порядок клипов, отчеты можно заново пересобрать через `main_sequence_reports.py`.
 
+## Последние рабочие изменения: Premiere и внешний API image
+
+На 2026-08-30 доступны специализированные сценарии TASK_019–025, TASK_028–030
+и Alla: timeline assembly, delete/insert/replace, SHORT, двойная доработка,
+адаптивный Motion и Lumetri. Полный CLI, таблица фиксированных версий,
+JSON-примеры и порядок QA: [PREMIERE_TASK_WORKFLOWS_RU.md](PREMIERE_TASK_WORKFLOWS_RU.md).
+Эти скрипты не являются новыми `mode` общего import/KEEP entry point.
+TASK-сценарии могут обновлять исходный `.prproj` после backup; переносимые
+Motion-режимы используют Save As. TASK_028–030 сохраняют музыку, тогда как
+переносимые Motion-шаблоны требуют `OUTPUT_SILENT`. TASK_029/030 и Alla не
+принимают `--dry-run` или `--config`; для 029/030 есть `--audit-only`.
+
+### API: одно изображение вне input
+
+`main_full_pipeline_api.py` теперь передаёт в Grok batch реальную папку
+`image_path.parent`, поэтому `--image` вне `input/` разрешается корректно.
+Используйте `--single-image`, чтобы `read_input_list` из конфигурации не включил
+пакетный обход. Подготовьте копию
+[`config_api_single_image.example.json`](../examples/config_api_single_image.example.json),
+заменив пути доставки, и запустите:
+
+```powershell
+.\run_full_grok_pipeline_api.bat --config-file .\examples\config_api_single_image.example.json --image "<LOCAL_PATH>" --single-image --result-timeout 900
+```
+
+Нужны настроенные `OPENAI_API_KEY` для подготовки prompt/scene и `XAI_API_KEY`
+для генерации; секреты хранятся в окружении или `.env`, не в примерах JSON.
+`config_alla_15_humor_api.json` — конкретный проектный пресет: один ролик,
+6 секунд, 4 camera segments, без background/final frames/music; пути локальные.
+
+`--no-submit` пропускает только генерацию xAI. Подготовка OpenAI, запись manifest,
+очистка `output/` и обработка входной очереди сохраняются. После успеха файл
+из `input/` удаляется, внешний исходник не удаляется этим success-cleanup.
+При ошибке и `continue_after_failure=true` даже внешний исходник может быть
+перемещён в `error/input`; при `false` обработчик перемещает файлы очереди
+`input/` и останавливается. Работайте с копиями и не держите посторонние файлы
+в рабочих папках. `--no-submit` не является проверкой без побочных эффектов.
+
+Для предварительного просмотра аргументов **без вызова pipeline**:
+
+```powershell
+.\examples\scripts\api_single_image.ps1 -Image "<LOCAL_PATH>" -Config .\examples\config_api_single_image.example.json
+```
+
+Только добавление `-Run` запускает эту PowerShell-заготовку. Browser-only флаги
+(`--profile-dir`, `--chrome-debug-port`, `--reuse-existing-grok-page` и другие)
+в API CLI игнорируются; `--result-timeout` задаёт ожидание результата.
+
 ## Назначение
 
 Проект предназначен для пакетной подготовки prompt-файлов, генерации background-изображений и видео через Grok, оптимизации порядка sequence в Premiere и формирования отчетов для финальной доводки монтажа. Основной рабочий сценарий: входное изображение -> генерация media -> ручная сборка sequence в Premiere -> оптимизация порядка -> ручная доработка -> повторная сборка финальных рекомендаций по утвержденному порядку.
@@ -1412,6 +1460,16 @@ python .\main_cleanup_artifacts.py --include-output-build-dirs --include-output-
 8. Когда sequence окончательно утверждена, пересобирать отчеты по финальному текущему порядку и хранить их в `reports`.
 
 ## Типовые команды
+
+Новые API/TASK-примеры (пути и конфиги сначала адаптировать):
+
+```powershell
+.\examples\scripts\api_single_image.ps1 -Image "<LOCAL_PATH>"
+.\examples\scripts\premiere_task_dry_run.ps1 -Task TASK_021 -Config .\examples\premiere\task_021_ripple_delete.example.json
+python .\main_premiere_task_029_adaptive_animation.py --audit-only
+python .\main_premiere_task_030_color_finish.py --audit-only
+```
+
 
 Полный цикл:
 

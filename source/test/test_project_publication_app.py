@@ -1,3 +1,4 @@
+import ast
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -9,6 +10,7 @@ from utils.project_publication import (
     DOC_TARGETS,
     JERUSALEM_TZ,
     PublicationResult,
+    _sanitize_public_text,
     write_publication_bundle,
 )
 
@@ -28,6 +30,16 @@ def _fake_openai_project_key() -> str:
 def test_publication_timezone_uses_jerusalem_summer_offset() -> None:
     summer = datetime(2026, 8, 26, 12, 0, tzinfo=JERUSALEM_TZ)
     assert summer.utcoffset() == timedelta(hours=3)
+
+
+def test_sanitizing_inline_path_preserves_enclosing_python_string() -> None:
+    local_path = 'E:' + '\\Work\\bundle\\out'
+    source = '(root / "paths.py").write_text(' + repr('TARGET = ' + local_path + '\n') + ', encoding="utf-8")'
+    sanitized = _sanitize_public_text(source)
+    ast.parse(sanitized)
+    assert '<LOCAL_PATH>' in sanitized
+    assert 'Work' not in sanitized
+    assert 'encoding="utf-8"' in sanitized
 
 
 def test_write_publication_bundle_creates_full_safe_source_mirror() -> None:
@@ -58,6 +70,10 @@ def test_write_publication_bundle_creates_full_safe_source_mirror() -> None:
     (root / "test" / "test_x.py").write_text("def test_x():\n    assert True\n", encoding="utf-8")
     (root / "tests" / "test_extra.py").write_text("def test_extra():\n    assert True\n", encoding="utf-8")
     (root / "project_publication" / "should_skip.txt").write_text("skip\n", encoding="utf-8")
+    private_runtime_dirs = ("tmp", "tmp_cleanup_artifacts", "input_pair", "output_1", "TASK_ARCHIVE", "TASK_030_PRIVATE", "source")
+    for dirname in private_runtime_dirs:
+        (root / dirname).mkdir()
+        (root / dirname / "private_report.json").write_text('{"private": true}', encoding="utf-8")
     (root / ".env").write_text(f"OPENAI_API_KEY={_fake_openai_project_key()}\n", encoding="utf-8")
     (root / "Gemini_Generated_Image_test.jpg").write_bytes(b"jpg")
     (root / "project_structure_registry.json").write_text(
@@ -111,6 +127,8 @@ def test_write_publication_bundle_creates_full_safe_source_mirror() -> None:
     assert not (target / "source" / "Gemini_Generated_Image_test.jpg").exists()
     assert not (target / "source" / "utils" / "__pycache__" / "skip.pyc").exists()
     assert not (target / "source" / "project_publication" / "should_skip.txt").exists()
+    for dirname in private_runtime_dirs:
+        assert not (target / "source" / dirname).exists()
     assert all((target / target_relpath).exists() for target_relpath in DOC_TARGETS.values())
     assert (target / "docs" / "PROJECT_STRUCTURE.md").exists()
     assert (target / "docs" / "USER_GUIDE_EN.md").exists()
@@ -242,7 +260,7 @@ def test_write_publication_bundle_sanitizes_paths_inside_source_files() -> None:
     (root / "config.json").write_text('{"key": "value"}\n', encoding="utf-8")
     _write_required_docs(root)
     (root / "api" / "paths.py").write_text('SOURCE = "<LOCAL_PATH>"\n', encoding="utf-8")
-    (root / "utils" / "paths.py").write_text("TARGET = <LOCAL_PATH> encoding="utf-8")
+    (root / "utils" / "paths.py").write_text("TARGET = <LOCAL_PATH>", encoding="utf-8")
     (root / "project_structure_registry.json").write_text(
         json.dumps(
             {

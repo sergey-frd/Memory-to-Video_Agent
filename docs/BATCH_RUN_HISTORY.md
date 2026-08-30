@@ -86,6 +86,23 @@
 | B068 | `run_premiere_sequence_motion.bat` | Дублировать sequence и применить JSON-driven intrinsic Motion | `.\run_premiere_sequence_motion.bat .\premiere_sequence_motion_template.json --dry-run` |
 | B069 | `run_premiere_sequence_motion.bat` | Вставить video-only диапазон из другой in-project sequence и анимировать только статичные кадры | `.\run_premiere_sequence_motion.bat .\premiere_sequence_insert_motion_template.json --dry-run` |
 
+## Примеры новых рабочих сценариев (2026-08-30)
+
+Это проверенные по CLI примеры, а не запись о выполнении генерации или монтажа
+в этой сессии. `<LOCAL_PATH>` и `<LOCAL_PATH>` обозначают ваши существующие файлы.
+
+| Сценарий | Команда | Побочные эффекты |
+| --- | --- | --- |
+| API, просмотр аргументов | `.\examples\scripts\api_single_image.ps1 -Image "<LOCAL_PATH>"` | Только чтение файла/config и вывод аргументов |
+| API, настоящий single-image run | `.\run_full_grok_pipeline_api.bat --config-file .\examples\config_api_single_image.example.json --image "<LOCAL_PATH>" --single-image` | API, доставка и обычная очистка runtime; сначала заменить пути |
+| TASK_021, dry-run | `.\examples\scripts\premiere_task_dry_run.ps1 -Task TASK_021 -Config "<LOCAL_PATH>"` | Чтение проекта, запись отчёта; без изменения `.prproj` |
+| TASK_028, dry-run | `python .\main_premiere_task_028_dual_refinement.py "<LOCAL_PATH>" --dry-run` | Отчёты рядом со spec |
+| TASK_029, аудит | `python .\main_premiere_task_029_adaptive_animation.py --audit-only` | Фиксированный проект; запись материалов аудита |
+| TASK_030, аудит | `python .\main_premiere_task_030_color_finish.py --audit-only` | Фиксированный проект; запись планов/аудита |
+
+Полный список TASK/Alla-команд и политика backup:
+[PREMIERE_TASK_WORKFLOWS_RU.md](PREMIERE_TASK_WORKFLOWS_RU.md).
+
 ## GitHub publication note (2026-08-26)
 
 Dev history: https://github.com/sergey-frd/img-style-ag_1 (`git push origin main`).
@@ -140,3 +157,9 @@ Grok equivalent with the same config format:
 - для Gemini и Grok без явного `--output-dir` эти же config-папки зеркалятся в `output\gemini_*` и `output\grok_*`;
 - имена результатов: `<image_stem>_watercolor.png` и `<image_stem>_scene_expansion.png`;
 - при рестарте `--skip-existing` пропускает уже сохраненные изображения.
+
+## Выпуск 2026.08.30.01
+
+Очистка временных файлов и синхронизация документации/примеров выполнены перед выпуском.
+Архив TASK_026/027 и результаты TASK_028–030 сохраняются в приватном dev-репозитории;
+публичная публикация содержит код, шаблоны и документацию без этих персональных артефактов.
