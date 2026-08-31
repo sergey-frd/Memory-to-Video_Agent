@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "task": "031",
+  "settings": {
+    "SOURCE_PROJECT": "../../input/SF_26_Bd_Art_2.prproj",
+    "BACKUP_PROJECT": "../../output/SF_26_Bd_Art_2_before_TASK_031.prproj",
+    "OUTPUT_PROJECT": "../../output/SF_26_Bd_Art_3_TASK031_ADVANCED_FINAL.prproj",
+    "CHECKPOINT_PROJECT": "../../output/SF_26_Bd_Art_3_TASK031_EDIT_CHECKPOINT.prproj",
+    "PREVIEW_PATH": "../../output/SF_26_Bd_Art_4_TASK031_ADVANCED_FINAL_640_360.mp4",
+    "REPO_TASK_DIR": "../../output/work/TASK_031_ART_AUTONOMOUS_AUDIT_JSON_EDIT_FINISH",
+    "LOCAL_TASK_DIR": "../../output/reports/TASK_031_ART_AUTONOMOUS_AUDIT_JSON_EDIT_FINISH",
+    "SOURCE_SEQUENCE": "SF_26_Bd_Art_3",
+    "OUTPUT_SEQUENCE": "SF_26_Bd_Art_4_TASK031_ADVANCED_FINAL"
+  }
+}

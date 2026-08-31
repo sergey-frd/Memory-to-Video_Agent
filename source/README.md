@@ -13,8 +13,35 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 
 ## Current version
 
-- Workspace `VERSION`: **`2026.08.30.01`** ([`VERSION`](VERSION))
-- Release tag: **`v2026.08.30.01`**
+- Workspace `VERSION`: **`2026.08.31.01`** ([`VERSION`](VERSION))
+- Release tag: **`v2026.08.31.01`**
+
+## Install this release on a laptop
+
+Use **img-style-ag_1** for the same private development code as the desktop.
+The public **Memory-to-Video_Agent** repository is an alternative distribution,
+not a second dependency. Choose one repository and the same release tag.
+
+```powershell
+git clone https://github.com/sergey-frd/img-style-ag_1.git
+cd img-style-ag_1
+git switch --detach v2026.08.31.01
+.\install_project.bat
+.\run_verify_installation.bat --require-tag
+```
+
+Requires Windows AMD64 and Python 3.14.2. Setup installs the desktop dependency
+lock and bundled FFmpeg fallback. Existing local secrets/configs are preserved.
+Premiere, plugins, media, keys and browser logins are transferred separately.
+See [the Russian laptop checklist](docs/INSTALL_ON_NEW_COMPUTER_RU.md).
+
+## Release 2026.08.31.01
+
+- Integrated ART TASK_031–034 code and native TASK_032 JSX executors.
+- Explicit local JSON profiles, guarded ART launcher, import/help safety and overwrite protection.
+- Locked desktop dependencies, fail-fast setup and release verification batch files.
+- Public bundle excludes local configs/TASK assets and includes safe env templates and JSX.
+- [ART contracts and QA limitations](docs/PREMIERE_ART_TASKS_031_034_RU.md).
 
 ## Published on GitHub (Internet)
 

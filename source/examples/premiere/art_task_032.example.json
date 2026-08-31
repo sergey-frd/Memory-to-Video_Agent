@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "task": "032",
+  "settings": {
+    "SOURCE": "../../input/SF_26_Bd_Art_3_TASK031.prproj",
+    "DEST": "../../output/SF_26_Bd_Art_4_TASK032_EXTREME_FINAL.prproj",
+    "CHECKPOINT": "../../output/SF_26_Bd_Art_4_TASK032_EDIT_CHECKPOINT.prproj",
+    "BACKUP": "../../output/SF_26_Bd_Art_3_TASK031_before_TASK_032.prproj",
+    "PREVIEW": "../../output/SF_26_Bd_Art_6_TASK032_EXTREME_FINAL_640_360.mp4",
+    "OUT": "../../output/work/TASK_032_ART_STRONG_MOTION_EXTREME_COLOR_UNIFIED_BACKGROUND",
+    "REPORT_DIR": "../../output/reports/TASK_032_ART_STRONG_MOTION_EXTREME_COLOR_UNIFIED_BACKGROUND",
+    "NAME": "SF_26_Bd_Art_5",
+    "TARGET": "SF_26_Bd_Art_6_TASK032_EXTREME_FINAL",
+    "BG": "TASK032_BRONZE_OCHRE_BACKGROUND",
+    "SHA": "8fb4d5bb42d14262064e1063af530372721b709ef097f3848c9ec39fa9e65dd5"
+  }
+}

@@ -19,7 +19,9 @@
     "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md",
     "docs/portrait_styles_tables.md",
     "docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md",
-    "docs/PREMIERE_TASK_WORKFLOWS_RU.md"
+    "docs/PREMIERE_TASK_WORKFLOWS_RU.md",
+    "docs/INSTALL_ON_NEW_COMPUTER_RU.md",
+    "docs/PREMIERE_ART_TASKS_031_034_RU.md"
   ],
   "core_invariants": [
     "GenerationConfig в config.py является единой точкой правды для generation-флагов.",
@@ -275,6 +277,22 @@
         "docs/USER_GUIDE_RU.md",
         "docs/USER_GUIDE_EN.md",
         "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md"
+      ]
+    },
+    {
+      "id": "portable_art_release",
+      "purpose": "Portable installation and fixed ART 031–034 contracts",
+      "files": [
+        "main_premiere_art_task.py",
+        "utils/premiere_art_runtime.py",
+        "main_verify_installation.py",
+        "setup_project.ps1",
+        "requirements-lock-windows-py314.txt",
+        "premiere_scripts/task032/"
+      ],
+      "tests": [
+        "test/test_premiere_art_runtime.py",
+        "test/test_release_installation.py"
       ]
     }
   ],

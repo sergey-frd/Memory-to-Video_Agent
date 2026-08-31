@@ -113,6 +113,13 @@ Example Windows paths in `config.json`:
 
 ## BAT Files
 
+- `install_project.bat` — Установка зафиксированного окружения / install locked environment
+- `run_verify_installation.bat` — Проверка выпуска, Git, Python, пакетов, FFmpeg / verify release
+- `run_premiere_art_task.bat` — TASK_031–034: конфиг и явная стадия / configured ART launcher
+
+[Installation / установка](INSTALL_ON_NEW_COMPUTER_RU.md); [ART 031–034](PREMIERE_ART_TASKS_031_034_RU.md).
+
+
 Complete inventory of every root `.bat`. Unique extra-parameter examples live in [`BATCH_RUN_HISTORY.md`](BATCH_RUN_HISTORY.md). Detailed notes follow for the main launchers.
 
 | Launcher | Purpose | Example |
@@ -1504,6 +1511,13 @@ Recommended cycle:
 8. When the sequence is final, rebuild reports from the final current order and keep them in `reports`.
 
 ## Typical Commands
+
+```powershell
+.\install_project.bat
+.\run_verify_installation.bat --require-tag
+.\run_premiere_art_task.bat --help
+```
+
 
 New API/TASK examples (adapt paths/configs first):
 

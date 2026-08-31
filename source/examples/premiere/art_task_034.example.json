@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "task": "034",
+  "settings": {
+    "SOURCE_PROJECT": "../../input/SF_26_Bd_Art_5_TASK033_EXTREME_MOTION_FINAL.prproj",
+    "OUTPUT_PROJECT": "../../output/SF_26_Bd_Art_6_TASK034_SINGLE_SOFT_IMPULSE.prproj",
+    "PREVIEW": "../../output/SF_26_Bd_Art_10_TASK034_SINGLE_SOFT_IMPULSE_FINAL_640_360.mp4",
+    "COMPARISON": "../../output/SF_26_Bd_Art_9_vs_10_TASK034_COMPARISON_1280_360.mp4",
+    "OLD_PREVIEW": "../../input/SF_26_Bd_Art_9_TASK033_FIT_PULSE_FILL_FINAL_640_360.mp4",
+    "REPO_DIR": "../../output/work/TASK_034_SINGLE_SOFT_IMPULSE",
+    "LOCAL_DIR": "../../output/reports/TASK_034_SINGLE_SOFT_DIRECTIONAL_IMPULSE",
+    "TASK033_PLAN": "../../input/TASK_033_EXECUTION_PLAN.json",
+    "SOURCE_SEQUENCE": "SF_26_Bd_Art_8_TASK033_COLOR_EXTREME",
+    "BAD_REF_SEQUENCE": "SF_26_Bd_Art_9_TASK033_FIT_PULSE_FILL_FINAL",
+    "OUTPUT_SEQUENCE": "SF_26_Bd_Art_10_TASK034_SINGLE_SOFT_IMPULSE_FINAL"
+  }
+}

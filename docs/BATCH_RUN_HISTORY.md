@@ -163,3 +163,11 @@ Grok equivalent with the same config format:
 Очистка временных файлов и синхронизация документации/примеров выполнены перед выпуском.
 Архив TASK_026/027 и результаты TASK_028–030 сохраняются в приватном dev-репозитории;
 публичная публикация содержит код, шаблоны и документацию без этих персональных артефактов.
+
+## Новые команды выпуска 2026.08.31.01
+
+| ID | BAT | Команда / назначение |
+| --- | --- | --- |
+| B101 | `install_project.bat` | `install_project.bat` — Установка зафиксированного окружения / install locked environment |
+| B102 | `run_verify_installation.bat` | `run_verify_installation.bat --require-tag` — Проверка выпуска, Git, Python, пакетов, FFmpeg / verify release |
+| B103 | `run_premiere_art_task.bat` | `run_premiere_art_task.bat --help` — TASK_031–034: конфиг и явная стадия / configured ART launcher |

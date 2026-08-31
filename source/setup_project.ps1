@@ -2,6 +2,7 @@ param(
     [string]$PythonExe = "python",
     [string]$VenvDir = ".venv",
     [string]$ConfigFile = "config.local.json",
+    [switch]$Unlocked,
     [switch]$InstallChromium,
     [switch]$ForceConfig
 )
@@ -20,32 +21,59 @@ function Ensure-Directory {
     }
 }
 
+function Assert-NativeSuccess {
+    param([string]$Step)
+    if ($LASTEXITCODE -ne 0) { throw "$Step failed (exit $LASTEXITCODE). Setup stopped." }
+}
+
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectRoot
 
 Write-Step "Project root: $projectRoot"
 
+if (-not $Unlocked) {
+    $pythonVersion = & $PythonExe -c "import platform; print(platform.python_version() + ' ' + platform.machine())"
+    Assert-NativeSuccess "Python version check"
+    if ($pythonVersion.Trim() -ne "3.14.2 AMD64") {
+        throw "This release lock requires Python 3.14.2 AMD64; found $pythonVersion. Use -PythonExe with that interpreter. -Unlocked opts out of exact dependency reproduction."
+    }
+}
+
 if (-not (Test-Path -LiteralPath $VenvDir)) {
     Write-Step "Creating virtual environment in $VenvDir"
     & $PythonExe -m venv $VenvDir
+    Assert-NativeSuccess "Virtual environment creation"
 } else {
     Write-Step "Virtual environment already exists in $VenvDir"
 }
 
-$venvPython = Join-Path $projectRoot "$VenvDir\Scripts\python.exe"
+$venvRoot = if ([System.IO.Path]::IsPathRooted($VenvDir)) { $VenvDir } else { Join-Path $projectRoot $VenvDir }
+$venvPython = Join-Path $venvRoot "Scripts\python.exe"
 if (-not (Test-Path -LiteralPath $venvPython)) {
     throw "Virtual environment Python was not found: $venvPython"
 }
 
-Write-Step "Upgrading pip"
-& $venvPython -m pip install --upgrade pip
+if (-not $Unlocked) {
+    $venvVersion = & $venvPython -c "import platform; print(platform.python_version() + ' ' + platform.machine())"
+    Assert-NativeSuccess "Existing environment version check"
+    if ($venvVersion.Trim() -ne "3.14.2 AMD64") { throw "Existing venv uses $venvVersion. Choose a new -VenvDir; do not copy a venv between machines." }
+}
+
+Write-Step "Installing the release pip version"
+& $venvPython -m pip install pip==26.0.1
+Assert-NativeSuccess "pip installation"
 
 Write-Step "Installing project dependencies"
-& $venvPython -m pip install -r (Join-Path $projectRoot "requirements.txt")
+$requirementsFile = if ($Unlocked) { "requirements.txt" } else { "requirements-lock-windows-py314.txt" }
+& $venvPython -m pip install -r (Join-Path $projectRoot $requirementsFile)
+Assert-NativeSuccess "Dependency installation"
+& $venvPython -m pip check
+Assert-NativeSuccess "Dependency consistency check"
 
 if ($InstallChromium) {
     Write-Step "Installing Playwright Chromium runtime"
     & $venvPython -m playwright install chromium
+    Assert-NativeSuccess "Chromium installation"
 }
 
 Write-Step "Ensuring local runtime directories"
@@ -77,8 +105,9 @@ OPENAI_SCENE_REPAIR_MODEL=gpt-4.1-mini
 OPENAI_MOTION_MODEL=gpt-4.1-mini
 "@
 
-Write-Step "Writing .env.template"
-Set-Content -LiteralPath $envTemplatePath -Value $envTemplate -Encoding UTF8
+if (Test-Path -LiteralPath $envTemplatePath) {
+    $envTemplate = Get-Content -LiteralPath $envTemplatePath -Raw
+}
 
 $envPath = Join-Path $projectRoot ".env"
 if (-not (Test-Path -LiteralPath $envPath)) {
@@ -88,7 +117,7 @@ if (-not (Test-Path -LiteralPath $envPath)) {
     Write-Step ".env already exists, leaving it unchanged"
 }
 
-$configTargetPath = Join-Path $projectRoot $ConfigFile
+$configTargetPath = if ([System.IO.Path]::IsPathRooted($ConfigFile)) { $ConfigFile } else { Join-Path $projectRoot $ConfigFile }
 if ((-not (Test-Path -LiteralPath $configTargetPath)) -or $ForceConfig) {
     Write-Step "Writing $ConfigFile"
     $baseConfig = Get-Content -LiteralPath (Join-Path $projectRoot "config_BASE.json") -Raw | ConvertFrom-Json
@@ -111,6 +140,10 @@ $chromeCandidates = @(
 $chromePath = $chromeCandidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
 
 Write-Host ""
+if (-not $Unlocked) {
+    & $venvPython (Join-Path $projectRoot "main_verify_installation.py")
+    Assert-NativeSuccess "Release installation verification"
+}
 Write-Host "Setup completed."
 Write-Host "Next steps:"
 Write-Host "1. Fill API keys in .env"

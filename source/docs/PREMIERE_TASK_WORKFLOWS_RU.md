@@ -189,3 +189,10 @@ python -m pytest test/test_parameter_documentation.py test/test_premiere_sequenc
 Тесты проверяют схемы, арифметику и отдельные операции. Они не подтверждают
 актуальность внешних медиа, успешное открытие реального проекта или визуальную
 приёмку результатов TASK_028–030/Alla.
+
+## Выпуск 2026.08.31.01: перенос установки и ART
+
+- [Установка той же версии на ноутбуке](INSTALL_ON_NEW_COMPUTER_RU.md).
+- [TASK_031–034: конфигурации, native JSX, QA и ограничения](PREMIERE_ART_TASKS_031_034_RU.md).
+- `main_premiere_art_task.py` / `utils/premiere_art_runtime.py` — общий безопасный запуск; `premiere_scripts/task032/` — код Adobe без медиа.
+- `setup_project.ps1`, `requirements-lock-windows-py314.txt`, `main_verify_installation.py` — установка и проверка окружения.

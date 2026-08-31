@@ -2,19 +2,19 @@
 
 This document is generated from the source project and is intended for the external project-information repository.
 
-- Generated at: `2026-08-30T12:02:28+03:00`
+- Generated at: `2026-08-31T16:04:47+03:00`
 - Source project: `img-style-ag_1`
 
 ## Snapshot
 
-- Files scanned: `421`
-- Python files: `184`
-- Test files: `50`
+- Files scanned: `461`
+- Python files: `206`
+- Test files: `52`
 - Config JSON files: `30`
-- Markdown docs: `27`
-- Entry points: `44`
+- Markdown docs: `29`
+- Entry points: `49`
 - API modules: `17`
-- Utils modules: `52`
+- Utils modules: `53`
 - Model modules: `7`
 
 ## Entry Points
@@ -38,6 +38,7 @@ This document is generated from the source project and is intended for the exter
 - `main_human_sequence_report.py`
 - `main_premiere_alla_client_motion_v02.py`
 - `main_premiere_alla_first_assembly.py`
+- `main_premiere_art_task.py`
 - `main_premiere_import_keep.py`
 - `main_premiere_sequence_coarse_insert.py`
 - `main_premiere_sequence_delete_only.py`
@@ -49,6 +50,9 @@ This document is generated from the source project and is intended for the exter
 - `main_premiere_task_028_dual_refinement.py`
 - `main_premiere_task_029_adaptive_animation.py`
 - `main_premiere_task_030_color_finish.py`
+- `main_premiere_task_031_art_final.py`
+- `main_premiere_task_033_fit_pulse_fill.py`
+- `main_premiere_task_034_single_soft_impulse.py`
 - `main_premiere_timeline_assembly.py`
 - `main_premiere_transform_script.py`
 - `main_premiere_transition_script.py`
@@ -61,6 +65,7 @@ This document is generated from the source project and is intended for the exter
 - `main_sequence_presentation.py`
 - `main_sequence_reports.py`
 - `main_sequence_trim_review.py`
+- `main_verify_installation.py`
 - `main_video_prompt_composer.py`
 - `main_video_prompt_story.py`
 
@@ -77,6 +82,7 @@ This document is generated from the source project and is intended for the exter
 | `hero_definition` | Создание проверяемого визуального определения героя из эталонных изображений и human-detail текста. |
 | `sequence_trim_review` | KEEP/DROP-анализ Premiere sequence через heuristic, semantic, hero, report_replay, ручное применение KEEP JSON, импорт списка медиа и import-and-keep за один проход. |
 | `premiere_motion_and_task_edits` | Переносимые Motion JSON-режимы и специализированные TASK/Alla монтаж, анимация, цвет; backup, saved-project QA, preview. |
+| `portable_art_release` | Portable installation and fixed ART 031–034 contracts |
 
 ## Change Types
 

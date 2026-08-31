@@ -44,6 +44,7 @@ PUBLISHED_SOURCE_SUFFIXES = {
     ".html",
     ".ini",
     ".js",
+    ".jsx",
     ".json",
     ".jsonc",
     ".md",
@@ -76,6 +77,8 @@ DOC_TARGETS = {
     "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md": "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md",
     "docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md": "docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md",
     "docs/PREMIERE_TASK_WORKFLOWS_RU.md": "docs/PREMIERE_TASK_WORKFLOWS_RU.md",
+    "docs/INSTALL_ON_NEW_COMPUTER_RU.md": "docs/INSTALL_ON_NEW_COMPUTER_RU.md",
+    "docs/PREMIERE_ART_TASKS_031_034_RU.md": "docs/PREMIERE_ART_TASKS_031_034_RU.md",
     "docs/portrait_styles_tables.md": "docs/portrait_styles_tables.md",
 }
 PUBLICATION_VERSION_RE = re.compile(r"^(?P<date>\d{4}\.\d{2}\.\d{2})\.(?P<index>\d{2})$")
@@ -148,7 +151,10 @@ def _is_excluded_dir_name(dirname: str) -> bool:
 
 
 def _is_excluded_file_name(filename: str) -> bool:
-    return filename in EXCLUDED_FILE_NAMES or any(filename.startswith(prefix) for prefix in EXCLUDED_FILE_PREFIXES)
+    if filename == ".env.template":
+        return False
+    return (filename in EXCLUDED_FILE_NAMES or filename.lower().endswith(".local.json")
+            or any(filename.startswith(prefix) for prefix in EXCLUDED_FILE_PREFIXES))
 
 
 def _is_publishable_source_file(source_path: Path, source_root: Path) -> bool:
@@ -159,7 +165,7 @@ def _is_publishable_source_file(source_path: Path, source_root: Path) -> bool:
         return False
     if _is_excluded_file_name(relpath.name):
         return False
-    return source_path.suffix.lower() in PUBLISHED_SOURCE_SUFFIXES
+    return relpath.name in {".env.template", ".gitignore"} or source_path.suffix.lower() in PUBLISHED_SOURCE_SUFFIXES
 
 
 def _iter_published_source_targets(source_root: Path, excluded_roots: tuple[Path, ...] = ()):
@@ -434,6 +440,21 @@ def _readme_markdown(snapshot: dict[str, object], manifest_relpaths: list[str]) 
         f"- Python files: `{counts['python_files']}`",
         f"- Test files: `{counts['test_files']}`",
         f"- Entry points: `{counts['entry_points']}`",
+        "",
+        "## Install this release",
+        "",
+        "Choose one repository: `img-style-ag_1` for the private desktop code, or this public distribution. They are not dependencies of each other.",
+        "For this public clone, select the release tag, then run the installer from `source/` (Windows AMD64, Python 3.14.2):",
+        "",
+        "```powershell",
+        f"git switch --detach {snapshot['publication_git_tag']}",
+        "cd source",
+        ".\\install_project.bat",
+        ".\\run_verify_installation.bat --require-tag",
+        "```",
+        "",
+        "[Laptop installation and data-transfer checklist (RU)](docs/INSTALL_ON_NEW_COMPUTER_RU.md).",
+        "Premiere, plugins, media, API keys and browser logins are installed/transferred separately.",
         "",
         "## Published Source Mirror",
         "",

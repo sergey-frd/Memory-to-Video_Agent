@@ -100,6 +100,13 @@ Motion-режимы используют Save As. TASK_028–030 сохраня�
 
 ## BAT-файлы
 
+- `install_project.bat` — Установка зафиксированного окружения / install locked environment
+- `run_verify_installation.bat` — Проверка выпуска, Git, Python, пакетов, FFmpeg / verify release
+- `run_premiere_art_task.bat` — TASK_031–034: конфиг и явная стадия / configured ART launcher
+
+[Installation / установка](INSTALL_ON_NEW_COMPUTER_RU.md); [ART 031–034](PREMIERE_ART_TASKS_031_034_RU.md).
+
+
 Полный список всех корневых `.bat`. Неповторяющиеся примеры с параметрами — в [`BATCH_RUN_HISTORY.md`](BATCH_RUN_HISTORY.md). Ниже — подробные заметки по основным launcher'ам.
 
 | Launcher | Назначение | Пример |
@@ -1460,6 +1467,13 @@ python .\main_cleanup_artifacts.py --include-output-build-dirs --include-output-
 8. Когда sequence окончательно утверждена, пересобирать отчеты по финальному текущему порядку и хранить их в `reports`.
 
 ## Типовые команды
+
+```powershell
+.\install_project.bat
+.\run_verify_installation.bat --require-tag
+.\run_premiere_art_task.bat --help
+```
+
 
 Новые API/TASK-примеры (пути и конфиги сначала адаптировать):
 

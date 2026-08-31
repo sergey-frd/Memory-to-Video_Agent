@@ -4,20 +4,37 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.08.30.01`
-- Git tag: `v2026.08.30.01`
+- Publication version: `2026.08.31.01`
+- Git tag: `v2026.08.31.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-08-30T12:02:28+03:00`
+- Last synchronized: `2026-08-31T16:04:47+03:00`
 - Source project: `img-style-ag_1`
-- Python files: `184`
-- Test files: `50`
-- Entry points: `44`
+- Python files: `206`
+- Test files: `52`
+- Entry points: `49`
+
+## Install this release
+
+Choose one repository: `img-style-ag_1` for the private desktop code, or this public distribution. They are not dependencies of each other.
+For this public clone, select the release tag, then run the installer from `source/` (Windows AMD64, Python 3.14.2):
+
+```powershell
+git switch --detach v2026.08.31.01
+cd source
+.\install_project.bat
+.\run_verify_installation.bat --require-tag
+```
+
+[Laptop installation and data-transfer checklist (RU)](docs/INSTALL_ON_NEW_COMPUTER_RU.md).
+Premiere, plugins, media, API keys and browser logins are installed/transferred separately.
 
 ## Published Source Mirror
 
-- Mirrored source files: `416`
+- Mirrored source files: `458`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
+- `source/.env.template`
+- `source/.gitignore`
 - `source/CHANGELOG.md`
 - `source/README.md`
 - `source/VERSION`
@@ -87,6 +104,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/examples`
 - `source/hero_definition_Alice.json`
 - `source/install_premiere_transition_panel.bat`
+- `source/install_project.bat`
 - `source/login_chatgpt_debug_profile.bat`
 - `source/login_chatgpt_profile.bat`
 - `source/login_gemini_profile.bat`
@@ -110,6 +128,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/main_human_sequence_report.py`
 - `source/main_premiere_alla_client_motion_v02.py`
 - `source/main_premiere_alla_first_assembly.py`
+- `source/main_premiere_art_task.py`
 - `source/main_premiere_import_keep.py`
 - `source/main_premiere_sequence_coarse_insert.py`
 - `source/main_premiere_sequence_delete_only.py`
@@ -121,6 +140,9 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/main_premiere_task_028_dual_refinement.py`
 - `source/main_premiere_task_029_adaptive_animation.py`
 - `source/main_premiere_task_030_color_finish.py`
+- `source/main_premiere_task_031_art_final.py`
+- `source/main_premiere_task_033_fit_pulse_fill.py`
+- `source/main_premiere_task_034_single_soft_impulse.py`
 - `source/main_premiere_timeline_assembly.py`
 - `source/main_premiere_transform_script.py`
 - `source/main_premiere_transition_script.py`
@@ -133,6 +155,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/main_sequence_presentation.py`
 - `source/main_sequence_reports.py`
 - `source/main_sequence_trim_review.py`
+- `source/main_verify_installation.py`
 - `source/main_video_prompt_composer.py`
 - `source/main_video_prompt_story.py`
 - `source/models`
@@ -140,6 +163,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/open_ai_work_window_bookmarks_profile.bat`
 - `source/open_ai_work_window_user_chrome.bat`
 - `source/premiere_extensions`
+- `source/premiere_scripts`
 - `source/premiere_sequence_insert_motion_template.json`
 - `source/premiere_sequence_motion_template.json`
 - `source/project_sequence_batch_Ivan_26_1w_v02.json`
@@ -158,6 +182,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/project_sequence_batch_yura_26_1.json`
 - `source/project_structure_registry.json`
 - `source/pytest.ini`
+- `source/requirements-lock-windows-py314.txt`
 - `source/requirements.txt`
 - `source/run_chatgpt_artistic_photo_portret_existing.bat`
 - `source/run_chatgpt_pair_batch_existing.bat`
@@ -185,6 +210,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/run_laptop_env_snapshot.bat`
 - `source/run_local_portrait_batch.bat`
 - `source/run_openai_portrait_batch.bat`
+- `source/run_premiere_art_task.bat`
 - `source/run_premiere_sequence_motion.bat`
 - `source/run_premiere_transform_script.bat`
 - `source/run_premiere_transition_script.bat`
@@ -202,6 +228,7 @@ This repository is intended to store the current architecture, guides, change-im
 - `source/run_sequence_media_import_standalone.bat`
 - `source/run_sequence_music_recommendation.bat`
 - `source/run_sequence_trim_review.bat`
+- `source/run_verify_installation.bat`
 - `source/run_video_prompt_story_export.bat`
 - `source/run_video_prompt_story_generate.bat`
 - `source/scripts`
@@ -258,8 +285,10 @@ This repository is intended to store the current architecture, guides, change-im
 
 - `docs/BATCH_RUN_HISTORY.md`
 - `docs/CHANGE_IMPACT.md`
+- `docs/INSTALL_ON_NEW_COMPUTER_RU.md`
 - `docs/MINI_LAPTOP_WATERCOLOR.md`
 - `docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md`
+- `docs/PREMIERE_ART_TASKS_031_034_RU.md`
 - `docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md`
 - `docs/PREMIERE_TASK_WORKFLOWS_RU.md`
 - `docs/PROJECT_OVERVIEW.md`

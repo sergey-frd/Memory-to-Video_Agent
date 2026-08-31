@@ -35,7 +35,7 @@ python .\main_project_publication_push.py --repo-dir <path-to-local-Memory-to-Vi
 | `origin` | https://github.com/sergey-frd/img-style-ag_1 | Push dev commits (`git push origin main`) |
 | `publication` | https://github.com/sergey-frd/Memory-to-Video_Agent | Read-only reference; bundle is pushed by `main_project_publication_push.py` into the local clone at `<LOCAL_PATH>` |
 
-Never `git push origin main` from the publication clone, and never push the dev workspace root to `publication`.
+The guarded publisher commits and pushes `origin` from the separate publication clone. Never push the development workspace root to the `publication` remote; that would expose the wrong tree.
 
 ## Release 2026.08.30.01
 
@@ -65,3 +65,16 @@ Publication **`2026.08.26.02`** targets the Internet:
 Headline feature: reusable JSON-driven Premiere intrinsic Motion and frame-exact in-project sequence-range insertion, with dry-run/QA, non-ripple silent output, templates, and complete examples.
 
 Do **not** read version from nested `source/data/project_snapshot.json`; that stale copy is no longer published. Older tags are historical snapshots only; `main` and the latest tag reflect the current bundle.
+
+## Release 2026.08.31.01 and installation identity
+
+Use the private development repository and the same `v2026.08.31.01` tag to
+reproduce desktop code on a personal laptop. The public bundle is a separate
+sanitized distribution; its commit ID differs. It is not a Git submodule.
+See [the installation checklist](INSTALL_ON_NEW_COMPUTER_RU.md).
+
+Publish only source files, templates and docs. JSX and the empty `.env.template`
+are included; `*.local.json`, actual `.env`, media and TASK runtime folders are
+excluded. ART jobs are not rerun during a code release. Preserve local reports
+and Premiere outputs. Commit/tag private code, publish the guarded public
+bundle, then verify both remote tags.

@@ -8,7 +8,9 @@
   "canonical_docs": [
     "PROJECT_STRUCTURE.md",
     "USER_GUIDE.md",
-    "Руководство_пользователя.md"
+    "Руководство_пользователя.md",
+    "docs/INSTALL_ON_NEW_COMPUTER_RU.md",
+    "docs/PREMIERE_ART_TASKS_031_034_RU.md"
   ],
   "core_invariants": [
     "GenerationConfig в config.py является единой точкой правды для generation-флагов.",
@@ -145,6 +147,22 @@
         "main_project_sequence_batch.py",
         "main_sequence_reports.py",
         "main_human_sequence_report.py"
+      ]
+    },
+    {
+      "id": "portable_art_release",
+      "purpose": "Portable installation and fixed ART 031–034 contracts",
+      "files": [
+        "main_premiere_art_task.py",
+        "utils/premiere_art_runtime.py",
+        "main_verify_installation.py",
+        "setup_project.ps1",
+        "requirements-lock-windows-py314.txt",
+        "premiere_scripts/task032/"
+      ],
+      "tests": [
+        "test/test_premiere_art_runtime.py",
+        "test/test_release_installation.py"
       ]
     }
   ],

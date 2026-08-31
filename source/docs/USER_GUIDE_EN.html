@@ -320,6 +320,12 @@ artifacts do not imply completion or an upload.</p>
 }
 </code></pre>
 <h2 id="bat-files">BAT Files</h2>
+<ul>
+<li><code>install_project.bat</code> — Установка зафиксированного окружения / install locked environment</li>
+<li><code>run_verify_installation.bat</code> — Проверка выпуска, Git, Python, пакетов, FFmpeg / verify release</li>
+<li><code>run_premiere_art_task.bat</code> — TASK_031–034: конфиг и явная стадия / configured ART launcher</li>
+</ul>
+<p><a href="INSTALL_ON_NEW_COMPUTER_RU.md">Installation / установка</a>; <a href="PREMIERE_ART_TASKS_031_034_RU.md">ART 031–034</a>.</p>
 <p>Complete inventory of every root <code>.bat</code>. Unique extra-parameter examples live in <a href="BATCH_RUN_HISTORY.md"><code>BATCH_RUN_HISTORY.md</code></a>. Detailed notes follow for the main launchers.</p>
 <table>
 <thead>
@@ -1679,6 +1685,10 @@ That music-first report now also starts with one single highest-priority track c
 <li>When the sequence is final, rebuild reports from the final current order and keep them in <code>reports</code>.</li>
 </ol>
 <h2 id="typical-commands">Typical Commands</h2>
+<pre><code class="language-powershell">.\install_project.bat
+.\run_verify_installation.bat --require-tag
+.\run_premiere_art_task.bat --help
+</code></pre>
 <p>New API/TASK examples (adapt paths/configs first):</p>
 <pre><code class="language-powershell">.\examples\scripts\api_single_image.ps1 -Image &quot;<LOCAL_PATH>;
 .\examples\scripts\premiere_task_dry_run.ps1 -Task TASK_021 -Config .\examples\premiere\task_021_ripple_delete.example.json

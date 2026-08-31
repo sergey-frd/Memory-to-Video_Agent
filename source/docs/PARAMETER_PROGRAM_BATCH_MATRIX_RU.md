@@ -563,3 +563,13 @@ PowerShell-пример `examples/scripts/premiere_task_dry_run.ps1` прини�
 6. project-specific config только при необходимости.
 
 Batch-файл не должен скрыто менять смысл JSON-параметра. Если `.bat` задаёт default или добавляет CLI-флаг, это должно быть указано в матрице.
+
+## Установка и ART TASK_031–034 (2026.08.31.01)
+
+| Параметр / конфигурация | Программа | BAT | Результат |
+| --- | --- | --- | --- |
+| `requirements-lock-windows-py314.txt`, `-PythonExe`, `-VenvDir`, `-ConfigFile`, `-Unlocked`, `-InstallChromium`, `-ForceConfig` | `setup_project.ps1` | `install_project.bat` | Зафиксированное окружение по умолчанию; unlocked — разработка |
+| `--require-tag`, `--json` | `main_verify_installation.py` | `run_verify_installation.bat` | Проверка версии/пакетов/FFmpeg без чтения секретов |
+| `--task`, `--config`, `--stage`, `--execute`; `schema_version`, `task`, `settings` | `main_premiere_art_task.py` | `run_premiere_art_task.bat` | Безопасная проверка или явно выбранная стадия ART |
+
+[Все ключи ART settings и низкоуровневые QA-команды](PREMIERE_ART_TASKS_031_034_RU.md).

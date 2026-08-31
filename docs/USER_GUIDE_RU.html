@@ -306,6 +306,12 @@ Motion-режимы используют Save As. TASK_028–030 сохраня�
 }
 </code></pre>
 <h2 id="bat-файлы">BAT-файлы</h2>
+<ul>
+<li><code>install_project.bat</code> — Установка зафиксированного окружения / install locked environment</li>
+<li><code>run_verify_installation.bat</code> — Проверка выпуска, Git, Python, пакетов, FFmpeg / verify release</li>
+<li><code>run_premiere_art_task.bat</code> — TASK_031–034: конфиг и явная стадия / configured ART launcher</li>
+</ul>
+<p><a href="INSTALL_ON_NEW_COMPUTER_RU.md">Installation / установка</a>; <a href="PREMIERE_ART_TASKS_031_034_RU.md">ART 031–034</a>.</p>
 <p>Полный список всех корневых <code>.bat</code>. Неповторяющиеся примеры с параметрами — в <a href="BATCH_RUN_HISTORY.md"><code>BATCH_RUN_HISTORY.md</code></a>. Ниже — подробные заметки по основным launcher&#39;ам.</p>
 <table>
 <thead>
@@ -1630,6 +1636,10 @@ python .\main_project_publication_push.py --repo-dir <LOCAL_PATH> --commit-messa
 <li>Когда sequence окончательно утверждена, пересобирать отчеты по финальному текущему порядку и хранить их в <code>reports</code>.</li>
 </ol>
 <h2 id="типовые-команды">Типовые команды</h2>
+<pre><code class="language-powershell">.\install_project.bat
+.\run_verify_installation.bat --require-tag
+.\run_premiere_art_task.bat --help
+</code></pre>
 <p>Новые API/TASK-примеры (пути и конфиги сначала адаптировать):</p>
 <pre><code class="language-powershell">.\examples\scripts\api_single_image.ps1 -Image &quot;<LOCAL_PATH>;
 .\examples\scripts\premiere_task_dry_run.ps1 -Task TASK_021 -Config .\examples\premiere\task_021_ripple_delete.example.json
