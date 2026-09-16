@@ -12,7 +12,7 @@ def main(args):
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
     from tools.task032_pipeline import OUT,PREVIEW
     F=__import__("utils.video_frame_extract", fromlist=["resolve_ffmpeg_executable"]).resolve_ffmpeg_executable()
-    m=json.loads((OUT/'TASK_032_MASTER.json').read_text(encoding='utf8'));c=cv2.VideoCapture(str(PREVIEW));font=ImageFont.truetype('C:/Windows/Fonts/arial.ttf',21)
+    m=json.loads((OUT/'TASK_032_MASTER.json').read_text(encoding='utf8'));c=cv2.VideoCapture(str(PREVIEW));font=ImageFont.truetype('<LOCAL_PATH>',21)
     sc=OUT/'scopes';sc.mkdir(exist_ok=True)
     metrics=[]
     for o in m['extreme_color_operations']:

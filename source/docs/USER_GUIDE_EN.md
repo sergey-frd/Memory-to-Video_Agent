@@ -1,4 +1,4 @@
-﻿# User Guide
+# User Guide
 
 ## Latest workspace changes: Premiere and external API images
 
@@ -729,6 +729,9 @@ All current `GenerationConfig` fields:
 - `final_videos_dir` — default `final_project/videos`; final delivery folder for generated `mp4` files and background images.
 - `final_output_dir` — default `final_project/output`; final delivery root for portrait/image-edit PNG copies produced by ChatGPT, Gemini, Grok, API, or local portrait batch flows when `--delivery-config-file` is provided. Project `output/...` subfolders are mirrored below this root.
 - `regeneration_assets_dir` — default `final_project/regeneration_assets`; delivery folder for prompts, manifests, and non-video stage artifacts.
+- `premiere_project_dir` — optional Adobe Premiere project directory, not a `.prproj` file. Set it in a private `config_Hero.local.json` and preserve the person's established project location.
+- `project_video_exports_dir` — optional destination for MP4 exports of the edited project, including interim review versions and accepted final videos. Its historical folder name need not match the current production year. This is separate from `final_videos_dir`, which receives AI-generated clips. Defaults to `None`, survives loading and overrides, and does not trigger export or copying. The user selects this directory for manual exports. Interim MP4s remain eligible for cleanup after final acceptance.
+- `source_materials_dir` — optional root directory for all source materials of the current birthday production. These paths default to `None` when omitted and survive loading and overrides. They record task context only; they do not change pipeline input or delivery, scan directories, or move files.
 - `hero_image_dir` — optional project metadata path to hero reference images.
 - `human_detail_txt` — optional project metadata path to the human-written hero profile.
 - `reports_dir` — optional shared project reports directory.
@@ -1885,3 +1888,7 @@ Canonical project documentation lives in `docs/`. Whenever workflow, file locati
 - the relevant reference document in `docs/` (for portrait banks also `docs/portrait_styles_tables.md`)
 
 Keep only `README.md` and `CHANGELOG.md` as root-level documentation entry points.
+
+## Job closeout and public bundle preparation
+
+See the [closeout guide (Russian)](HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md) for planning, archiving, hash verification and removal of working copies. `run_prepare_public_bundle.bat <new-folder>` builds and audits a separate package without Git operations. Personal configs and media remain local; development Git history is not included.

@@ -4,13 +4,13 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.08.31.01`
-- Git tag: `v2026.08.31.01`
+- Publication version: `2026.09.16.04`
+- Git tag: `v2026.09.16.04`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-08-31T16:04:47+03:00`
+- Last synchronized: `2026-09-16T09:47:30+03:00`
 - Source project: `img-style-ag_1`
-- Python files: `206`
-- Test files: `52`
+- Python files: `215`
+- Test files: `55`
 - Entry points: `49`
 
 ## Install this release
@@ -19,7 +19,7 @@ Choose one repository: `img-style-ag_1` for the private desktop code, or this pu
 For this public clone, select the release tag, then run the installer from `source/` (Windows AMD64, Python 3.14.2):
 
 ```powershell
-git switch --detach v2026.08.31.01
+git switch --detach v2026.09.16.04
 cd source
 .\install_project.bat
 .\run_verify_installation.bat --require-tag
@@ -30,11 +30,12 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 
 ## Published Source Mirror
 
-- Mirrored source files: `458`
+- Mirrored source files: `446`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/.env.template`
 - `source/.gitignore`
+- `source/AGENTS.md`
 - `source/CHANGELOG.md`
 - `source/README.md`
 - `source/VERSION`
@@ -64,35 +65,8 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/chatgpt_watercolor_scene_expansion_config.json`
 - `source/config.json`
 - `source/config.py`
-- `source/config_Alex.json`
-- `source/config_Alice.json`
 - `source/config_BASE.json`
-- `source/config_Edik.json`
-- `source/config_Ivan.json`
-- `source/config_Kira_M.json`
-- `source/config_Nicol.json`
-- `source/config_Nicol_expanded.jsonc`
-- `source/config_Nicol_identity_safe_closeup.json`
-- `source/config_Nicol_triple_framing.json`
-- `source/config_Nicol_x3.json`
-- `source/config_Rita.json`
-- `source/config_SF.json`
-- `source/config_Sergey_Hol.json`
-- `source/config_SvtaIg.json`
-- `source/config_Yakov.json`
-- `source/config_Yura.json`
-- `source/config_Ziggi.json`
-- `source/config_alla_15_humor_api.json`
-- `source/config_eZiggi.json`
-- `source/config_igor.json`
-- `source/config_kira.json`
-- `source/config_kira_bg_only.json`
-- `source/config_maya.json`
-- `source/config_slava.json`
-- `source/config_vika.json`
-- `source/config_‭AlxKrvz.json`
-- `source/config_‭IgorSv.json`
-- `source/config_‭Zoya_Phil.json`
+- `source/config_closeout.example.json`
 - `source/copy_sequence_images_sveta_igr_26_2.bat`
 - `source/copy_sequence_media_sveta_igr_26_2.bat`
 - `source/copy_sequence_media_sveta_igr_26_2.json`
@@ -206,6 +180,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/run_grok_automation_all.bat`
 - `source/run_grok_portrait_batch_existing.bat`
 - `source/run_hero_definition.bat`
+- `source/run_hero_video_closeout.bat`
 - `source/run_laptop_env_compare.bat`
 - `source/run_laptop_env_snapshot.bat`
 - `source/run_local_portrait_batch.bat`
@@ -214,6 +189,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/run_premiere_sequence_motion.bat`
 - `source/run_premiere_transform_script.bat`
 - `source/run_premiere_transition_script.bat`
+- `source/run_prepare_public_bundle.bat`
 - `source/run_project_publication_push.bat`
 - `source/run_project_publication_stage.bat`
 - `source/run_project_sequence_batch.bat`
@@ -285,6 +261,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 
 - `docs/BATCH_RUN_HISTORY.md`
 - `docs/CHANGE_IMPACT.md`
+- `docs/HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md`
 - `docs/INSTALL_ON_NEW_COMPUTER_RU.md`
 - `docs/MINI_LAPTOP_WATERCOLOR.md`
 - `docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md`

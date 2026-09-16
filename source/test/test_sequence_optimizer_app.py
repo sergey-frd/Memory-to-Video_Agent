@@ -4296,7 +4296,7 @@ def _make_transform_entry(
             track_index=0,
             clipitem_id=f"clip-{index}",
             name=name,
-            source_path=f"C:/media/{name}",
+            source_path=f"<LOCAL_PATH>",
             start=(index - 1) * 120,
             end=index * 120,
             in_point=0,
@@ -4307,7 +4307,7 @@ def _make_transform_entry(
         ),
         assets=ClipAssetBundle(
             stage_id=stage_id,
-            bundle_dir=f"C:/assets/{stage_id}",
+            bundle_dir=f"<LOCAL_PATH>",
             scene_analysis={
                 "summary": summary,
                 "people_count": people_count,

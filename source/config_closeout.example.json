@@ -1,0 +1,17 @@
+{
+  "task_id": "TASK999",
+  "hero_config": "config_Hero.local.json",
+  "working_dir": "output/TASK999",
+  "project_scan_roots": ["<LOCAL_PATH>", "output"],
+  "storage": {
+    "classification": {"config_key": "source_materials_dir", "relative": "classification/TASK999/imported_output_v01"},
+    "artwork": {"config_key": "source_materials_dir", "relative": "artwork/TASK999/imported_output_v01"},
+    "history": {"config_key": "premiere_project_dir", "relative": "TASK999/closeout_v01/history"},
+    "provenance": {"config_key": "regeneration_assets_dir", "relative": "TASK999/closeout_v01"},
+    "metadata": {"config_key": "source_materials_dir", "relative": "classification/TASK999/closeout_v01"}
+  },
+  "retained_results": [
+    {"config_key": "premiere_project_dir", "relative": "Hero_final.prproj", "role": "current_project"},
+    {"config_key": "project_video_exports_dir", "relative": "Hero_final.mp4", "role": "completed_video"}
+  ]
+}

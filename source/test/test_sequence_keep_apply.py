@@ -933,7 +933,7 @@ def _write_still_and_video_project(project_path: Path) -> None:
     </MediaSource>
   </VideoMediaSource>
   <Media ObjectUID="media-video" ClassID="media" Version="1">
-    <ActualMediaFilePath>E:/media/clip_a.mp4</ActualMediaFilePath>
+    <ActualMediaFilePath><LOCAL_PATH></ActualMediaFilePath>
   </Media>
   <VideoClipTrackItem ObjectID="2100" ClassID="video-item" Version="1">
     <ClipTrackItem Version="1">
@@ -961,7 +961,7 @@ def _write_still_and_video_project(project_path: Path) -> None:
     </MediaSource>
   </VideoMediaSource>
   <Media ObjectUID="media-photo" ClassID="media" Version="1">
-    <ActualMediaFilePath>E:/media/still.jpg</ActualMediaFilePath>
+    <ActualMediaFilePath><LOCAL_PATH></ActualMediaFilePath>
     <Infinite>true</Infinite>
   </Media>
 </PremiereData>
@@ -1015,7 +1015,7 @@ def _write_mixed_av_project(project_path: Path) -> None:
     </MediaSource>
   </VideoMediaSource>
   <Media ObjectUID="media-{index}" ClassID="media" Version="1">
-    <ActualMediaFilePath>E:/media/{name}</ActualMediaFilePath>
+    <ActualMediaFilePath><LOCAL_PATH>{name}</ActualMediaFilePath>
   </Media>
 """
         )

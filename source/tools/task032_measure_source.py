@@ -16,7 +16,7 @@ def main(args):
     info={'width':cap.get(cv2.CAP_PROP_FRAME_WIDTH),'height':cap.get(cv2.CAP_PROP_FRAME_HEIGHT),'fps':cap.get(cv2.CAP_PROP_FPS),'frames':cap.get(cv2.CAP_PROP_FRAME_COUNT),'source':'Экспорт Premiere Pro 26.3.2, штатный пресет YouTube 720p'}
     info['duration']=info['frames']/info['fps']
     (ROOT/'TASK_032_SOURCE_NATIVE_PROBE.json').write_text(json.dumps(info,ensure_ascii=False,indent=2),encoding='utf8')
-    font=ImageFont.truetype('C:/Windows/Fonts/arial.ttf',18)
+    font=ImageFont.truetype('<LOCAL_PATH>',18)
     for page in range(7):
         sheet=Image.new('RGB',(1600,5*202),'#111111'); d=ImageDraw.Draw(sheet)
         for k in range(25):

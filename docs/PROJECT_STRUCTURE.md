@@ -633,3 +633,14 @@ Publication safety:
 - [TASK_031–034: конфигурации, native JSX, QA и ограничения](PREMIERE_ART_TASKS_031_034_RU.md).
 - `main_premiere_art_task.py` / `utils/premiere_art_runtime.py` — общий безопасный запуск; `premiere_scripts/task032/` — код Adobe без медиа.
 - `setup_project.ps1`, `requirements-lock-windows-py314.txt`, `main_verify_installation.py` — установка и проверка окружения.
+
+## Архивирование и локальная подготовка публикации
+
+| Компонент | Назначение |
+| --- | --- |
+| `tools/hero_video_closeout.py`, `run_hero_video_closeout.bat` | План, архив, проверка хешей, ограниченное удаление, постоянный отчёт |
+| `config_closeout.example.json` | Публикуемый шаблон; заполненные конфиги остаются локально |
+| `tools/hero_workspace_finalize.py` | Ручной перенос медиа, staging новых проектов и проверка перед удалением остатков |
+| `run_prepare_public_bundle.bat`, `tools/audit_public_bundle.py` | Новый локальный пакет и аудит без commit/push |
+
+Полный порядок: [HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md](HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md). Постоянные архивы и отчёты не относятся к временным файлам.

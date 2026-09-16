@@ -150,7 +150,7 @@ def test_main_project_publication_push_prints_json(monkeypatch: pytest.MonkeyPat
         [
             "main_project_publication_push.py",
             "--repo-dir",
-            "E:/Git/Memory-to-Video_Agent",
+            "<LOCAL_PATH>",
             "--source-root",
             ".",
             "--json",
@@ -160,7 +160,7 @@ def test_main_project_publication_push_prints_json(monkeypatch: pytest.MonkeyPat
         main_project_publication_push,
         "prepare_publication_push",
         lambda **_kwargs: PublicationPushResult(
-            repo_dir="E:/Git/Memory-to-Video_Agent",
+            repo_dir="<LOCAL_PATH>",
             remote_url=DEFAULT_PUBLICATION_REMOTE,
             branch="main",
             publication_version="2026.04.01.01",

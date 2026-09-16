@@ -54,6 +54,9 @@ CONFIG_INT_FIELDS = {
     "grok_multiscene_prompt_size",
 }
 CONFIG_STR_FIELDS = {
+    "premiere_project_dir",
+    "project_video_exports_dir",
+    "source_materials_dir",
     "motion_model",
     "final_videos_dir",
     "final_output_dir",
@@ -174,6 +177,9 @@ class GenerationConfig:
     final_output_dir: str = "final_project/output"
     regeneration_assets_dir: str = "final_project/regeneration_assets"
     hero_image_dir: str | None = None
+    premiere_project_dir: str | None = None
+    project_video_exports_dir: str | None = None
+    source_materials_dir: str | None = None
     human_detail_txt: str | None = None
     reports_dir: str | None = None
     continue_after_failure: bool = False
@@ -245,6 +251,9 @@ class GenerationConfig:
             save_grok_debug_artifacts=data.get("save_grok_debug_artifacts", default.save_grok_debug_artifacts),
             final_videos_dir=str(data.get("final_videos_dir", default.final_videos_dir)),
             final_output_dir=str(data.get("final_output_dir", default.final_output_dir)),
+            premiere_project_dir=data.get("premiere_project_dir", default.premiere_project_dir),
+            project_video_exports_dir=data.get("project_video_exports_dir", default.project_video_exports_dir),
+            source_materials_dir=data.get("source_materials_dir", default.source_materials_dir),
             regeneration_assets_dir=str(data.get("regeneration_assets_dir", default.regeneration_assets_dir)),
             hero_image_dir=(
                 str(data["hero_image_dir"])
@@ -314,6 +323,9 @@ class GenerationConfig:
             "final_output_dir": self.final_output_dir,
             "regeneration_assets_dir": self.regeneration_assets_dir,
             "hero_image_dir": self.hero_image_dir,
+            "premiere_project_dir": self.premiere_project_dir,
+            "project_video_exports_dir": self.project_video_exports_dir,
+            "source_materials_dir": self.source_materials_dir,
             "human_detail_txt": self.human_detail_txt,
             "reports_dir": self.reports_dir,
             "continue_after_failure": self.continue_after_failure,

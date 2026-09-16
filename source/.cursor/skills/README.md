@@ -8,6 +8,7 @@ Skills here load automatically when the workspace is open. They are derived from
 
 | Skill | When the agent should pick it up |
 | --- | --- |
+| [`premiere-offline-first`](premiere-offline-first/SKILL.md) | Video generation, voiceover, editing, color and motion with minimal Premiere runtime; preserves editable effects and separates FFmpeg preview from native QA. Codex also reads this through the root `AGENTS.md`. |
 | [`grok-video-pipeline`](grok-video-pipeline/SKILL.md) | User wants to generate videos through Grok (web automation `run_full_grok_pipeline.bat` OR direct xAI API `run_full_grok_pipeline_api.bat`). Covers `XAI_API_KEY` setup and the `video_duration_seconds` button fix. |
 | [`chatgpt-portrait-batch`](chatgpt-portrait-batch/SKILL.md) | User wants to generate stylized portraits or pair portraits through ChatGPT / Gemini / Grok desktop or web, OpenAI API, or the local stylizer. |
 | [`cleanup-temp-files`](cleanup-temp-files/SKILL.md) | User wants to safely clean `test_runtime/`, `__pycache__`, `pytest-cache-files-*`, or other temp artifacts via `main_cleanup_artifacts.py`. |
@@ -28,6 +29,8 @@ Each `SKILL.md` follows the format documented in `~/.cursor/skills-cursor/create
 - A short "Reference" section pointing at the actual source files in this project.
 
 ## Adding a new skill
+
+`premiere-offline-first` is also installed as a personal Codex skill on the author's workstation. Its canonical version is the file in this repository; keep the personal copy synchronized when changing it. The root `AGENTS.md` routes Codex to the repository version without requiring personal installation on another computer. See `docs/INSTALL_ON_NEW_COMPUTER_RU.md` for the portable setup.
 
 1. Pick a focused, recurring task that comes up repeatedly in this project.
 2. Create `.cursor/skills/<skill-name>/SKILL.md`.

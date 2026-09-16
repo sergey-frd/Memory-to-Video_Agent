@@ -42,6 +42,29 @@ def test_sanitizing_inline_path_preserves_enclosing_python_string() -> None:
     assert 'encoding="utf-8"' in sanitized
 
 
+def test_forward_slash_and_single_quoted_paths_are_private() -> None:
+    source = "PHOTO = '<LOCAL_PATH>'\nURL = 'https://example.org'\n"
+    sanitized = _sanitize_public_text(source)
+    ast.parse(sanitized)
+    assert 'Private Family' not in sanitized
+    assert "PHOTO = '<LOCAL_PATH>'" in sanitized
+    assert 'https://example.org' in sanitized
+
+
+def test_private_hero_configs_and_job_artifacts_are_excluded() -> None:
+    from utils.project_publication import _is_excluded_file_name, _is_publishable_source_file
+    assert _is_excluded_file_name('config_PrivatePerson.json')
+    assert _is_excluded_file_name('config_PrivatePerson.jsonc')
+    assert _is_excluded_file_name('run_task036_closeout.bat')
+    assert _is_excluded_file_name('task037_manifest.json')
+    assert not _is_excluded_file_name('config_BASE.json')
+    assert not _is_excluded_file_name('config_closeout.example.json')
+    root = Path('example_root')
+    assert not _is_publishable_source_file(root / 'docs/HERO_VIDEO_AUTOMATION_PLAN_RU.md', root)
+    assert not _is_publishable_source_file(root / 'docs/HERO_VIDEO_CLOSEOUT_RU.md', root)
+    assert _is_publishable_source_file(root / 'docs/HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md', root)
+
+
 def test_write_publication_bundle_creates_full_safe_source_mirror() -> None:
     root = Path("test_runtime") / f"publication_{uuid4().hex}"
     root.mkdir(parents=True, exist_ok=True)

@@ -18,7 +18,7 @@ CONFIG_PATHS = (
     Path("sequence_music_recommendation_Alice.json"),
     Path("project_sequence_batch_template.json"),
 )
-ROOT_DOCUMENTS = {"README.md", "CHANGELOG.md"}
+ROOT_DOCUMENTS = {"README.md", "CHANGELOG.md", "AGENTS.md"}
 CANONICAL_DOCS = (
     Path("docs/README.md"),
     Path("docs/USER_GUIDE_EN.md"),

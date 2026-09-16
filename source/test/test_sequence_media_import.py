@@ -1088,16 +1088,16 @@ def _write_import_source_project(project_path: Path) -> None:
   <Media ObjectUID="media-video" ClassID="media" Version="1">
     <AudioStream ObjectRef="2004" />
     <VideoStream ObjectRef="2005" />
-    <ActualMediaFilePath>E:/media/clip_a.mp4</ActualMediaFilePath>
-    <FilePath>E:/media/clip_a.mp4</FilePath>
-    <RelativePath>E:/media/clip_a.mp4</RelativePath>
+    <ActualMediaFilePath><LOCAL_PATH></ActualMediaFilePath>
+    <FilePath><LOCAL_PATH></FilePath>
+    <RelativePath><LOCAL_PATH></RelativePath>
     <RelativePath>../media/clip_a.mp4</RelativePath>
     <Title>clip_a.mp4</Title>
     <FileKey>11111111-1111-1111-1111-111111111111</FileKey>
     <ContentAndMetadataState>22222222-2222-2222-2222-222222222222</ContentAndMetadataState>
   </Media>
   <AudioStream ObjectID="2004" ClassID="audio-stream" Version="1">
-    <PeakFilePath>C:/temp/clip_a.pek</PeakFilePath>
+    <PeakFilePath><LOCAL_PATH></PeakFilePath>
   </AudioStream>
   <VideoStream ObjectID="2005" ClassID="video-stream" Version="1">
     <FrameRect>0,0,1920,1080</FrameRect>
@@ -1131,9 +1131,9 @@ def _write_import_source_project(project_path: Path) -> None:
   </VideoMediaSource>
   <Media ObjectUID="media-photo" ClassID="media" Version="1">
     <VideoStream ObjectRef="2104" />
-    <ActualMediaFilePath>E:/media/still.jpg</ActualMediaFilePath>
-    <FilePath>E:/media/still.jpg</FilePath>
-    <RelativePath>E:/media/still.jpg</RelativePath>
+    <ActualMediaFilePath><LOCAL_PATH></ActualMediaFilePath>
+    <FilePath><LOCAL_PATH></FilePath>
+    <RelativePath><LOCAL_PATH></RelativePath>
     <RelativePath>../media/still.jpg</RelativePath>
     <Title>still.jpg</Title>
     <FileKey>33333333-3333-3333-3333-333333333333</FileKey>

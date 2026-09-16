@@ -43,7 +43,7 @@ def _clip(
         track_index=1,
         clipitem_id=clipitem_id,
         name=name,
-        source_path=f"E:/media/{name}",
+        source_path=f"<LOCAL_PATH>",
         start=start,
         end=start + duration,
         in_point=0,
@@ -317,7 +317,7 @@ def _write_two_track_project(project_path: Path) -> None:
     </MediaSource>
   </VideoMediaSource>
   <Media ObjectUID="media-{index}" ClassID="media" Version="1">
-    <ActualMediaFilePath>E:/media/{name}</ActualMediaFilePath>
+    <ActualMediaFilePath><LOCAL_PATH>{name}</ActualMediaFilePath>
   </Media>
 """
         )

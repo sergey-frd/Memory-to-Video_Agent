@@ -1842,7 +1842,7 @@ def test_launch_managed_context_starts_chrome_and_connects(monkeypatch) -> None:
             image_path=root / "frame.png",
             output_path=root / "out.mp4",
             profile_dir=profile_dir,
-            executable_path=Path("C:/Chrome/chrome.exe"),
+            executable_path=Path("<LOCAL_PATH>"),
         )
     )
     monkeypatch.setattr(agent, "_find_free_port", lambda: 9555)
@@ -1883,7 +1883,7 @@ def test_launch_managed_context_starts_chrome_and_connects(monkeypatch) -> None:
     result = agent._launch_managed_context(FakePlaywright())
 
     assert result == "managed-context"
-    assert Path(observed_command[0]).as_posix() == "C:/Chrome/chrome.exe"
+    assert Path(observed_command[0]).as_posix() == "<LOCAL_PATH>"
     assert any("--remote-debugging-port=9555" == item for item in observed_command)
     assert "--disable-hang-monitor" in observed_command
     assert "--hide-crash-restore-bubble" in observed_command

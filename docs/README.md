@@ -34,3 +34,10 @@
 - [TASK_031–034: конфигурации, native JSX, QA и ограничения](PREMIERE_ART_TASKS_031_034_RU.md).
 - `main_premiere_art_task.py` / `utils/premiere_art_runtime.py` — общий безопасный запуск; `premiere_scripts/task032/` — код Adobe без медиа.
 - `setup_project.ps1`, `requirements-lock-windows-py314.txt`, `main_verify_installation.py` — установка и проверка окружения.
+
+## Архивирование и подготовка публикации
+
+- [Завершение видеозадания](HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md): команды, сохранность файлов, ручной перенос медиа и проверка пакета.
+- `run_hero_video_closeout.bat` — план → архив → проверка → очистка.
+- `run_prepare_public_bundle.bat <новая-папка>` — локальная сборка и аудит без Git-операций.
+- [Публикация](PUBLISHING.md) — отдельный публичный пакет и история Git.

@@ -13,7 +13,7 @@ def main(args):
     from tools.task032_preflight import OUT as ROOT, NAME
     rows = json.loads((ROOT/'TASK_032_TIMELINE_MANIFEST.json').read_text(encoding='utf8'))[NAME]
     rows = [r for r in rows if r['path'] and r['group']=='video']
-    font = ImageFont.truetype('C:/Windows/Fonts/arial.ttf', 16)
+    font = ImageFont.truetype('<LOCAL_PATH>', 16)
     for page in range((len(rows)+14)//15):
         sheet = Image.new('RGB', (5*384,3*280), '#181818')
         d=ImageDraw.Draw(sheet)

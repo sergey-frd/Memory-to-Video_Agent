@@ -10,7 +10,7 @@ def test_build_config_creates_non_submitting_auth_check() -> None:
     args = Namespace(
         profile_dir=Path(".browser-profile/grok-web"),
         target_url="https://grok.com/imagine",
-        chrome_exe=Path("C:/Chrome/chrome.exe"),
+        chrome_exe=Path("<LOCAL_PATH>"),
         chrome_debug_port=9222,
         launch_timeout=45.0,
     )
@@ -21,7 +21,7 @@ def test_build_config_creates_non_submitting_auth_check() -> None:
     assert config.image_path is None
     assert config.profile_dir == Path(".browser-profile/grok-web")
     assert config.target_url == "https://grok.com/imagine"
-    assert config.executable_path == Path("C:/Chrome/chrome.exe")
+    assert config.executable_path == Path("<LOCAL_PATH>")
     assert config.debug_port == 9222
     assert config.launch_timeout_ms == 45_000
     assert config.submit is False

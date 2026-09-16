@@ -57,7 +57,7 @@ def test_build_premiere_transform_extendscript_adds_plain_transform_by_default()
     script = build_premiere_transform_extendscript(
         sequence_name="Ivan26_o04",
         jobs=jobs,
-        log_path=Path("C:/tmp/Ivan26_o04_apply_transforms.log"),
+        log_path=Path("<LOCAL_PATH>"),
     )
 
     assert "app.enableQE()" in script
@@ -139,7 +139,7 @@ def test_write_transform_script_derives_plan_from_legacy_report() -> None:
         "energy_level": 1,
         "clip": {
           "name": "group.png",
-          "source_path": "C:/media/group.png"
+          "source_path": "<LOCAL_PATH>"
         },
         "assets": {
           "scene_analysis": {
@@ -176,7 +176,7 @@ def _clip(name: str, start_seconds: int, end_seconds: int) -> PremiereSequenceCl
         track_index=1,
         clipitem_id=f"track-item-{name}",
         name=name,
-        source_path=f"C:/media/{name}",
+        source_path=f"<LOCAL_PATH>",
         start=start,
         end=end,
         in_point=0,
@@ -232,7 +232,7 @@ def _write_sample_project(path: Path) -> None:
     ET.SubElement(media_source, "Media", {"ObjectURef": "media-1"})
 
     media = ET.SubElement(root, "Media", {"ObjectUID": "media-1"})
-    ET.SubElement(media, "ActualMediaFilePath").text = "C:/media/group.png"
+    ET.SubElement(media, "ActualMediaFilePath").text = "<LOCAL_PATH>"
 
     path.write_bytes(gzip.compress(ET.tostring(root, encoding="utf-8", xml_declaration=True)))
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import copy
 import gzip
 import os
@@ -853,10 +852,9 @@ def _set_all_direct_child_text(node: ET.Element, tag_name: str, text_value: str)
 def _refresh_media_state_ids(media_node: ET.Element) -> None:
     state_id = str(uuid4())
     _set_child_text(media_node, "ContentAndMetadataState", state_id)
-    modification = media_node.find("./ModificationState")
-    if modification is not None:
-        modification.attrib["BinaryHash"] = str(uuid4())
-        modification.text = base64.b64encode(state_id.encode("utf-16-le")).decode("ascii")
+    # ModificationState is an opaque serialized Adobe payload. BinaryHash is
+    # not a free-standing UUID (its suffix includes the serialized size).
+    # Preserve the template's payload/hash pair; inventing either corrupts it.
 
 
 def _clone_media_streams(

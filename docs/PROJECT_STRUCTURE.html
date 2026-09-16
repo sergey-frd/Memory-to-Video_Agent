@@ -346,7 +346,8 @@
 <a class="level-2" href="#test-matrix-1">Test Matrix</a>
 <a class="level-2" href="#machine-readable-registry">Machine-Readable Registry</a>
 <a class="level-2" href="#publication-sync-1">Publication Sync</a>
-<a class="level-2" href="#выпуск-2026083101-перенос-установки-и-art">Выпуск 2026.08.31.01: перенос установки и ART</a></nav></aside>
+<a class="level-2" href="#выпуск-2026083101-перенос-установки-и-art">Выпуск 2026.08.31.01: перенос установки и ART</a>
+<a class="level-2" href="#архивирование-и-локальная-подготовка-публикации">Архивирование и локальная подготовка публикации</a></nav></aside>
     <main><article class="content">
 <h1 id="project-structure-web-map">Project Structure Web Map</h1>
 <section id="hero">
@@ -1102,6 +1103,32 @@ python .\main_project_publication_push.py --repo-dir &lt;path-to-local-Memory-to
 <li><code>main_premiere_art_task.py</code> / <code>utils/premiere_art_runtime.py</code> — общий безопасный запуск; <code>premiere_scripts/task032/</code> — код Adobe без медиа.</li>
 <li><code>setup_project.ps1</code>, <code>requirements-lock-windows-py314.txt</code>, <code>main_verify_installation.py</code> — установка и проверка окружения.</li>
 </ul>
+<h2 id="архивирование-и-локальная-подготовка-публикации">Архивирование и локальная подготовка публикации</h2>
+<table>
+<thead>
+<tr>
+<th>Компонент</th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>tools/hero_video_closeout.py</code>, <code>run_hero_video_closeout.bat</code></td>
+<td>План, архив, проверка хешей, ограниченное удаление, постоянный отчёт</td>
+</tr>
+<tr>
+<td><code>config_closeout.example.json</code></td>
+<td>Публикуемый шаблон; заполненные конфиги остаются локально</td>
+</tr>
+<tr>
+<td><code>tools/hero_workspace_finalize.py</code></td>
+<td>Ручной перенос медиа, staging новых проектов и проверка перед удалением остатков</td>
+</tr>
+<tr>
+<td><code>run_prepare_public_bundle.bat</code>, <code>tools/audit_public_bundle.py</code></td>
+<td>Новый локальный пакет и аудит без commit/push</td>
+</tr>
+</tbody></table>
+<p>Полный порядок: <a href="HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md">HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md</a>. Постоянные архивы и отчёты не относятся к временным файлам.</p>
 
       <p class="source-note">Source: <a href="PROJECT_STRUCTURE.md">docs/PROJECT_STRUCTURE.md</a>.</p>
     </article></main>

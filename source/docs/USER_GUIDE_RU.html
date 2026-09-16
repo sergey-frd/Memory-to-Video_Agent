@@ -220,7 +220,8 @@
 <a class="level-2" href="#краткие-рекомендации-оператору">Краткие рекомендации оператору</a>
 <a class="level-2" href="#компоновщик-многосценного-video-prompt">Компоновщик многосценного video prompt</a>
 <a class="level-2" href="#предпросмотр-многосценной-истории-в-html">Предпросмотр многосценной истории в HTML</a>
-<a class="level-2" href="#правило-синхронизации-документации">Правило синхронизации документации</a></nav></aside>
+<a class="level-2" href="#правило-синхронизации-документации">Правило синхронизации документации</a>
+<a class="level-2" href="#завершение-задания-и-подготовка-публичной-версии">Завершение задания и подготовка публичной версии</a></nav></aside>
     <main><article class="content">
 <h1 id="руководство-пользователя">Руководство пользователя</h1>
 <h2 id="экспресс-запуск-за-1-минуту">Экспресс-запуск за 1 минуту</h2>
@@ -1029,6 +1030,9 @@ run_full_grok_pipeline_api.bat --skip-video --generate-source-background
 <li><code>save_grok_debug_artifacts</code> — по умолчанию <code>false</code>; сохранять диагностические candidate/debug-артефакты Grok в <code>output</code>.</li>
 <li><code>final_videos_dir</code> — по умолчанию <code>final_project/videos</code>; финальный каталог для готовых <code>mp4</code> и background-изображений.</li>
 <li><code>final_output_dir</code> — по умолчанию <code>final_project/output</code>; финальный корневой каталог для постоянных копий portrait/image-edit PNG, которые создаются через ChatGPT, Gemini, Grok, API или local batch при наличии <code>--delivery-config-file</code>. Подпапки проектного <code>output/...</code> зеркалятся ниже этого корня.</li>
+<li><code>premiere_project_dir</code> — необязательный путь к папке проекта Adobe Premiere (не к файлу <code>.prproj</code>). Задаётся в личном <code>config_Hero.local.json</code>; сохраняйте историческое расположение проектов героя.</li>
+<li><code>project_video_exports_dir</code> — необязательная папка MP4, экспортированных из монтажного проекта: промежуточные версии для просмотра и принятые финальные ролики. Историческое имя папки может не совпадать с годом текущего задания. Это отдельное назначение от <code>final_videos_dir</code>, где сохраняются AI-видеофрагменты. Параметр сохраняется при загрузке и override, по умолчанию <code>None</code>; автоматический экспорт или перенос не запускает. При ручном экспорте пользователь выбирает эту папку. Промежуточные MP4 остаются кандидатами на последующую очистку после принятия финала.</li>
+<li><code>source_materials_dir</code> — необязательный путь к корневой папке всех исходных материалов текущего поздравления. Пути описывают контекст задания, сохраняются при загрузке и override; сами по себе не меняют вход pipeline, доставку результатов и не запускают сканирование или перенос файлов. Если не заданы, имеют значение <code>None</code>.</li>
 <li><code>regeneration_assets_dir</code> — по умолчанию <code>final_project/regeneration_assets</code>; каталог для prompt-файлов, manifest и не-видео артефактов stage.</li>
 <li><code>hero_image_dir</code> — необязательный project metadata-путь к эталонным изображениям героя.</li>
 <li><code>human_detail_txt</code> — необязательный project metadata-путь к текстовому описанию героя.</li>
@@ -1902,6 +1906,8 @@ run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --skip-exist
 <li>соответствующий справочный документ в <code>docs/</code> (для portrait-банков также <code>docs/portrait_styles_tables.md</code>).</li>
 </ul>
 <p>В корне остаются только точки входа <code>README.md</code> и <code>CHANGELOG.md</code>.</p>
+<h2 id="завершение-задания-и-подготовка-публичной-версии">Завершение задания и подготовка публичной версии</h2>
+<p>Используйте <a href="HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md">руководство closeout</a>: сначала план, затем архивирование и проверка, после этого удаление рабочих копий. <code>run_prepare_public_bundle.bat &lt;новая-папка&gt;</code> подготавливает и проверяет отдельный пакет без отправки на GitHub. Личные конфиги и медиа сохраняются локально; история рабочего Git не переносится.</p>
 
       <p class="source-note">Source: <a href="USER_GUIDE_RU.md">docs/USER_GUIDE_RU.md</a>.</p>
     </article></main>

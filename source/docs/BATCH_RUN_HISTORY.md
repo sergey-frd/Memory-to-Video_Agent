@@ -171,3 +171,17 @@ Grok equivalent with the same config format:
 | B101 | `install_project.bat` | `install_project.bat` — Установка зафиксированного окружения / install locked environment |
 | B102 | `run_verify_installation.bat` | `run_verify_installation.bat --require-tag` — Проверка выпуска, Git, Python, пакетов, FFmpeg / verify release |
 | B103 | `run_premiere_art_task.bat` | `run_premiere_art_task.bat --help` — TASK_031–034: конфиг и явная стадия / configured ART launcher |
+
+## Closeout и пакет для локальной проверки
+
+```bat
+run_hero_video_closeout.bat plan config_closeout_TASK999.local.json cleanup_archive/TASK999/plan.json
+run_hero_video_closeout.bat archive config_closeout_TASK999.local.json cleanup_archive/TASK999/plan.json
+run_hero_video_closeout.bat verify config_closeout_TASK999.local.json cleanup_archive/TASK999/plan.json
+run_hero_video_closeout.bat cleanup config_closeout_TASK999.local.json cleanup_archive/TASK999/plan.json
+run_hero_video_closeout.bat cleanup config_closeout_TASK999.local.json cleanup_archive/TASK999/plan.json --apply
+run_hero_video_closeout.bat publish-report config_closeout_TASK999.local.json cleanup_archive/TASK999/plan.json
+run_prepare_public_bundle.bat project_publication/new_review
+```
+
+TASK999 — заполняемый пример. Cleanup без `--apply` ничего не удаляет; каталог нового пакета должен отсутствовать. Подробности: [руководство](HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md).

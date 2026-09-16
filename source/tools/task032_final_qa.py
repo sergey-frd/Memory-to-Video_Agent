@@ -16,7 +16,7 @@ def main(args):
     if args.preview is not None:PREVIEW=args.preview.resolve()
     c=cv2.VideoCapture(str(PREVIEW));info={'width':int(c.get(3)),'height':int(c.get(4)),'fps':c.get(5),'frames':int(c.get(7))};info['duration']=info['frames']/info['fps']
     print(info,flush=True)
-    font=ImageFont.truetype('C:/Windows/Fonts/arial.ttf',18)
+    font=ImageFont.truetype('<LOCAL_PATH>',18)
     for page in range(int(info['duration']//25)+1):
         s=Image.new('RGB',(1600,1010),'#111111');d=ImageDraw.Draw(s)
         for k in range(25):

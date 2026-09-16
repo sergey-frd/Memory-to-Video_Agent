@@ -1,5 +1,16 @@
 .env
 *.local.json
+# Personal production configuration and completed-job launchers stay local.
+config_*.json
+config_*.jsonc
+!config_BASE.json
+!config_*.example.json
+!config_*.example.jsonc
+run_task036_closeout.bat
+run_task037_closeout.bat
+run_tasks036_037_closeout.bat
+docs/HERO_VIDEO_AUTOMATION_PLAN_RU.md
+docs/HERO_VIDEO_CLOSEOUT_RU.md
 # Per-task media, projects, audit logs and generated JSON are local artifacts.
 TASK_*/
 .venv/

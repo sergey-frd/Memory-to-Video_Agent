@@ -82,7 +82,8 @@ From the source root, the tool selects:
 - All entry-point `main_*.py` and `main.py`/`main1.py`.
 - All `run_*.bat` and `login_*.bat`.
 - `api/`, `services/`, `models/`, `styles/`, `utils/`, `tests/`, `test/`.
-- All `config*.json`, `chatgpt_*_config.json`, `project_sequence_batch_*.json`, `video_prompt_*.json/.py`.
+- Safe config templates (`config_BASE.json`, `*.example.json/.jsonc`), `chatgpt_*_config.json`, `project_sequence_batch_*.json`, `video_prompt_*.json/.py`. Personal `config_*.json/.jsonc`, local configs and private job artifacts are excluded.
+- For preparation without Git operations, use `run_prepare_public_bundle.bat <new-folder>`; its audit checks the current bundle. The destination must not already exist.
 - `requirements.txt`, `pytest.ini`, `setup_project.ps1`, `deploy_and_run.ps1`.
 - `project_structure_registry.json`.
 - The top-level `README.md` and `CHANGELOG.md`.

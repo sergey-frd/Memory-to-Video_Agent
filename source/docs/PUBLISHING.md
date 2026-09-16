@@ -6,6 +6,20 @@ Each successful guarded publication commit can also receive a matching Git tag d
 
 ## Safe Update Flow
 
+For a local review bundle without Git operations, run
+`run_prepare_public_bundle.bat project_publication/new_review`.
+The destination must not exist. The batch builds the bundle and runs
+`tools/audit_public_bundle.py`; it does not stage, commit or push.
+The direct writer does not remove stale files from an existing destination.
+Audit covers the current file tree, not old Git history.
+Private per-person `config_*.json` / `.jsonc` files are excluded; distribute
+`config_BASE.json` and explicit `*.example.json` templates instead. Completed
+job launchers/manifests and the private hero workflow notes are not published.
+The public closeout instructions are in `docs/HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md`.
+Path sanitization covers both Windows slash styles. The private development
+repository may contain family media in older commits: use the separate public
+bundle, not the development repository's history.
+
 1. Refresh the bundle into this local clone.
 2. Stage only the managed files from `data/publication_manifest.json`.
 3. Review `git diff --staged` and the root `VERSION` file.

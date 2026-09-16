@@ -12,6 +12,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 EXCLUDED_DIR_NAMES = {
     ".browser-profile",
+    ".codex",
+    ".agents",
     ".git",
     ".pytest_cache",
     ".mypy_cache",
@@ -30,12 +32,14 @@ EXCLUDED_DIR_NAMES = {
     "temp",
     "source",
 }
-EXCLUDED_DIR_PREFIXES = ("pytest-cache-files-", "pytest-temp", "tmp_", "input_", "output_", "TASK_")
+EXCLUDED_DIR_PREFIXES = ("pytest-cache-files-", "pytest-temp", ".tmp", "tmp_", "input_", "output_", "TASK_")
 EXCLUDED_FILE_NAMES = {".env"}
 EXCLUDED_FILE_PREFIXES = (".env.",)
 EXCLUDED_SOURCE_RELATIVE_FILES = {
     "data/project_snapshot.json",
     "data/publication_manifest.json",
+    "docs/HERO_VIDEO_AUTOMATION_PLAN_RU.md",
+    "docs/HERO_VIDEO_CLOSEOUT_RU.md",
 }
 PUBLISHED_SOURCE_SUFFIXES = {
     ".bat",
@@ -79,11 +83,12 @@ DOC_TARGETS = {
     "docs/PREMIERE_TASK_WORKFLOWS_RU.md": "docs/PREMIERE_TASK_WORKFLOWS_RU.md",
     "docs/INSTALL_ON_NEW_COMPUTER_RU.md": "docs/INSTALL_ON_NEW_COMPUTER_RU.md",
     "docs/PREMIERE_ART_TASKS_031_034_RU.md": "docs/PREMIERE_ART_TASKS_031_034_RU.md",
+    "docs/HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md": "docs/HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md",
     "docs/portrait_styles_tables.md": "docs/portrait_styles_tables.md",
 }
 PUBLICATION_VERSION_RE = re.compile(r"^(?P<date>\d{4}\.\d{2}\.\d{2})\.(?P<index>\d{2})$")
-WINDOWS_QUOTED_PATH_RE = re.compile(r'"[A-Za-z]:\\[^"\n]+"')
-WINDOWS_INLINE_PATH_RE = re.compile(r'''(?<![A-Za-z0-9_])(?:[A-Za-z]:\\[^\s`"'<>()\[\]{},;]+)''')
+WINDOWS_QUOTED_PATH_RE = re.compile(r'''(?P<quote>["'])[A-Za-z]:[\\/][^"'\n]+(?P=quote)''')
+WINDOWS_INLINE_PATH_RE = re.compile(r'''(?<![A-Za-z0-9_])(?:[A-Za-z]:[\\/][^\s`"'<>()\[\]{},;]+)''')
 SECRET_PATTERNS = {
     "openai_project_key": re.compile(r"sk-proj-[A-Za-z0-9_-]{20,}"),
     "openai_key": re.compile(r"sk-[A-Za-z0-9_-]{20,}"),
@@ -143,6 +148,8 @@ def _iter_project_files(source_root: Path, excluded_roots: tuple[Path, ...] = ()
         for filename in sorted(filenames):
             if _is_excluded_file_name(filename):
                 continue
+            if (current_path / filename).relative_to(source_root).as_posix() in EXCLUDED_SOURCE_RELATIVE_FILES:
+                continue
             yield current_path / filename
 
 
@@ -153,6 +160,14 @@ def _is_excluded_dir_name(dirname: str) -> bool:
 def _is_excluded_file_name(filename: str) -> bool:
     if filename == ".env.template":
         return False
+    name = filename.casefold()
+    # Configs for real people remain local; distribute BASE and explicit examples.
+    if name.startswith('config_') and name.endswith(('.json', '.jsonc')):
+        if name != 'config_base.json' and not name.endswith(('.example.json', '.example.jsonc')):
+            return True
+    # These completed jobs contain private manifests and user-specific launchers.
+    if re.search(r'tasks?0?(?:36|37)(?!\d)', name):
+        return True
     return (filename in EXCLUDED_FILE_NAMES or filename.lower().endswith(".local.json")
             or any(filename.startswith(prefix) for prefix in EXCLUDED_FILE_PREFIXES))
 
@@ -290,7 +305,7 @@ def _next_publication_version(target_dir: Path, signature: str) -> PublicationVe
 
 
 def _sanitize_public_text(text: str) -> str:
-    text = WINDOWS_QUOTED_PATH_RE.sub('"<LOCAL_PATH>"', text)
+    text = WINDOWS_QUOTED_PATH_RE.sub(lambda match: match.group('quote') + '<LOCAL_PATH>' + match.group('quote'), text)
     text = WINDOWS_INLINE_PATH_RE.sub("<LOCAL_PATH>", text)
     return text
 

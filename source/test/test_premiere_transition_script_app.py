@@ -56,7 +56,7 @@ def test_build_premiere_transition_extendscript_contains_qe_transition_calls() -
         sequence_name="Ivan26_o04",
         jobs=jobs,
         transition_name="Cross Dissolve",
-        log_path=Path("C:/tmp/Ivan26_o04_apply_transitions.log"),
+        log_path=Path("<LOCAL_PATH>"),
     )
 
     assert "app.enableQE()" in script
@@ -77,7 +77,7 @@ def _clip(name: str, start_seconds: int, end_seconds: int) -> PremiereSequenceCl
         track_index=1,
         clipitem_id=f"track-item-{name}",
         name=name,
-        source_path=f"C:/media/{name}",
+        source_path=f"<LOCAL_PATH>",
         start=start,
         end=end,
         in_point=0,

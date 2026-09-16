@@ -222,7 +222,8 @@
 <a class="level-2" href="#short-operator-recommendations">Short Operator Recommendations</a>
 <a class="level-2" href="#multi-scene-video-prompt-composer">Multi-Scene Video Prompt Composer</a>
 <a class="level-2" href="#multi-scene-video-story-preview">Multi-Scene Video Story Preview</a>
-<a class="level-2" href="#documentation-sync-rule">Documentation Sync Rule</a></nav></aside>
+<a class="level-2" href="#documentation-sync-rule">Documentation Sync Rule</a>
+<a class="level-2" href="#job-closeout-and-public-bundle-preparation">Job closeout and public bundle preparation</a></nav></aside>
     <main><article class="content">
 <h1 id="user-guide">User Guide</h1>
 <h2 id="latest-workspace-changes-premiere-and-external-api-images">Latest workspace changes: Premiere and external API images</h2>
@@ -1075,6 +1076,9 @@ Gemini saving first tries the generated image button <code>Download full size</c
 <li><code>final_videos_dir</code> — default <code>final_project/videos</code>; final delivery folder for generated <code>mp4</code> files and background images.</li>
 <li><code>final_output_dir</code> — default <code>final_project/output</code>; final delivery root for portrait/image-edit PNG copies produced by ChatGPT, Gemini, Grok, API, or local portrait batch flows when <code>--delivery-config-file</code> is provided. Project <code>output/...</code> subfolders are mirrored below this root.</li>
 <li><code>regeneration_assets_dir</code> — default <code>final_project/regeneration_assets</code>; delivery folder for prompts, manifests, and non-video stage artifacts.</li>
+<li><code>premiere_project_dir</code> — optional Adobe Premiere project directory, not a <code>.prproj</code> file. Set it in a private <code>config_Hero.local.json</code> and preserve the person&#39;s established project location.</li>
+<li><code>project_video_exports_dir</code> — optional destination for MP4 exports of the edited project, including interim review versions and accepted final videos. Its historical folder name need not match the current production year. This is separate from <code>final_videos_dir</code>, which receives AI-generated clips. Defaults to <code>None</code>, survives loading and overrides, and does not trigger export or copying. The user selects this directory for manual exports. Interim MP4s remain eligible for cleanup after final acceptance.</li>
+<li><code>source_materials_dir</code> — optional root directory for all source materials of the current birthday production. These paths default to <code>None</code> when omitted and survive loading and overrides. They record task context only; they do not change pipeline input or delivery, scan directories, or move files.</li>
 <li><code>hero_image_dir</code> — optional project metadata path to hero reference images.</li>
 <li><code>human_detail_txt</code> — optional project metadata path to the human-written hero profile.</li>
 <li><code>reports_dir</code> — optional shared project reports directory.</li>
@@ -1961,6 +1965,8 @@ run_chatgpt_style_batch_existing.bat chatgpt_all_styles_config.json --skip-exist
 <li>the relevant reference document in <code>docs/</code> (for portrait banks also <code>docs/portrait_styles_tables.md</code>)</li>
 </ul>
 <p>Keep only <code>README.md</code> and <code>CHANGELOG.md</code> as root-level documentation entry points.</p>
+<h2 id="job-closeout-and-public-bundle-preparation">Job closeout and public bundle preparation</h2>
+<p>See the <a href="HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md">closeout guide (Russian)</a> for planning, archiving, hash verification and removal of working copies. <code>run_prepare_public_bundle.bat &lt;new-folder&gt;</code> builds and audits a separate package without Git operations. Personal configs and media remain local; development Git history is not included.</p>
 
       <p class="source-note">Source: <a href="USER_GUIDE_EN.md">docs/USER_GUIDE_EN.md</a>.</p>
     </article></main>
