@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "output_root": "output/Hero2026/workflow",
+  "pipeline_config": "config_pipeline_Hero.local.json",
+  "review": {
+    "require_alternative": true
+  },
+  "native": {
+    "project": "<Premiere project>",
+    "target_sequence": "<empty target sequence>",
+    "preset": "<LOCAL_PATH>"
+  },
+  "animation": {
+    "peak_fraction": 0.58,
+    "zoom_fraction": 0.14,
+    "return_fraction": 0.18,
+    "enabled": true
+  },
+  "transitions": {
+    "duration_seconds": 0.4,
+    "minimum_clip_seconds": 8,
+    "enabled": true
+  },
+  "color": {
+    "creative_brief": {
+      "purpose": "Тёплая семейная история взросления Бена: любопытство, занятия, близость семьи.",
+      "mood": "Спокойная радость; пробный вариант для просмотра",
+      "lighting_intent": "Сохранить естественные различия помещений и событий; без оранжевой кожи",
+      "music_direction": "Не выбрана; анализ музыки не выполняется",
+      "references": []
+    },
+    "individual": {
+      "exposure_mode": "apply_conservative",
+      "maximum_auto_exposure": 0.2,
+      "overrides": {}
+    },
+    "global_look": {
+      "profile": "warm_family",
+      "strength": 0.35,
+      "overrides": {}
+    },
+    "enabled": true
+  }
+}

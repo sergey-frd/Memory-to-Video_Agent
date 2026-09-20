@@ -185,3 +185,30 @@ run_prepare_public_bundle.bat project_publication/new_review
 ```
 
 TASK999 — заполняемый пример. Cleanup без `--apply` ничего не удаляет; каталог нового пакета должен отсутствовать. Подробности: [руководство](HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md).
+
+| ID | Batch | Назначение |
+| --- | --- | --- |
+| B-CLOSEOUT | `run_hero_video_closeout.bat` | План, архив, проверка и очистка; пример выше |
+| B-PUBLIC | `run_prepare_public_bundle.bat` | Новый публичный пакет и аудит; пример выше |
+
+| B-INVENTORY | `run_prepare_classification_input.bat` | `run_prepare_classification_input.bat config_inventory_Hero.local.json` — каталог и контактные листы |
+
+| B-CLASSIFY | `run_classify_source_package.bat` | `run_classify_source_package.bat config_classification_Hero.local.json --dry-run` — проверка перед AI-классификацией |
+
+| B-STRUCTURE | `run_build_video_structure.bat` | `run_build_video_structure.bat config_structure_Hero.local.json --dry-run` — проверка входа структуры |
+
+| B-DRAFT | `run_render_structure_draft.bat` | `run_render_structure_draft.bat config_draft_Hero.local.json --dry-run` — план и черновой MP4 |
+
+| B-NATIVE | `run_prepare_native_export.bat` | `run_prepare_native_export.bat config_native_Hero.local.json --dry-run` — подготовка копии и JSX для Adobe |
+
+| B-PIPELINE | `run_hero_pipeline.bat` | `run_hero_pipeline.bat config_pipeline_Hero.local.json --check` — общая цепочка |
+
+| B-REV | `run_revise_edit_plan.bat` | Explicit edit plan revision | `run_revise_edit_plan.bat config_revision_Ben26_v2.local.json` |
+
+| B-ANIM | `run_prepare_plan_animation.bat` | Native photo motion | `run_prepare_plan_animation.bat config_animation_Ben26_v3.local.json` |
+
+| B-TRANS | `run_prepare_plan_transitions.bat` | Native transitions | `run_prepare_plan_transitions.bat config_transitions_Ben26_v3.local.json` |
+
+| B-WORKFLOW | `run_video_workflow.bat` | Start, revisions, approval, native finishing | `run_video_workflow.bat config_workflow_Hero.local.json --action start` |
+
+| B-COLOR | `run_prepare_plan_color.bat` | Two editable Lumetri layers | `run_prepare_plan_color.bat config_color_Ben26_v3.local.json` |

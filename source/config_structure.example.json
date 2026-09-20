@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "classification_result": "output/Hero2026/classification/RUN/classification_result.json",
+  "output_root": "output/Hero2026/structure",
+  "ai_enabled": true,
+  "model": "gpt-4.1-mini",
+  "target_duration_seconds": 300,
+  "narrative": "Тематический рассказ о жизни героя; хронология только по подтверждённым данным",
+  "required_ids": [],
+  "excluded_ids": []
+}

@@ -36,6 +36,16 @@ EXCLUDED_DIR_PREFIXES = ("pytest-cache-files-", "pytest-temp", ".tmp", "tmp_", "
 EXCLUDED_FILE_NAMES = {".env"}
 EXCLUDED_FILE_PREFIXES = (".env.",)
 EXCLUDED_SOURCE_RELATIVE_FILES = {
+    "tools/prepare_max_production.py",
+    "tools/prepare_max_minimal.py",
+    "tools/check_max_production.py",
+    "tools/prepare_arkady_first_pass.py",
+    "tools/prepare_arkady_all_art.py",
+    "tools/watch_ben_render.ps1",
+    "watch_ben_render.bat",
+    "docs/MAX26_LOCAL_RUN_RU.md",
+    "docs/ARKADY26_LOCAL_RUN_RU.md",
+    "docs/BEN26_MASTER_PORTRAIT_RU.md",
     "data/project_snapshot.json",
     "data/publication_manifest.json",
     "docs/HERO_VIDEO_AUTOMATION_PLAN_RU.md",
@@ -66,6 +76,7 @@ PUBLISHED_SOURCE_SUFFIXES = {
 TEXT_READ_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251")
 
 DOC_TARGETS = {
+    "docs/FULL_MINIMAL_PRODUCTION_RU.md": "docs/FULL_MINIMAL_PRODUCTION_RU.md",
     "CHANGELOG.md": "CHANGELOG.md",
     "docs/README.md": "docs/README.md",
     "docs/PROJECT_STRUCTURE.md": "docs/PROJECT_STRUCTURE.md",

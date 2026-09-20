@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "source_job": "<path to approved transition_job.json>",
+  "output_root": "output/Hero2026/color",
+  "creative_brief": {
+    "purpose": "<Describe the purpose of the film>",
+    "mood": "Спокойная радость; пробный вариант для просмотра",
+    "lighting_intent": "Сохранить естественные различия помещений и событий; без оранжевой кожи",
+    "music_direction": "Не выбрана; анализ музыки не выполняется",
+    "references": []
+  },
+  "individual": {
+    "exposure_mode": "suggest",
+    "maximum_auto_exposure": 0.2,
+    "overrides": {}
+  },
+  "global_look": {
+    "profile": "warm_family",
+    "strength": 0.35,
+    "overrides": {}
+  }
+}

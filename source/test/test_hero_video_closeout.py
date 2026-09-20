@@ -78,6 +78,31 @@ class CloseoutTests(unittest.TestCase):
             c.cleanup(self.plan, apply=True)
         self.assertTrue(self.photo.exists())
 
+    def test_exact_disposable_routes_preserve_working_dependency(self):
+        job=c.load(self.job)
+        job['file_routes']={
+            'artwork/photo.png': {'storage':'artwork','relative':'photo.png'},
+            '01_CLASSIFICATION/catalog.json': {'storage':'classification','relative':'catalog.json'},
+            'cache.prin': None,
+            'draft.prproj': None,
+        }
+        job['keep_working_files']=['artwork/photo.png']
+        c.save(self.job,job)
+        self.prepare()
+        result=c.cleanup(self.plan,apply=True)
+        self.assertTrue(self.photo.exists())
+        self.assertFalse(self.project.exists())
+        self.assertFalse((self.root/'archive/history/draft.prproj').exists())
+        self.assertEqual(len(result['deleted']),3)
+        self.assertEqual(c.load(self.root/'archive/classification/catalog.json')['manual'],'keep this description')
+
+    def test_exact_routes_reject_escape_and_unlisted_file(self):
+        storage={'artwork':self.root/'archive/artwork'}
+        with self.assertRaises(ValueError):
+            c.job_route(self.photo,self.source,storage,{'file_routes':{}})
+        with self.assertRaises(ValueError):
+            c.job_route(self.photo,self.source,storage,{'file_routes':{'artwork/photo.png':{'storage':'artwork','relative':'../../outside'}}})
+
     def test_changed_source_blocks_all_deletion(self):
         self.prepare()
         self.photo.write_bytes(b'new user edit')

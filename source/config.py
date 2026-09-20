@@ -63,6 +63,8 @@ CONFIG_STR_FIELDS = {
     "regeneration_assets_dir",
     "hero_image_dir",
     "human_detail_txt",
+    "family_detail_txt",
+    "family_screenshot",
     "reports_dir",
 }
 CONFIG_ENUM_FIELDS = {
@@ -181,6 +183,8 @@ class GenerationConfig:
     project_video_exports_dir: str | None = None
     source_materials_dir: str | None = None
     human_detail_txt: str | None = None
+    family_detail_txt: str | None = None
+    family_screenshot: str | None = None
     reports_dir: str | None = None
     continue_after_failure: bool = False
     write_description: bool = True
@@ -265,6 +269,8 @@ class GenerationConfig:
                 if data.get("human_detail_txt") is not None
                 else default.human_detail_txt
             ),
+            family_detail_txt=data.get("family_detail_txt", default.family_detail_txt),
+            family_screenshot=data.get("family_screenshot", default.family_screenshot),
             reports_dir=(
                 str(data["reports_dir"])
                 if data.get("reports_dir") is not None
@@ -327,6 +333,8 @@ class GenerationConfig:
             "project_video_exports_dir": self.project_video_exports_dir,
             "source_materials_dir": self.source_materials_dir,
             "human_detail_txt": self.human_detail_txt,
+            "family_detail_txt": self.family_detail_txt,
+            "family_screenshot": self.family_screenshot,
             "reports_dir": self.reports_dir,
             "continue_after_failure": self.continue_after_failure,
             "write_description": self.write_description,

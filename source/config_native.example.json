@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "project": "<LOCAL_PATH>",
+  "target_sequence": "Result",
+  "edit_plan": "output/Hero2026/draft_video/RUN/edit_plan.json",
+  "output_root": "output/Hero2026/native_export",
+  "preset": "<LOCAL_PATH>",
+  "width": 1920,
+  "height": 1080
+}

@@ -1,0 +1,12 @@
+{
+  "task_id": "Hero2026",
+  "hero_config": "config_Hero.local.json",
+  "working_dir": "output/Hero2026",
+  "report_dir": "cleanup_archive/Hero2026/final_v1",
+  "project_scan_roots": [
+    "<LOCAL_PATH>",
+    "output"
+  ],
+  "video_config_key": "final_videos_dir",
+  "project_config_key": "premiere_project_dir"
+}

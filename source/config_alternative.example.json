@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "classification_result": "output/Hero2026/pipeline/classification/RUN/classification_result.json",
+  "model": "gpt-4.1-mini",
+  "target_duration_seconds": 300,
+  "narrative": "Сохранить смысл истории героя; после критики первого черновика предложить более выразительный альтернативный монтаж без неподтверждённых фактов.",
+  "required_ids": [],
+  "excluded_ids": []
+}

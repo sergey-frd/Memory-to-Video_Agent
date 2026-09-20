@@ -83,7 +83,7 @@ def context(job_path):
     config = safe(ROOT / job['hero_config'])
     hero = load(config)
     task = job['task_id']
-    if not re.fullmatch(r'TASK\d{3,}', task):
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}', task):
         raise ValueError('Invalid task_id')
     source = safe(ROOT / job['working_dir'])
     # Destructive scope is deliberately restricted to one task under this repository/output.
@@ -165,6 +165,8 @@ def route_file(p, source, storage):
         return None, 'rebuildable_cache'
     if any('adobe premiere pro audio previews' in s for s in parts):
         return None, 'rebuildable_audio_preview'
+    if 'segments' in parts and p.suffix.lower() == '.mp4':
+        return None, 'rebuildable_ffmpeg_segment'
     if parts[0] == '01_classification':
         return storage['classification'] / Path(*rel.parts[1:]), 'classification'
     if 'classification' in parts:
@@ -174,6 +176,24 @@ def route_file(p, source, storage):
     if p.suffix.lower() in {'.py', '.jsx'}:
         return storage['provenance'] / 'legacy_scripts' / rel, 'legacy_code_snapshot'
     return storage['history'] / rel, 'history'
+
+
+def job_route(p, source, storage, job):
+    """Optional reviewed exact-file routing; absent policy retains legacy archive behavior."""
+    routes = job.get('file_routes')
+    if routes is None:
+        return route_file(p, source, storage)
+    relative = p.relative_to(source).as_posix()
+    if relative not in routes:
+        raise ValueError(f'File absent from reviewed routing: {relative}')
+    route = routes[relative]
+    if route is None:
+        return None, 'explicit_disposable_intermediate'
+    base = storage[route['storage']]
+    destination = safe(base / route['relative'])
+    if not below(destination, base) or norm(destination) == norm(base):
+        raise ValueError('Unsafe explicit route')
+    return destination, route.get('kind', 'retained_material')
 
 
 def make_plan(job_path, plan_path):
@@ -186,13 +206,13 @@ def make_plan(job_path, plan_path):
     refs = {norm(r) for p in protected for r in p['references']}
     rows = []
     for p in sorted(files(source)):
-        dest, kind = route_file(p, source, storage)
+        dest, kind = job_route(p, source, storage, job)
         # A cache referenced by a retained project is not disposable.
         if norm(p) in refs and dest is None:
             dest, kind = storage['history'] / p.relative_to(source), 'referenced_dependency'
         rows.append({'source': str(p), 'destination': str(dest) if dest else None,
                      'kind': kind, 'bytes': p.stat().st_size, 'sha256': sha(p),
-                     'keep_source': norm(p) in refs})
+                     'keep_source': norm(p) in refs or p.relative_to(source).as_posix() in job.get('keep_working_files', [])})
     paths = [norm(x['destination']) for x in rows if x['destination']]
     if len(paths) != len(set(paths)):
         raise ValueError('Destination collision')
@@ -236,7 +256,7 @@ def validate_plan(plan_path):
         p = safe(row['source'])
         if not below(p, source) or norm(p) == norm(source):
             raise ValueError(f'Outside cleanup scope: {p}')
-        dest, kind = route_file(p, source, storage)
+        dest, kind = job_route(p, source, storage, job)
         if row['kind'] == 'referenced_dependency':
             dest = storage['history'] / p.relative_to(source)
         if row['destination'] != (str(dest) if dest else None):

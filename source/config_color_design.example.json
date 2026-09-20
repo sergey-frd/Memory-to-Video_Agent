@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "implementation_status": "DESIGN_ONLY_NOT_EXECUTABLE",
+  "enabled": true,
+  "placement": "after_transitions_before_final_acceptance",
+  "input_project": "<approved animated project with transitions>",
+  "source_sequence": "B_26_1",
+  "output_sequence": "B_26_1_COLOR",
+  "individual_correction": {
+    "enabled": true,
+    "analyze_multiple_frames": true,
+    "preserve_skin_tones": true,
+    "preserve_scene_lighting": true,
+    "manual_overrides_by_clip_instance": {}
+  },
+  "global_look": {
+    "profile": "UNSELECTED",
+    "reference_images": [],
+    "strength": 0.25,
+    "mood_source": "user_direction"
+  },
+  "review": {
+    "comparison_required": true,
+    "full_720p_required": true,
+    "color_approval_required": true
+  },
+  "output": {
+    "editable_native_effects_required": true,
+    "native_1080p_required": true
+  }
+}

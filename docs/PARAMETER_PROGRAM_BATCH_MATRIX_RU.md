@@ -39,6 +39,9 @@ flowchart LR
 |---|---|---|---|
 | `hero_image_dir` | `null` | Каталог эталонных изображений героя | `main_hero_definition.py`, project metadata |
 | `human_detail_txt` | `null` | Текстовое описание героя | Hero Definition, personalized music report |
+| `family_detail_txt` | не задан | Путь к тексту семейной иерархии | GenerationConfig: загрузка и сохранение при override |
+| `family_screenshot` | не задан | Путь к изображению семейного дерева | GenerationConfig: загрузка и сохранение при override |
+
 | `reports_dir` | `null` | Общий каталог project reports | music/report workflows |
 
 При `--delivery-config-file config_Alice.json` portrait batch использует `final_output_dir`; дополнительные project metadata сохраняются и больше не считаются неизвестными ключами.
@@ -573,3 +576,5 @@ Batch-файл не должен скрыто менять смысл JSON-па�
 | `--task`, `--config`, `--stage`, `--execute`; `schema_version`, `task`, `settings` | `main_premiere_art_task.py` | `run_premiere_art_task.bat` | Безопасная проверка или явно выбранная стадия ART |
 
 [Все ключи ART settings и низкоуровневые QA-команды](PREMIERE_ART_TASKS_031_034_RU.md).
+
+Семейные поля необязательны; если указаны, ожидается непустая строка пути. В JSON используйте `<LOCAL_PATH>` или экранированные обратные слеши. Поддержка полей загрузчиком сама по себе не включает чтение семейного дерева AI или использование этих данных при подборе музыки. `human_detail_txt` сохраняет прежнее значение — описание главного героя.

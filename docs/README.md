@@ -4,6 +4,8 @@
 
 ## Основные руководства
 
+- [FULL_MINIMAL_PRODUCTION_RU.md](FULL_MINIMAL_PRODUCTION_RU.md) — актуальная технология FULL → LOCK → MINIMAL, совместный запуск Adobe, постоянное хранение и удаление промежуточных файлов.
+
 - [USER_GUIDE_RU.md](USER_GUIDE_RU.md) — руководство пользователя на русском.
 - [USER_GUIDE_EN.md](USER_GUIDE_EN.md) — English user guide.
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — архитектура и карта подсистем.
@@ -41,3 +43,12 @@
 - `run_hero_video_closeout.bat` — план → архив → проверка → очистка.
 - `run_prepare_public_bundle.bat <новая-папка>` — локальная сборка и аудит без Git-операций.
 - [Публикация](PUBLISHING.md) — отдельный публичный пакет и история Git.
+
+- [Подготовка входа классификации](CLASSIFICATION_INPUT_RU.md) — инвентаризация sequence, изображения и обзорные кадры видео.
+
+- [Объединённая batch-технология](HERO_BATCH_PIPELINE_RU.md).
+
+
+## Общая технология с редакциями и остановками
+
+Реализован `run_video_workflow.bat`: начальный pipeline до 720p, повторяемые редакции, утверждение монтажа, нативный экспорт, анимация, переходы и приёмка. Полная инструкция и параметры: [VIDEO_WORKFLOW_FINAL_RU.md](VIDEO_WORKFLOW_FINAL_RU.md). Состояние сохраняется; операции Premiere выполняются через подготовленный JSX с последующим возобновлением сценария.

@@ -4,13 +4,13 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.09.16.04`
-- Git tag: `v2026.09.16.04`
+- Publication version: `2026.09.20.02`
+- Git tag: `v2026.09.20.02`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-09-16T09:47:30+03:00`
+- Last synchronized: `2026-09-20T13:58:03+03:00`
 - Source project: `img-style-ag_1`
-- Python files: `215`
-- Test files: `55`
+- Python files: `246`
+- Test files: `71`
 - Entry points: `49`
 
 ## Install this release
@@ -19,7 +19,7 @@ Choose one repository: `img-style-ag_1` for the private desktop code, or this pu
 For this public clone, select the release tag, then run the installer from `source/` (Windows AMD64, Python 3.14.2):
 
 ```powershell
-git switch --detach v2026.09.16.04
+git switch --detach v2026.09.20.02
 cd source
 .\install_project.bat
 .\run_verify_installation.bat --require-tag
@@ -30,7 +30,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 
 ## Published Source Mirror
 
-- Mirrored source files: `446`
+- Mirrored source files: `505`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/.env.template`
@@ -66,7 +66,18 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/config.json`
 - `source/config.py`
 - `source/config_BASE.json`
+- `source/config_alternative.example.json`
+- `source/config_classification.example.json`
 - `source/config_closeout.example.json`
+- `source/config_color.example.json`
+- `source/config_color_design.example.json`
+- `source/config_draft.example.json`
+- `source/config_inventory.example.json`
+- `source/config_native.example.json`
+- `source/config_pipeline.example.json`
+- `source/config_structure.example.json`
+- `source/config_workflow.example.json`
+- `source/config_workflow_closeout.example.json`
 - `source/copy_sequence_images_sveta_igr_26_2.bat`
 - `source/copy_sequence_media_sveta_igr_26_2.bat`
 - `source/copy_sequence_media_sveta_igr_26_2.json`
@@ -158,6 +169,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/pytest.ini`
 - `source/requirements-lock-windows-py314.txt`
 - `source/requirements.txt`
+- `source/run_build_video_structure.bat`
 - `source/run_chatgpt_artistic_photo_portret_existing.bat`
 - `source/run_chatgpt_pair_batch_existing.bat`
 - `source/run_chatgpt_pair_batch_work_window.bat`
@@ -168,6 +180,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/run_chatgpt_style_batch_existing.bat`
 - `source/run_chatgpt_style_menu_existing.bat`
 - `source/run_chatgpt_watercolor_on_paper_existing.bat`
+- `source/run_classify_source_package.bat`
 - `source/run_copy_minimal_to_laptop_dir.bat`
 - `source/run_copy_sequence_images.bat`
 - `source/run_copy_sequence_media_batch.bat`
@@ -180,6 +193,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/run_grok_automation_all.bat`
 - `source/run_grok_portrait_batch_existing.bat`
 - `source/run_hero_definition.bat`
+- `source/run_hero_pipeline.bat`
 - `source/run_hero_video_closeout.bat`
 - `source/run_laptop_env_compare.bat`
 - `source/run_laptop_env_snapshot.bat`
@@ -189,6 +203,12 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/run_premiere_sequence_motion.bat`
 - `source/run_premiere_transform_script.bat`
 - `source/run_premiere_transition_script.bat`
+- `source/run_prepare_classification_input.bat`
+- `source/run_prepare_native_export.bat`
+- `source/run_prepare_native_finish.bat`
+- `source/run_prepare_plan_animation.bat`
+- `source/run_prepare_plan_color.bat`
+- `source/run_prepare_plan_transitions.bat`
 - `source/run_prepare_public_bundle.bat`
 - `source/run_project_publication_push.bat`
 - `source/run_project_publication_stage.bat`
@@ -196,6 +216,8 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/run_project_sequence_batch_igor_26_1A.bat`
 - `source/run_project_sequence_batch_nicol_26_T2.bat`
 - `source/run_project_sequence_batch_vika_26_1A.bat`
+- `source/run_render_structure_draft.bat`
+- `source/run_revise_edit_plan.bat`
 - `source/run_sequence_import_and_keep.bat`
 - `source/run_sequence_import_and_keep_standalone.bat`
 - `source/run_sequence_keep_apply.bat`
@@ -207,6 +229,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/run_verify_installation.bat`
 - `source/run_video_prompt_story_export.bat`
 - `source/run_video_prompt_story_generate.bat`
+- `source/run_video_workflow.bat`
 - `source/scripts`
 - `source/sequence_import_and_keep_template.json`
 - `source/sequence_keep_apply_template.json`
@@ -261,6 +284,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 
 - `docs/BATCH_RUN_HISTORY.md`
 - `docs/CHANGE_IMPACT.md`
+- `docs/FULL_MINIMAL_PRODUCTION_RU.md`
 - `docs/HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md`
 - `docs/INSTALL_ON_NEW_COMPUTER_RU.md`
 - `docs/MINI_LAPTOP_WATERCOLOR.md`

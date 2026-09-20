@@ -171,7 +171,8 @@
 </head>
 <body>
   <div class="shell">
-    <aside class="sidebar"><nav><a class="level-2" href="#экспресс-запуск-за-1-минуту">Экспресс-запуск за 1 минуту</a>
+    <aside class="sidebar"><nav><a class="level-2" href="#full-и-minimal-актуальная-технология">FULL и MINIMAL: актуальная технология</a>
+<a class="level-2" href="#экспресс-запуск-за-1-минуту">Экспресс-запуск за 1 минуту</a>
 <a class="level-2" href="#последние-рабочие-изменения-premiere-и-внешний-api-image">Последние рабочие изменения: Premiere и внешний API image</a>
 <a class="level-3" href="#api-одно-изображение-вне-input">API: одно изображение вне input</a>
 <a class="level-2" href="#назначение">Назначение</a>
@@ -224,6 +225,8 @@
 <a class="level-2" href="#завершение-задания-и-подготовка-публичной-версии">Завершение задания и подготовка публичной версии</a></nav></aside>
     <main><article class="content">
 <h1 id="руководство-пользователя">Руководство пользователя</h1>
+<h2 id="full-и-minimal-актуальная-технология">FULL и MINIMAL: актуальная технология</h2>
+<p>Сборка двух версий в одном 4K-проекте, запуск JSX пользователем, фиксация FULL, проверка MINIMAL и безопасное завершение описаны в <a href="FULL_MINIMAL_PRODUCTION_RU.md">FULL + MINIMAL</a>. Классификации и исходники сохраняются; удаление промежуточных файлов выполняется только после проверки архива и ссылок проектов.</p>
 <h2 id="экспресс-запуск-за-1-минуту">Экспресс-запуск за 1 минуту</h2>
 <ol>
 <li>Положите исходные изображения в <code>input</code>.</li>
@@ -307,6 +310,26 @@ Motion-режимы используют Save As. TASK_028–030 сохраня�
 }
 </code></pre>
 <h2 id="bat-файлы">BAT-файлы</h2>
+<p><code>run_prepare_plan_color.bat config_color_Ben26_v3.local.json</code> — shot correction and global look; see VIDEO_WORKFLOW_FINAL_RU.md.</p>
+<p><code>run_video_workflow.bat config_workflow_Hero.local.json --action start</code> — complete review-driven workflow; <a href="VIDEO_WORKFLOW_FINAL_RU.md">guide</a>.</p>
+<p><code>run_prepare_plan_transitions.bat config_transitions_Ben26_v3.local.json</code> — prepare native video transitions; see HERO_BATCH_PIPELINE_RU.md.</p>
+<p><code>run_prepare_plan_animation.bat config_animation_Ben26_v3.local.json</code> — prepare native photo animation; details in HERO_BATCH_PIPELINE_RU.md.</p>
+<p><code>run_revise_edit_plan.bat config_revision_Ben26_v2.local.json</code> — explicit IN/OUT revision; see HERO_BATCH_PIPELINE_RU.md.</p>
+<pre><code class="language-bat">run_hero_pipeline.bat config_pipeline_Hero.local.json --check
+</code></pre>
+<pre><code class="language-bat">run_prepare_native_export.bat config_native_Hero.local.json --dry-run
+</code></pre>
+<pre><code class="language-bat">run_render_structure_draft.bat config_draft_Hero.local.json --dry-run
+</code></pre>
+<pre><code class="language-bat">run_build_video_structure.bat config_structure_Hero.local.json --dry-run
+</code></pre>
+<pre><code class="language-bat">run_classify_source_package.bat config_classification_Hero.local.json --dry-run
+</code></pre>
+<pre><code class="language-bat">run_prepare_classification_input.bat config_inventory_Hero.local.json
+</code></pre>
+<pre><code class="language-bat">run_hero_video_closeout.bat plan config_closeout_TASK999.local.json cleanup_archive/TASK999/plan.json
+run_prepare_public_bundle.bat project_publication/new_review
+</code></pre>
 <ul>
 <li><code>install_project.bat</code> — Установка зафиксированного окружения / install locked environment</li>
 <li><code>run_verify_installation.bat</code> — Проверка выпуска, Git, Python, пакетов, FFmpeg / verify release</li>
@@ -1640,6 +1663,26 @@ python .\main_project_publication_push.py --repo-dir <LOCAL_PATH> --commit-messa
 <li>Когда sequence окончательно утверждена, пересобирать отчеты по финальному текущему порядку и хранить их в <code>reports</code>.</li>
 </ol>
 <h2 id="типовые-команды">Типовые команды</h2>
+<p><code>run_prepare_plan_color.bat config_color_Ben26_v3.local.json</code> — shot correction and global look; see VIDEO_WORKFLOW_FINAL_RU.md.</p>
+<p><code>run_video_workflow.bat config_workflow_Hero.local.json --action start</code> — complete review-driven workflow; <a href="VIDEO_WORKFLOW_FINAL_RU.md">guide</a>.</p>
+<p><code>run_prepare_plan_transitions.bat config_transitions_Ben26_v3.local.json</code> — prepare native video transitions; see HERO_BATCH_PIPELINE_RU.md.</p>
+<p><code>run_prepare_plan_animation.bat config_animation_Ben26_v3.local.json</code> — prepare native photo animation; details in HERO_BATCH_PIPELINE_RU.md.</p>
+<p><code>run_revise_edit_plan.bat config_revision_Ben26_v2.local.json</code> — explicit IN/OUT revision; see HERO_BATCH_PIPELINE_RU.md.</p>
+<pre><code class="language-bat">run_hero_pipeline.bat config_pipeline_Hero.local.json --check
+</code></pre>
+<pre><code class="language-bat">run_prepare_native_export.bat config_native_Hero.local.json --dry-run
+</code></pre>
+<pre><code class="language-bat">run_render_structure_draft.bat config_draft_Hero.local.json --dry-run
+</code></pre>
+<pre><code class="language-bat">run_build_video_structure.bat config_structure_Hero.local.json --dry-run
+</code></pre>
+<pre><code class="language-bat">run_classify_source_package.bat config_classification_Hero.local.json --dry-run
+</code></pre>
+<pre><code class="language-bat">run_prepare_classification_input.bat config_inventory_Hero.local.json
+</code></pre>
+<pre><code class="language-bat">run_hero_video_closeout.bat plan config_closeout_TASK999.local.json cleanup_archive/TASK999/plan.json
+run_prepare_public_bundle.bat project_publication/new_review
+</code></pre>
 <pre><code class="language-powershell">.\install_project.bat
 .\run_verify_installation.bat --require-tag
 .\run_premiere_art_task.bat --help

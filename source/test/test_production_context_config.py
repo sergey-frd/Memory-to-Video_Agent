@@ -30,3 +30,23 @@ def test_production_paths_optional_but_validate_when_present(key):
         "builtins.open", mock_open(read_data=json.dumps({key: 123}))
     ), pytest.raises(ConfigValidationError):
         load_generation_config(Path("config.json"))
+
+
+@pytest.mark.parametrize("key", ["family_detail_txt", "family_screenshot"])
+def test_family_context_optional_and_roundtrip(key):
+    assert getattr(GenerationConfig.from_dict({}), key) is None
+    value = "<LOCAL_PATH>" if key == "family_screenshot" else "<LOCAL_PATH>"
+    with patch.object(Path, "exists", return_value=True), patch(
+        "builtins.open", mock_open(read_data=json.dumps({key: value}))
+    ):
+        config = load_generation_config(Path("config.json"))
+    assert getattr(config.override(generate_music=True), key) == value
+
+
+@pytest.mark.parametrize("key", ["family_detail_txt", "family_screenshot"])
+@pytest.mark.parametrize("value", [None, 123, "", "   ", [], {}])
+def test_family_context_rejects_invalid_values(key, value):
+    with patch.object(Path, "exists", return_value=True), patch(
+        "builtins.open", mock_open(read_data=json.dumps({key: value}))
+    ), pytest.raises(ConfigValidationError):
+        load_generation_config(Path("config.json"))

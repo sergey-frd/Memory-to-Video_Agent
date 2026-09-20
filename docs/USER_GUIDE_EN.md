@@ -1,5 +1,9 @@
 # User Guide
 
+## FULL and MINIMAL production
+
+See [the production and closeout guide (Russian)](FULL_MINIMAL_PRODUCTION_RU.md) for two editable sequences in one 4K project, user-run JSX, FULL locking and MINIMAL validation. Preserve source media and classifications; remove intermediates only after archive verification and project dependency checks.
+
 ## Latest workspace changes: Premiere and external API images
 
 As of 2026-08-30, task-specific executors cover TASK_019–025, TASK_028–030 and
@@ -112,6 +116,47 @@ Example Windows paths in `config.json`:
 ```
 
 ## BAT Files
+
+`run_prepare_plan_color.bat config_color_Ben26_v3.local.json` — shot correction and global look; see VIDEO_WORKFLOW_FINAL_RU.md.
+
+`run_video_workflow.bat config_workflow_Hero.local.json --action start` — complete review-driven workflow; [guide](VIDEO_WORKFLOW_FINAL_RU.md).
+
+`run_prepare_plan_transitions.bat config_transitions_Ben26_v3.local.json` — prepare native video transitions; see HERO_BATCH_PIPELINE_RU.md.
+
+`run_prepare_plan_animation.bat config_animation_Ben26_v3.local.json` — prepare native photo animation; details in HERO_BATCH_PIPELINE_RU.md.
+
+`run_revise_edit_plan.bat config_revision_Ben26_v2.local.json` — explicit IN/OUT revision; see HERO_BATCH_PIPELINE_RU.md.
+
+```bat
+run_hero_pipeline.bat config_pipeline_Hero.local.json --check
+```
+
+```bat
+run_prepare_native_export.bat config_native_Hero.local.json --dry-run
+```
+
+```bat
+run_render_structure_draft.bat config_draft_Hero.local.json --dry-run
+```
+
+```bat
+run_build_video_structure.bat config_structure_Hero.local.json --dry-run
+```
+
+```bat
+run_classify_source_package.bat config_classification_Hero.local.json --dry-run
+```
+
+```bat
+run_prepare_classification_input.bat config_inventory_Hero.local.json
+```
+
+
+```bat
+run_hero_video_closeout.bat plan config_closeout_TASK999.local.json cleanup_archive/TASK999/plan.json
+run_prepare_public_bundle.bat project_publication/new_review
+```
+
 
 - `install_project.bat` — Установка зафиксированного окружения / install locked environment
 - `run_verify_installation.bat` — Проверка выпуска, Git, Python, пакетов, FFmpeg / verify release
@@ -1514,6 +1559,47 @@ Recommended cycle:
 8. When the sequence is final, rebuild reports from the final current order and keep them in `reports`.
 
 ## Typical Commands
+
+`run_prepare_plan_color.bat config_color_Ben26_v3.local.json` — shot correction and global look; see VIDEO_WORKFLOW_FINAL_RU.md.
+
+`run_video_workflow.bat config_workflow_Hero.local.json --action start` — complete review-driven workflow; [guide](VIDEO_WORKFLOW_FINAL_RU.md).
+
+`run_prepare_plan_transitions.bat config_transitions_Ben26_v3.local.json` — prepare native video transitions; see HERO_BATCH_PIPELINE_RU.md.
+
+`run_prepare_plan_animation.bat config_animation_Ben26_v3.local.json` — prepare native photo animation; details in HERO_BATCH_PIPELINE_RU.md.
+
+`run_revise_edit_plan.bat config_revision_Ben26_v2.local.json` — explicit IN/OUT revision; see HERO_BATCH_PIPELINE_RU.md.
+
+```bat
+run_hero_pipeline.bat config_pipeline_Hero.local.json --check
+```
+
+```bat
+run_prepare_native_export.bat config_native_Hero.local.json --dry-run
+```
+
+```bat
+run_render_structure_draft.bat config_draft_Hero.local.json --dry-run
+```
+
+```bat
+run_build_video_structure.bat config_structure_Hero.local.json --dry-run
+```
+
+```bat
+run_classify_source_package.bat config_classification_Hero.local.json --dry-run
+```
+
+```bat
+run_prepare_classification_input.bat config_inventory_Hero.local.json
+```
+
+
+```bat
+run_hero_video_closeout.bat plan config_closeout_TASK999.local.json cleanup_archive/TASK999/plan.json
+run_prepare_public_bundle.bat project_publication/new_review
+```
+
 
 ```powershell
 .\install_project.bat
