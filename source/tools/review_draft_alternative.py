@@ -8,7 +8,7 @@ import subprocess
 
 from dotenv import load_dotenv
 from tools.prepare_classification_input import digest, write_json
-from tools.build_video_structure import obj, schema_for, validate, repair_messages
+from tools.build_video_structure import obj, schema_for, validate, repair_messages, COMPACT_PRINCIPLE
 from tools.render_structure_draft import make_plan, run as render
 from tools.revise_edit_plan import validate_plan
 from utils.video_frame_extract import resolve_ffmpeg_executable
@@ -35,7 +35,7 @@ only the SAME supplied classification catalog, required/excluded IDs and brief.
 Do not reclassify materials. Family tree is context, not a scene. Explain each
 selection and change. Change actual order, selection or durations, not just titles.
 A mere permutation is insufficient: change durations, source selection or trims.
-Use each material ID at most once, integer seconds, total within 10% of target.
+Use each material ID at most once, integer seconds. Respect duration_mode: compact uses the target as an upper planning budget with 10% tolerance, never a minimum; target explicitly requires total within 10%; coverage has no total target but still requires individually sufficient durations.
 Video durations cannot exceed max_video_seconds. Exact source trims remain draft.
 Return critique and alternative. Never claim approval or that an alternative is
 objectively better. Audio and continuous-action review remain a human checkpoint.'''
@@ -68,55 +68,15 @@ def timestamp_schema(timestamps):
 
 
 def balance_duration(response, rows, cfg):
-    """Repair only bounded duration arithmetic, never IDs/order or invalid source limits."""
-    plan=response['alternative']
-    items=[i for b in plan['blocks'] for i in b['items']]
-    total=sum(i['duration_seconds'] for i in items)
-    if cfg.get('max_duration_seconds') is not None:
-        cap = cfg['max_duration_seconds']
+    """Reject invalid budgets; never proportionally retime or drop ending scenes."""
+    plan = response['alternative']
+    total = validate(plan, rows, cfg)
+    cap = cfg.get('max_duration_seconds')
+    if cap is not None:
         if type(cap) is not int or cap <= 0:
             raise ValueError('Positive integer max_duration_seconds required')
-        validate(plan, rows, dict(cfg, target_duration_seconds=total))
-        removed = []
-        # Preserve required materials; remove complete optional scenes from the end.
-        for block in reversed(plan['blocks']):
-            for item in list(reversed(block['items'])):
-                if total <= cap: break
-                if item['material_id'] in cfg['required_ids']: continue
-                block['items'].remove(item); total -= item['duration_seconds']
-                removed.append(item)
-        plan['blocks'] = [b for b in plan['blocks'] if b['items']]
-        if total > cap or not plan['blocks']:
-            raise ValueError('Cannot satisfy hard duration cap with required scenes')
-        if removed:
-            response['hard_cap_removed'] = removed
-            plan['warnings'].append('Hard duration cap: removed complete optional scenes from end; review ending: '+json.dumps(removed,ensure_ascii=False))
-        return
-    # First reject all unrelated validation errors, including source overruns.
-    validate(plan,rows,dict(cfg,target_duration_seconds=total))
-    target=cfg['target_duration_seconds']
-    if abs(total-target)<=target*.1:return
-    if abs(target/total-1)>.2:
-        raise ValueError('Duration repair exceeds 20%; model must revise selection')
-    by_id={r['id']:r for r in rows};before=[i['duration_seconds'] for i in items]
-    lower=[max(1,math.floor(d*.8)) for d in before]
-    upper=[]
-    for i,d in zip(items,before):
-        row=by_id[i['material_id']];cap=math.ceil(d*1.2)
-        if row['kind']=='video':cap=min(cap,math.floor(max((p['source_out_ticks']-p['source_in_ticks'])/254016000000 for p in row['placements'])))
-        upper.append(cap)
-    if not sum(lower)<=target<=sum(upper):raise ValueError('Insufficient source capacity for duration repair')
-    values=before[:];step=1 if total<target else -1
-    while sum(values)!=target:
-        eligible=[j for j,v in enumerate(values) if (v<upper[j] if step>0 else v>lower[j])]
-        j=max(eligible,key=lambda j:step*(before[j]*target/total-values[j]))
-        values[j]+=step
-    changes=[]
-    for item,old,new in zip(items,before,values):
-        item['duration_seconds']=new
-        if old!=new:changes.append(dict(material_id=item['material_id'],before_seconds=old,after_seconds=new))
-    response['duration_repair']=dict(before_seconds=total,after_seconds=target,changes=changes)
-    plan['warnings'].append(f'Автоматическая балансировка длительности: {total} → {target} с; ритм требует повторной оценки.')
+        if total > cap:
+            raise ValueError('Hard duration cap exceeded; editorial revision required, no automatic trimming')
 
 
 def remove_validated_repeats(response, rows, cfg):
@@ -164,7 +124,6 @@ def validate_response(response, rows, cfg, original, timestamps):
         total = sum(i['duration_seconds'] for b in response['alternative']['blocks'] for i in b['items'])
         if total > cfg['max_duration_seconds']:
             raise ValueError('Hard duration cap exceeded')
-        effective = dict(cfg, target_duration_seconds=total)
     validate(response['alternative'], rows, effective)
     new = make_plan(dict(response['alternative'], status='DRAFT_REVIEW_REQUIRED'), rows, original['fps'])
     validate_plan(new)
@@ -265,6 +224,8 @@ def run(config, review, output, dry_run=False):
     config = Path(config).resolve(); cfg = read(config); output = Path(output)
     if cfg.get('schema_version') != 1:
         raise ValueError('Expected schema_version 1')
+    if cfg.get('duration_mode', 'compact') not in ('compact', 'target', 'coverage'):
+        raise ValueError('Invalid duration_mode')
     cfg.setdefault('required_ids', []); cfg.setdefault('excluded_ids', [])
     if type(cfg.get('target_duration_seconds')) is not int or cfg['target_duration_seconds'] <= 0:
         raise ValueError('Positive integer target_duration_seconds required')
@@ -316,7 +277,7 @@ def run(config, review, output, dry_run=False):
         frames = output / 'frames'; frames.mkdir(exist_ok=True)
         content = [dict(type='input_text', text=json.dumps(dict(
             brief=cfg['narrative'], prior_iteration=read(review['post_critique']) if review.get('post_critique') else None,
-            target_duration_seconds=cfg['target_duration_seconds'],
+            target_duration_seconds=cfg['target_duration_seconds'], duration_mode=cfg.get('duration_mode', 'compact'),
             hard_maximum_seconds=cfg.get('max_duration_seconds'),
             required_ids=cfg['required_ids'], excluded_ids=cfg['excluded_ids'],
             edit_plan=original, catalog=[{k:r[k] for k in ('id','kind','description','themes','quality_notes','uncertainties')} |
@@ -332,7 +293,7 @@ def run(config, review, output, dry_run=False):
         write_json(output/'samples.json', dict(times_seconds=times, method='3 frames/shot; no audio or continuous motion analysis'))
         from openai import OpenAI
         load_dotenv(); client = OpenAI(timeout=180, max_retries=2)
-        messages = [dict(role='system', content=PROMPT), dict(role='user', content=content)]
+        messages = [dict(role='system', content=PROMPT + '\n' + COMPACT_PRINCIPLE), dict(role='user', content=content)]
         failed = sorted(output.glob('invalid_*.json'), key=lambda p:p.stat().st_mtime)
         if failed:
             saved = read(failed[-1])

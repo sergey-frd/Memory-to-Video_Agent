@@ -16,6 +16,7 @@
 
 | ID | Batch-файл | Назначение | Неповторяющийся пример запуска |
 | --- | --- | --- | --- |
+| B_NATIVE_FINISH | `run_prepare_native_finish.bat` | `run_prepare_native_finish.bat config_native_finish.example.json --dry-run` | Validate combined native finish configuration; does not execute Premiere. |
 | B001 | `login_grok_profile.bat` | Ручной вход в Grok automation profile | `.\login_grok_profile.bat` |
 | B002 | `login_chatgpt_profile.bat` | Ручной вход в ChatGPT profile для обычной web-автоматизации | `.\login_chatgpt_profile.bat` |
 | B003 | `login_chatgpt_debug_profile.bat` | Ручной вход в ChatGPT debug profile с remote debugging port `9333` | `.\login_chatgpt_debug_profile.bat` |

@@ -21,7 +21,7 @@ def test_repeat_removal_requires_valid_remaining_plan():
     data=response(); item=data['alternative']['blocks'][0]['items'][0]
     data['alternative']['blocks'][0]['items'].append(dict(item))
     original=copy.deepcopy(data)
-    cfg=dict(target_duration_seconds=16,required_ids=[],excluded_ids=[])
+    cfg=dict(duration_mode='target',target_duration_seconds=16,required_ids=[],excluded_ids=[])
     with pytest.raises(ValueError,match='Total duration'):
         remove_validated_repeats(data,[dict(id='p',kind='image')],cfg)
     assert data==original
@@ -41,7 +41,7 @@ def test_critique_retry_preserves_envelope_and_supplies_budget():
         [dict(id='p',kind='image'),dict(id='unused',kind='image')],
         dict(target_duration_seconds=300,excluded_ids=[]),[.996])
     assert messages[0]['content']==raw
-    assert '"seconds_to_add": 105' in messages[1]['content']
+    assert 'not a minimum to fill' in messages[1]['content']
     assert 'FULL critique AND alternative' in messages[1]['content']
     assert '[0.996]' in messages[1]['content']
 
@@ -52,11 +52,11 @@ def test_duration_repair_respects_capacity_and_rejects_unrelated_errors():
     data=response();data['alternative']['blocks'][0]['items']=[dict(material_id='p',duration_seconds=105,reason='rhythm')]
     row=dict(id='p',kind='video',placements=[dict(source_in_ticks=0,source_out_ticks=124*254016000000)])
     balance_duration(data,[row],cfg)
-    assert data['duration_repair']['after_seconds']==124
-    assert data['alternative']['blocks'][0]['items'][0]['duration_seconds']==124
+    assert 'duration_repair' not in data
+    assert data['alternative']['blocks'][0]['items'][0]['duration_seconds']==105
     bad=response();bad['alternative']['blocks'][0]['items'][0]['duration_seconds']=105
-    short=dict(row,placements=[dict(source_in_ticks=0,source_out_ticks=110*254016000000)])
-    with pytest.raises(ValueError,match='capacity'):balance_duration(bad,[short],cfg)
+    short=dict(row,placements=[dict(source_in_ticks=0,source_out_ticks=100*254016000000)])
+    with pytest.raises(ValueError,match='exceeds available'):balance_duration(bad,[short],cfg)
     bad['alternative']['blocks'][0]['items'][0]['material_id']='unknown'
     with pytest.raises(ValueError,match='Unknown ID'):balance_duration(bad,[row],cfg)
 

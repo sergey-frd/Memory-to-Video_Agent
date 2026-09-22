@@ -47,12 +47,13 @@ def make_plan(structure, rows, fps):
             clips.append(dict(id=mid, path=row['path'], sha256=row['sha256'], kind=row['kind'],
                               source_in_seconds=start, source_out_seconds=start + duration if row['kind'] == 'video' else None,
                               source_placement=placement, duration_seconds=duration,
-                              timeline_start_frame=cursor, frames=duration * fps, block=block['title']))
+                              timeline_start_frame=cursor, frames=duration * fps, block=block['title'],
+                              editorial_reason=item.get('reason', ''), timing_review='PENDING'))
             cursor += duration * fps
     if not clips:
         raise ValueError('Empty structure')
     return dict(schema_version=1, status='DRAFT', fps=fps, frames=cursor,
-                duration_seconds=cursor / fps, range_policy='First chronological placement long enough; start of its used range',
+                duration_seconds=cursor / fps, editorial_policy=structure.get('editorial_policy', 'legacy_unreviewed'), range_policy='First chronological placement long enough; start of its used range',
                 clips=clips, limitations=['No Premiere effects', 'Automatic source trims require review',
                                         'No music or titles; original video audio, silence for photos'])
 

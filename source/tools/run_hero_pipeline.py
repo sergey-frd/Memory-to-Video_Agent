@@ -29,6 +29,8 @@ def validate_config(cfg):
             raise ValueError(f'Fill configuration field: {key}')
     if type(cfg.get('target_duration_seconds')) is not int or cfg['target_duration_seconds'] <= 0:
         raise ValueError('Positive target_duration_seconds required')
+    if cfg.get('duration_mode', 'compact') not in ('compact', 'target', 'coverage'):
+        raise ValueError('Invalid duration_mode')
     if type(cfg.get('ai_enabled', True)) is not bool:
         raise ValueError('ai_enabled must be boolean')
 
@@ -85,7 +87,7 @@ def run(path, check=False, until='draft'):
                 base.update(input_manifest=str(result('inventory')), ai_enabled=cfg.get('ai_enabled', True), model=cfg['model'])
             elif stage == 'structure':
                 base.update(classification_result=str(result('classification')), ai_enabled=cfg.get('ai_enabled', True),
-                            model=cfg['model'], target_duration_seconds=cfg['target_duration_seconds'],
+                            model=cfg['model'], duration_mode=cfg.get('duration_mode', 'compact'), target_duration_seconds=cfg['target_duration_seconds'],
                             narrative=cfg['narrative'], required_ids=cfg.get('required_ids', []), excluded_ids=cfg.get('excluded_ids', []))
             elif stage == 'draft':
                 base.update(structure=str(result('structure').parent / 'structure.json'), width=1280, height=720,

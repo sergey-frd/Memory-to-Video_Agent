@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "workflow_state": "output/Hero/workflow/workflow_state.json",
+  "review_index": 1,
+  "edit_plan": "output/Hero/review/edit_plan.json",
+  "project": "<source-project.prproj>",
+  "target_sequence": "HERO_EMPTY",
+  "preset": "<export-preset.epr>",
+  "output_root": "output/Hero/native_finish",
+  "width": 1920,
+  "height": 1080,
+  "checkpoint_names": [
+    "HERO_ASSEMBLY",
+    "HERO_MOTION",
+    "HERO_TRANSITIONS",
+    "HERO_FINAL"
+  ],
+  "animation": {
+    "enabled": true,
+    "peak_fraction": 0.58,
+    "zoom_fraction": 0.06,
+    "return_fraction": 0.18
+  },
+  "transitions": {
+    "enabled": true,
+    "duration_seconds": 0.4,
+    "minimum_clip_seconds": 3
+  },
+  "color": {
+    "enabled": true,
+    "default_correction": {},
+    "overrides": {},
+    "global_look": {
+      "profile": "warm_family",
+      "strength": 0.2,
+      "overrides": {}
+    }
+  },
+  "notes": [
+    "Fill all paths and select an approved review before preparation. Manual JSX execution includes one native export."
+  ],
+  "output_prefix": "Hero"
+}

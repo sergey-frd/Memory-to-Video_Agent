@@ -4,6 +4,13 @@ This repository is intended to contain only the managed publication bundle expor
 The current bundle includes a full safe source mirror under `source/`, excluding secrets and runtime-only folders.
 Each successful guarded publication commit can also receive a matching Git tag derived from the generated `VERSION` file.
 
+## Release 2026.09.22.01
+
+Compact-first structure planning and alternatives remove runtime padding and
+mechanical duration repair. Personal Ben26/Arkady26 jobs and storage reports stay
+local. The general compact-first, FULL/MINIMAL and workflow guides are included
+at the publication root as well as under `source/docs/`.
+
 ## Safe Update Flow
 
 For a local review bundle without Git operations, run

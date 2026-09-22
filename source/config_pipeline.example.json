@@ -8,6 +8,7 @@
   "output_root": "output/Hero2026/pipeline",
   "ai_enabled": true,
   "model": "gpt-4.1-mini",
+  "duration_mode": "compact",
   "target_duration_seconds": 300,
   "narrative": "Тематический рассказ о герое. Факты брать из подтверждённого контекста.",
   "required_ids": [],

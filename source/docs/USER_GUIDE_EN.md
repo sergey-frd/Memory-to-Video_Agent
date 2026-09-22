@@ -117,6 +117,8 @@ Example Windows paths in `config.json`:
 
 ## BAT Files
 
+`run_prepare_native_finish.bat` — prepare a combined native finish job; see [the workflow](NATIVE_FINISH_RU.md). Premiere execution remains manual.
+
 `run_prepare_plan_color.bat config_color_Ben26_v3.local.json` — shot correction and global look; see VIDEO_WORKFLOW_FINAL_RU.md.
 
 `run_video_workflow.bat config_workflow_Hero.local.json --action start` — complete review-driven workflow; [guide](VIDEO_WORKFLOW_FINAL_RU.md).
@@ -1559,6 +1561,10 @@ Recommended cycle:
 8. When the sequence is final, rebuild reports from the final current order and keep them in `reports`.
 
 ## Typical Commands
+
+```bat
+run_prepare_native_finish.bat config_native_finish.example.json --dry-run
+```
 
 `run_prepare_plan_color.bat config_color_Ben26_v3.local.json` — shot correction and global look; see VIDEO_WORKFLOW_FINAL_RU.md.
 

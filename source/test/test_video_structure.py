@@ -56,7 +56,7 @@ def test_collects_duplicate_and_duration_errors():
     assert 'Total duration 200s' in str(error.value)
 
 
-def test_repair_supplies_exact_deficit_and_floored_source_limits():
+def test_retry_requests_editorial_revision_not_padding():
     import json
     from tools.build_video_structure import repair_messages
     rows = [dict(id='photo', kind='image'), dict(id='unused', kind='image'),
@@ -67,23 +67,37 @@ def test_repair_supplies_exact_deficit_and_floored_source_limits():
     repair_messages(messages, json.dumps(plan), 'duration', rows,
                     dict(target_duration_seconds=300, excluded_ids=['excluded']))
     content = messages[-1]['content']
-    assert '"seconds_to_add": 72' in content
-    assert '"video": 19' in content
-    assert '"unused_allowed_ids": ["unused", "video"]' in content
+    assert 'seconds_to_add' not in content
+    assert 'not a minimum to fill' in content
+    assert 'source limits' in content
 
 
-def test_small_repair_is_bounded_and_does_not_hide_invalid_sources():
+def test_deficit_does_not_pad_photos_or_hide_invalid_sources():
     from tools.build_video_structure import repair_small_duration_error
     rows = [dict(id=str(i), kind='image') for i in range(6)]
     plan = dict(title='a', synopsis='b', warnings=[], blocks=[dict(title='a', purpose='b',
         items=[dict(material_id=str(i), duration_seconds=44, reason='x') for i in range(6)])])
     cfg = dict(target_duration_seconds=300, required_ids=[], excluded_ids=[])
     repair_small_duration_error(plan, rows, cfg)
-    assert validate(plan, rows, cfg)==270
-    assert plan['warnings']
+    assert validate(plan, rows, cfg)==264
+    assert not plan['warnings']
     for item in plan['blocks'][0]['items']: item['duration_seconds']=30
     repair_small_duration_error(plan, rows, cfg)
     assert sum(i['duration_seconds'] for i in plan['blocks'][0]['items'])==180
     rows[0].update(kind='video', placements=[dict(source_in_ticks=0,source_out_ticks=254016000000)])
     with pytest.raises(ValueError, match='exceeds available'):
         repair_small_duration_error(plan, rows, cfg)
+
+
+def test_explicit_target_rejects_deficit_without_mutating_shots():
+    import copy
+    from tools.build_video_structure import repair_small_duration_error
+    rows = [dict(id='p', kind='image')]
+    plan = dict(title='A', synopsis='B', warnings=[], blocks=[dict(title='A', purpose='B',
+        items=[dict(material_id='p', duration_seconds=5, reason='The expression is clear')])])
+    original = copy.deepcopy(plan)
+    cfg = dict(duration_mode='target', target_duration_seconds=10, required_ids=[], excluded_ids=[])
+    with pytest.raises(ValueError, match='Total duration'):
+        repair_small_duration_error(plan, rows, cfg)
+    assert plan == original
+    assert validate(plan, rows, dict(cfg, duration_mode='compact')) == 5

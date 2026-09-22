@@ -35,7 +35,14 @@ EXCLUDED_DIR_NAMES = {
 EXCLUDED_DIR_PREFIXES = ("pytest-cache-files-", "pytest-temp", ".tmp", "tmp_", "input_", "output_", "TASK_")
 EXCLUDED_FILE_NAMES = {".env"}
 EXCLUDED_FILE_PREFIXES = (".env.",)
+EXCLUDED_SOURCE_RELATIVE_DIRS = {"premiere_scripts/Ben26", "premiere_scripts/Arkady26"}
 EXCLUDED_SOURCE_RELATIVE_FILES = {
+    "docs/NATIVE_FINISH_ONE_RUN_RU.md",
+    "tools/audit_arkady_compact_stage1.py",
+    "tools/prepare_arkady_compact_stage3.py",
+    "tools/prepare_arkady_closeout.py",
+    "docs/ARKADY26_PRODUCTION_AND_STORAGE_RU.md",
+    "docs/BEN26_STORAGE_20260920_RU.md",
     "tools/prepare_max_production.py",
     "tools/prepare_max_minimal.py",
     "tools/check_max_production.py",
@@ -76,6 +83,10 @@ PUBLISHED_SOURCE_SUFFIXES = {
 TEXT_READ_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251")
 
 DOC_TARGETS = {
+    "docs/COMPACT_FIRST_RU.md": "docs/COMPACT_FIRST_RU.md",
+    "docs/VIDEO_WORKFLOW_FINAL_RU.md": "docs/VIDEO_WORKFLOW_FINAL_RU.md",
+    "docs/HERO_BATCH_PIPELINE_RU.md": "docs/HERO_BATCH_PIPELINE_RU.md",
+    "docs/NATIVE_FINISH_RU.md": "docs/NATIVE_FINISH_RU.md",
     "docs/FULL_MINIMAL_PRODUCTION_RU.md": "docs/FULL_MINIMAL_PRODUCTION_RU.md",
     "CHANGELOG.md": "CHANGELOG.md",
     "docs/README.md": "docs/README.md",
@@ -155,6 +166,7 @@ def _iter_project_files(source_root: Path, excluded_roots: tuple[Path, ...] = ()
             for dirname in dirnames
             if not _is_excluded_dir_name(dirname)
             and (current_path / dirname).resolve() not in excluded
+            and (current_path / dirname).relative_to(source_root).as_posix() not in EXCLUDED_SOURCE_RELATIVE_DIRS
         )
         for filename in sorted(filenames):
             if _is_excluded_file_name(filename):
@@ -185,6 +197,8 @@ def _is_excluded_file_name(filename: str) -> bool:
 
 def _is_publishable_source_file(source_path: Path, source_root: Path) -> bool:
     relpath = source_path.relative_to(source_root)
+    if any(relpath.as_posix().startswith(d + "/") for d in EXCLUDED_SOURCE_RELATIVE_DIRS):
+        return False
     if relpath.as_posix() in EXCLUDED_SOURCE_RELATIVE_FILES:
         return False
     if any(_is_excluded_dir_name(part) for part in relpath.parts[:-1]):

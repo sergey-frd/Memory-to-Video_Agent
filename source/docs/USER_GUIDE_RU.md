@@ -104,6 +104,8 @@ Motion-режимы используют Save As. TASK_028–030 сохраня�
 
 ## BAT-файлы
 
+`run_prepare_native_finish.bat` — подготовка объединённого native finish; см. [порядок работы](NATIVE_FINISH_RU.md). Запуск в Premiere выполняется вручную.
+
 `run_prepare_plan_color.bat config_color_Ben26_v3.local.json` — shot correction and global look; see VIDEO_WORKFLOW_FINAL_RU.md.
 
 `run_video_workflow.bat config_workflow_Hero.local.json --action start` — complete review-driven workflow; [guide](VIDEO_WORKFLOW_FINAL_RU.md).
@@ -1515,6 +1517,10 @@ python .\main_cleanup_artifacts.py --include-output-build-dirs --include-output-
 8. Когда sequence окончательно утверждена, пересобирать отчеты по финальному текущему порядку и хранить их в `reports`.
 
 ## Типовые команды
+
+```bat
+run_prepare_native_finish.bat config_native_finish.example.json --dry-run
+```
 
 `run_prepare_plan_color.bat config_color_Ben26_v3.local.json` — shot correction and global look; see VIDEO_WORKFLOW_FINAL_RU.md.
 

@@ -4,6 +4,8 @@
 
 ## Основные руководства
 
+- [COMPACT_FIRST_RU.md](COMPACT_FIRST_RU.md) — первая компактная сборка после CLASSIFY, достаточность длительности и границы автоматизации.
+
 - [FULL_MINIMAL_PRODUCTION_RU.md](FULL_MINIMAL_PRODUCTION_RU.md) — актуальная технология FULL → LOCK → MINIMAL, совместный запуск Adobe, постоянное хранение и удаление промежуточных файлов.
 
 - [USER_GUIDE_RU.md](USER_GUIDE_RU.md) — руководство пользователя на русском.

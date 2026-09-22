@@ -35,6 +35,22 @@ duration_seconds, reason), and warnings. Durations are integer seconds and must
 sum to target_duration_seconds within 10 percent. No repeated material IDs.'''
 
 
+COMPACT_PRINCIPLE = """The FIRST assembly after classification must already be compact,
+including the full portrait, not an overlong master to shorten later. Cover the
+hero's distinct facets with the minimum sufficient screen time for each video,
+photo and artwork. For EACH item, its reason must explain what action, emotion or
+meaning the viewer needs to understand, the sufficient endpoint, and any necessary
+expressive pause. End once that purpose is clear unless further time adds meaning.
+Do not apply a common percentage, pad stills, repeat an understood action, or use
+source duration as a reason to hold a shot. Preserve meaningful looks, reactions,
+gestures, portraits and artistic pauses. Unknown timing must be marked СПОРНО in
+reason and warnings, never presented as observed. Sampled descriptions cannot
+prove exact action boundaries. Typical full 3-5 minutes and short 1-2 minutes are
+orientation, not quotas. Special extended films require an explicit brief and
+conscious additions, never automatic retention of excess. Both versions use this
+principle independently; shorter runtime alone is not proof of better editing."""
+
+
 def obj(properties):
     return dict(type='object', properties=properties, required=list(properties), additionalProperties=False)
 
@@ -42,7 +58,7 @@ def obj(properties):
 SCHEMA = obj(dict(title=dict(type='string'), synopsis=dict(type='string'),
     blocks=dict(type='array', items=obj(dict(title=dict(type='string'), purpose=dict(type='string'),
         items=dict(type='array', items=obj(dict(material_id=dict(type='string'),
-            duration_seconds=dict(type='integer'), reason=dict(type='string'))))))),
+            duration_seconds=dict(type='integer'), reason=dict(type='string', minLength=1, description='Why this duration is sufficient for the specific action, emotion or meaning; justify any expressive pause and mark uncertain timing'))))))),
     warnings=dict(type='array', items=dict(type='string'))))
 
 
@@ -57,48 +73,17 @@ def schema_for(rows, cfg):
 
 
 def repair_messages(messages, raw, error, rows=None, cfg=None):
-    if cfg and cfg.get('duration_mode') == 'coverage':
-        messages.extend([{'role': 'assistant', 'content': raw}, {'role': 'user', 'content':
-            'Correct the full plan: '+str(error)+'. Preserve broad facet coverage, unique IDs and source limits. No total duration target; do not pad or mechanically shorten.'}])
-        return
-    budget = ''
-    if rows is not None and cfg is not None:
-        try:
-            previous = json.loads(raw)
-            items = [i for b in previous['blocks'] for i in b['items']]
-            total = sum(i['duration_seconds'] for i in items)
-            used = {i['material_id'] for i in items}
-            first = {}
-            for item in items:
-                first.setdefault(item['material_id'], item['duration_seconds'])
-            limits = {r['id']: math.floor(max(
-                (p['source_out_ticks'] - p['source_in_ticks']) / 254016000000
-                for p in r['placements'])) for r in rows if r['kind'] == 'video'}
-            budget = '\nCOMPUTED BUDGET (seconds): ' + json.dumps(dict(
-                current_total=total, target=cfg['target_duration_seconds'],
-                seconds_to_add=cfg['target_duration_seconds']-total,
-                unique_total=sum(first.values()),
-                seconds_to_add_after_removing_repeats=cfg['target_duration_seconds']-sum(first.values()),
-                repeated_ids=sorted(mid for mid in used if sum(i['material_id']==mid for i in items)>1),
-                video_maximum_seconds=limits,
-                unused_photos=[r['id'] for r in rows if r['kind']=='image'
-                    and r['id'] not in used and r['id'] not in cfg['excluded_ids']],
-                unused_allowed_ids=[r['id'] for r in rows
-                    if r['id'] not in used and r['id'] not in cfg['excluded_ids']]))
-            budget += ('\nAdd meaningful unused materials when short; do not pad a few photos '
-                       'or exceed video limits. Explicitly budget the missing seconds across '
-                       'new choices before returning the full plan. Preserve story coherence. '
-                       'Remove ALL repeated occurrences first. Fill the UNIQUE-total deficit '
-                       'using UNUSED IDs, including relevant photos from the catalog. '
-                       'A repeated video does not supply additional available seconds.')
-        except (ValueError, KeyError, TypeError):
-            pass
-    messages.append({'role': 'assistant', 'content': raw})
-    messages.append({'role': 'user', 'content':
-        'Correct the preceding complete plan. Validation errors: ' + str(error) +
-        '. Each material_id must appear at most once across ALL blocks. '
-        'Recalculate the sum of ALL durations to match the requested target. '
-        'Keep valid choices where possible; return the full corrected JSON.' + budget})
+    mode = (cfg or {}).get('duration_mode', 'compact')
+    timing = ('No total duration target.' if mode == 'coverage' else
+              'Target duration is an upper planning budget, not a minimum to fill.' if mode == 'compact' else
+              'The explicitly requested target remains a constraint; resolve conflicts editorially.')
+    messages.extend([{'role': 'assistant', 'content': raw}, {'role': 'user', 'content':
+        'Correct the complete plan: ' + str(error) + '. ' + timing +
+        ' Preserve unique IDs, required/excluded materials and source limits. '
+        'Never pad shots, scale durations by a percentage or discard the ending mechanically. '
+        'For every item explain what the viewer must understand, when that becomes sufficient, '
+        'and why any remaining pause is necessary. Mark uncertain timing explicitly. '
+        'Return the full corrected plan.'}])
 
 
 def validate(plan, rows, cfg):
@@ -122,7 +107,7 @@ def validate(plan, rows, cfg):
                 errors.append(f'Excluded ID: {mid}')
             if mid in seen:
                 errors.append(f'Repeated ID: {mid}')
-            if type(duration) is not int or duration <= 0 or not isinstance(item.get('reason'), str):
+            if type(duration) is not int or duration <= 0 or not isinstance(item.get('reason'), str) or not item['reason'].strip():
                 raise ValueError('Invalid item duration/reason')
             row = by_id.get(mid)
             if row and row['kind'] == 'video':
@@ -132,35 +117,18 @@ def validate(plan, rows, cfg):
             seen.add(mid); total += duration
     if not set(cfg['required_ids']).issubset(seen):
         errors.append('Required IDs omitted: ' + ', '.join(sorted(set(cfg['required_ids']) - seen)))
-    if cfg.get('duration_mode') != 'coverage' and abs(total - cfg['target_duration_seconds']) > cfg['target_duration_seconds'] * .1:
+    if cfg.get('duration_mode', 'compact') == 'target' and abs(total - cfg['target_duration_seconds']) > cfg['target_duration_seconds'] * .1:
         errors.append(f'Total duration {total}s differs from target {cfg["target_duration_seconds"]}s by more than 10%')
+    if cfg.get('duration_mode', 'compact') == 'compact' and total > cfg['target_duration_seconds'] * 1.1:
+        errors.append(f'Total duration {total}s exceeds compact planning budget; review individual content, do not scale durations')
     if errors:
         raise ValueError('; '.join(errors))
     return total
 
 
 def repair_small_duration_error(plan, rows, cfg):
-    """Correct only near-boundary arithmetic, at most one second per photo."""
-    if cfg.get('duration_mode') == 'coverage':
-        return
-    items = [i for b in plan['blocks'] for i in b['items']]
-    total = sum(i['duration_seconds'] for i in items)
-    validate(plan, rows, dict(cfg, target_duration_seconds=total))
-    target = cfg['target_duration_seconds']
-    lower, upper = math.ceil(target*.9), math.floor(target*1.1)
-    needed = lower-total if total < lower else upper-total if total > upper else 0
-    if not needed or abs(needed) > target*.05:
-        return
-    photos = {r['id'] for r in rows if r['kind']=='image'}
-    eligible = [i for i in items if i['material_id'] in photos and i['duration_seconds'] >= 5]
-    if len(eligible) < abs(needed):
-        return
-    changes = []
-    for item in eligible[:abs(needed)]:
-        before = item['duration_seconds']
-        item['duration_seconds'] += 1 if needed > 0 else -1
-        changes.append(dict(material_id=item['material_id'], before=before, after=item['duration_seconds']))
-    plan['warnings'].append('Bounded duration correction (one second per photo; review pacing): '+json.dumps(changes))
+    """Validate only. Runtime deficits never justify changing individual durations."""
+    validate(plan, rows, cfg)
 
 
 def run(path, dry_run=False):
@@ -169,8 +137,9 @@ def run(path, dry_run=False):
     if cfg.get('schema_version') != 1 or type(cfg.get('ai_enabled', True)) is not bool:
         raise ValueError('Invalid schema/ai_enabled')
     cfg.setdefault('ai_enabled', True)
+    cfg.setdefault('duration_mode', 'compact')
     cfg.setdefault('required_ids', []); cfg.setdefault('excluded_ids', [])
-    if cfg.get('duration_mode', 'target') not in ('target', 'coverage'):
+    if cfg.get('duration_mode', 'compact') not in ('compact', 'target', 'coverage'):
         raise ValueError('Invalid duration_mode')
     if cfg.get('duration_mode') == 'coverage':
         cfg['target_duration_seconds'] = None
@@ -216,13 +185,15 @@ def run(path, dry_run=False):
         payload = dict(catalog=compact, context=context, target_duration_seconds=cfg['target_duration_seconds'],
                        narrative=cfg['narrative'], required_ids=cfg['required_ids'], excluded_ids=cfg['excluded_ids'])
         response_schema = schema_for(rows, cfg)
-        prompt = PROMPT
+        prompt = PROMPT + '\n' + COMPACT_PRINCIPLE
+        if cfg['duration_mode'] == 'compact':
+            prompt = prompt.replace('sum to target_duration_seconds within 10 percent.', 'stay within the target upper planning budget plus 10 percent tolerance. A shorter meaningful film is valid; never fill a deficit.')
         if cfg.get('duration_mode') == 'coverage':
             prompt = prompt.replace('Select a coherent subset, avoid repetitive scenes, respect required/excluded IDs.',
                 'Create a broad master portrait covering ALL distinct supported facets, activities, settings and emotions. Omit redundant takes, not distinct facets. Respect required/excluded IDs.')
             prompt = prompt.replace('sum to target_duration_seconds within 10 percent.',
                 'have NO required total or maximum runtime. Runtime emerges from coverage. Keep each individual thought brief; do not pad scenes. Alternate energy with meaningful links, not random mosaic. Audit the entire catalog for missing facets before answering.')
-        fingerprint = hashlib.sha256(json.dumps(dict(planner_version=3, prompt=prompt, model=cfg['model'], payload=payload,
+        fingerprint = hashlib.sha256(json.dumps(dict(planner_version=4, prompt=prompt, model=cfg['model'], payload=payload,
             catalog_sha256=digest(catalog)), sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         cache = output / 'cache' / (fingerprint + '.json')
         status(classification_result=str(result_path), catalog_sha256=digest(catalog), materials=len(rows))
@@ -263,7 +234,7 @@ def run(path, dry_run=False):
             write_json(cache, plan)
         total = validate(plan, rows, cfg)
         write_json(out / 'structure.json', dict(schema_version=1, status='DRAFT_REVIEW_REQUIRED',
-            **plan, duration_seconds=total, classification_result=str(result_path),
+            **plan, duration_seconds=total, duration_mode=cfg['duration_mode'], editorial_policy='compact_first_v1', classification_result=str(result_path),
             limitations=['Video trims/audio not reviewed', 'Family-tree references in catalog are context only'],
             requires_exact_edit_plan=True))
         by_id = {r['id']: r for r in rows}

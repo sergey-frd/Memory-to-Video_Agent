@@ -342,3 +342,18 @@ def test_main_project_publication_prints_json(monkeypatch, capsys) -> None:
     assert Path(payload["target_dir"]).name == "repo"
     assert payload["manifest_path"].endswith("publication_manifest.json")
     assert payload["publication_version"] == "2026.04.01.01"
+
+
+def test_personal_compact_jobs_and_reports_never_enter_public_bundle():
+    from utils.project_publication import _is_publishable_source_file, _iter_project_files
+    root = Path('test_runtime') / ('publication_private_' + uuid4().hex)
+    names = ['premiere_scripts/Ben26/compact_v1/source_audit.json',
+             'premiere_scripts/Arkady26/run.jsx', 'tools/prepare_arkady_closeout.py',
+             'docs/BEN26_STORAGE_20260920_RU.md']
+    for name in names:
+        p = root / name
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text('private', encoding='utf-8')
+        assert not _is_publishable_source_file(p, root)
+    assert not list(_iter_project_files(root))
+    assert _is_publishable_source_file(root / 'tools/build_video_structure.py', root)

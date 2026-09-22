@@ -4,10 +4,10 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.09.20.02`
-- Git tag: `v2026.09.20.02`
+- Publication version: `2026.09.22.01`
+- Git tag: `v2026.09.22.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-09-20T13:58:03+03:00`
+- Last synchronized: `2026-09-22T11:38:42+03:00`
 - Source project: `img-style-ag_1`
 - Python files: `246`
 - Test files: `71`
@@ -19,7 +19,7 @@ Choose one repository: `img-style-ag_1` for the private desktop code, or this pu
 For this public clone, select the release tag, then run the installer from `source/` (Windows AMD64, Python 3.14.2):
 
 ```powershell
-git switch --detach v2026.09.20.02
+git switch --detach v2026.09.22.01
 cd source
 .\install_project.bat
 .\run_verify_installation.bat --require-tag
@@ -30,7 +30,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 
 ## Published Source Mirror
 
-- Mirrored source files: `505`
+- Mirrored source files: `507`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/.env.template`
@@ -74,6 +74,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/config_draft.example.json`
 - `source/config_inventory.example.json`
 - `source/config_native.example.json`
+- `source/config_native_finish.example.json`
 - `source/config_pipeline.example.json`
 - `source/config_structure.example.json`
 - `source/config_workflow.example.json`
@@ -284,10 +285,13 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 
 - `docs/BATCH_RUN_HISTORY.md`
 - `docs/CHANGE_IMPACT.md`
+- `docs/COMPACT_FIRST_RU.md`
 - `docs/FULL_MINIMAL_PRODUCTION_RU.md`
+- `docs/HERO_BATCH_PIPELINE_RU.md`
 - `docs/HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md`
 - `docs/INSTALL_ON_NEW_COMPUTER_RU.md`
 - `docs/MINI_LAPTOP_WATERCOLOR.md`
+- `docs/NATIVE_FINISH_RU.md`
 - `docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md`
 - `docs/PREMIERE_ART_TASKS_031_034_RU.md`
 - `docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md`
@@ -302,6 +306,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `docs/USER_GUIDE_EN.md`
 - `docs/USER_GUIDE_RU.html`
 - `docs/USER_GUIDE_RU.md`
+- `docs/VIDEO_WORKFLOW_FINAL_RU.md`
 - `docs/portrait_styles_tables.md`
 
 ## Repository Safety Files

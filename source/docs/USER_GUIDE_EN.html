@@ -324,6 +324,7 @@ artifacts do not imply completion or an upload.</p>
 }
 </code></pre>
 <h2 id="bat-files">BAT Files</h2>
+<p><code>run_prepare_native_finish.bat</code> — prepare a combined native finish job; see <a href="NATIVE_FINISH_RU.md">the workflow</a>. Premiere execution remains manual.</p>
 <p><code>run_prepare_plan_color.bat config_color_Ben26_v3.local.json</code> — shot correction and global look; see VIDEO_WORKFLOW_FINAL_RU.md.</p>
 <p><code>run_video_workflow.bat config_workflow_Hero.local.json --action start</code> — complete review-driven workflow; <a href="VIDEO_WORKFLOW_FINAL_RU.md">guide</a>.</p>
 <p><code>run_prepare_plan_transitions.bat config_transitions_Ben26_v3.local.json</code> — prepare native video transitions; see HERO_BATCH_PIPELINE_RU.md.</p>
@@ -1712,6 +1713,8 @@ That music-first report now also starts with one single highest-priority track c
 <li>When the sequence is final, rebuild reports from the final current order and keep them in <code>reports</code>.</li>
 </ol>
 <h2 id="typical-commands">Typical Commands</h2>
+<pre><code class="language-bat">run_prepare_native_finish.bat config_native_finish.example.json --dry-run
+</code></pre>
 <p><code>run_prepare_plan_color.bat config_color_Ben26_v3.local.json</code> — shot correction and global look; see VIDEO_WORKFLOW_FINAL_RU.md.</p>
 <p><code>run_video_workflow.bat config_workflow_Hero.local.json --action start</code> — complete review-driven workflow; <a href="VIDEO_WORKFLOW_FINAL_RU.md">guide</a>.</p>
 <p><code>run_prepare_plan_transitions.bat config_transitions_Ben26_v3.local.json</code> — prepare native video transitions; see HERO_BATCH_PIPELINE_RU.md.</p>

@@ -13,8 +13,8 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 
 ## Current version
 
-- Workspace `VERSION`: **`2026.08.31.01`** ([`VERSION`](VERSION))
-- Release tag: **`v2026.08.31.01`**
+- Workspace `VERSION`: **`2026.09.22.01`** ([`VERSION`](VERSION))
+- Release tag: **`v2026.09.22.01`**
 
 ## Install this release on a laptop
 
@@ -25,7 +25,7 @@ not a second dependency. Choose one repository and the same release tag.
 ```powershell
 git clone https://github.com/sergey-frd/img-style-ag_1.git
 cd img-style-ag_1
-git switch --detach v2026.08.31.01
+git switch --detach v2026.09.22.01
 .\install_project.bat
 .\run_verify_installation.bat --require-tag
 ```
@@ -34,6 +34,14 @@ Requires Windows AMD64 and Python 3.14.2. Setup installs the desktop dependency
 lock and bundled FFmpeg fallback. Existing local secrets/configs are preserved.
 Premiere, plugins, media, keys and browser logins are transferred separately.
 See [the Russian laptop checklist](docs/INSTALL_ON_NEW_COMPUTER_RU.md).
+
+## Release 2026.09.22.01
+
+- Compact-first planning immediately after classification, for full and minimal films.
+- No automatic photo padding, percentage retiming or removal of ending scenes to meet a budget.
+- Updated FULL/MINIMAL workflow and guarded publication exclusions for personal jobs.
+- [Compact-first behavior and review limits](docs/COMPACT_FIRST_RU.md).
+- Existing personal edits are not rebuilt by this release.
 
 ## Release 2026.08.31.01
 
