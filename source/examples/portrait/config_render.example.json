@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "edit_plan": "edit_plan.json",
+  "output_root": "output/new_preview",
+  "width": 1280,
+  "height": 720,
+  "fps": 25,
+  "video_bitrate": "1800k",
+  "audio_bitrate": "128k"
+}

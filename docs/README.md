@@ -4,6 +4,9 @@
 
 ## Основные руководства
 
+- [PORTRAIT_WORKFLOW_CHOICES_RU.md](PORTRAIT_WORKFLOW_CHOICES_RU.md) — выбор цели нового портрета, карта скриптов/JSON, нативные этапы и границы автоматизации.
+- [PORTRAIT_MODES_RU.md](PORTRAIT_MODES_RU.md) — реальные параметры и примеры FULL/SHORT.
+
 - [COMPACT_FIRST_RU.md](COMPACT_FIRST_RU.md) — первая компактная сборка после CLASSIFY, достаточность длительности и границы автоматизации.
 
 - [FULL_MINIMAL_PRODUCTION_RU.md](FULL_MINIMAL_PRODUCTION_RU.md) — актуальная технология FULL → LOCK → MINIMAL, совместный запуск Adobe, постоянное хранение и удаление промежуточных файлов.
@@ -54,3 +57,8 @@
 ## Общая технология с редакциями и остановками
 
 Реализован `run_video_workflow.bat`: начальный pipeline до 720p, повторяемые редакции, утверждение монтажа, нативный экспорт, анимация, переходы и приёмка. Полная инструкция и параметры: [VIDEO_WORKFLOW_FINAL_RU.md](VIDEO_WORKFLOW_FINAL_RU.md). Состояние сохраняется; операции Premiere выполняются через подготовленный JSX с последующим возобновлением сценария.
+
+- [CLASSIFICATION_INPUT_RU.md](CLASSIFICATION_INPUT_RU.md) — параметризованные WC/DE, классификация готовых ART и накопление каталога.
+- [VIDEO_WORKFLOW_FINAL_RU.md](VIDEO_WORKFLOW_FINAL_RU.md) — общий видеопроцесс и отдельный сценарий двух первоначальных черновиков RomanN26.
+
+- [Режимы портрета для любого героя: поля, зависимости и примеры](PORTRAIT_MODES_RU.md)

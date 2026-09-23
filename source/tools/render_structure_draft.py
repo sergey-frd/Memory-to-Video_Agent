@@ -107,9 +107,8 @@ def run(config_path, dry_run=False):
             status(status='VALIDATED_NO_RENDER'); return state
         ffmpeg = resolve_ffmpeg_executable()
         def execute(args, label):
-            with log.activity(label), (out / 'ffmpeg.log').open('a', encoding='utf-8') as err:
-                subprocess.run([ffmpeg, '-hide_banner', '-nostdin', '-y', *args],
-                               stdout=subprocess.DEVNULL, stderr=err, check=True)
+            from tools.ffmpeg_progress import execute as monitored
+            monitored(ffmpeg, args, label, log, out / 'ffmpeg.log')
         parts = out / 'segments'; parts.mkdir()
         for index, clip in enumerate(plan['clips'], 1):
             log.emit('ITEM', f'{index}/{len(plan["clips"])} {clip["id"]} {clip["path"]}')
@@ -118,7 +117,16 @@ def run(config_path, dry_run=False):
             if clip['kind'] == 'video':
                 probe = subprocess.run([ffmpeg, '-hide_banner', '-i', clip['path']], capture_output=True, text=True, errors='replace', timeout=60)
                 audio = bool(re.search(r'Stream #.*Audio:', probe.stderr))
-            args = ['-loop', '1', '-framerate', str(cfg['fps']), '-i', clip['path']] if clip['kind'] == 'image' else ['-ss', str(clip['source_in_seconds']), '-i', clip['path']]
+            input_path = clip['path']
+            if Path(input_path).suffix.lower() in ('.heic', '.heif'):
+                import pillow_heif
+                from PIL import Image, ImageOps
+                pillow_heif.register_heif_opener()
+                normalized = parts / f'{index:04}_source.png'
+                with Image.open(input_path) as im:
+                    ImageOps.exif_transpose(im).convert('RGB').save(normalized)
+                input_path = str(normalized)
+            args = ['-loop', '1', '-framerate', str(cfg['fps']), '-i', input_path] if clip['kind'] == 'image' else ['-ss', str(clip['source_in_seconds']), '-i', clip['path']]
             if not audio:
                 args += ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo']
             video = (f"scale={cfg['width']}:{cfg['height']}:force_original_aspect_ratio=decrease,"

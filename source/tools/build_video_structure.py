@@ -12,6 +12,7 @@ from uuid import uuid4
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from dotenv import load_dotenv
+from tools.portrait_coverage import neutral_catalog, audit_schema, validate_audit, COVERAGE_PROMPT
 from tools.classify_source_package import ProgressLog, inside
 from tools.prepare_classification_input import digest, write_json
 
@@ -69,6 +70,7 @@ def schema_for(rows, cfg):
         raise ValueError('No allowed materials')
     item = schema['properties']['blocks']['items']['properties']['items']['items']
     item['properties']['material_id']['enum'] = allowed
+    if cfg.get('coverage_facets'): schema=audit_schema(schema,cfg['coverage_facets'])
     return schema
 
 
@@ -121,8 +123,11 @@ def validate(plan, rows, cfg):
         errors.append(f'Total duration {total}s differs from target {cfg["target_duration_seconds"]}s by more than 10%')
     if cfg.get('duration_mode', 'compact') == 'compact' and total > cfg['target_duration_seconds'] * 1.1:
         errors.append(f'Total duration {total}s exceeds compact planning budget; review individual content, do not scale durations')
+    if cfg.get('max_duration_seconds') is not None and total > cfg['max_duration_seconds']:
+        errors.append('Hard duration cap exceeded')
     if errors:
         raise ValueError('; '.join(errors))
+    if cfg.get('coverage_facets'): validate_audit(plan,cfg['coverage_facets'])
     return total
 
 
@@ -182,6 +187,7 @@ def run(path, dry_run=False):
         compact = [{k: r[k] for k in ('id', 'kind', 'description', 'themes', 'style', 'quality_notes', 'uncertainties')} |
                    dict(max_video_seconds=math.floor(max((p['source_out_ticks'] - p['source_in_ticks']) / 254016000000 for p in r['placements'])) if r['kind'] == 'video' else None)
                    for r in rows]
+        if cfg.get('media_type_policy')=='equal': compact=neutral_catalog(compact)
         payload = dict(catalog=compact, context=context, target_duration_seconds=cfg['target_duration_seconds'],
                        narrative=cfg['narrative'], required_ids=cfg['required_ids'], excluded_ids=cfg['excluded_ids'])
         response_schema = schema_for(rows, cfg)
@@ -193,6 +199,11 @@ def run(path, dry_run=False):
                 'Create a broad master portrait covering ALL distinct supported facets, activities, settings and emotions. Omit redundant takes, not distinct facets. Respect required/excluded IDs.')
             prompt = prompt.replace('sum to target_duration_seconds within 10 percent.',
                 'have NO required total or maximum runtime. Runtime emerges from coverage. Keep each individual thought brief; do not pad scenes. Alternate energy with meaningful links, not random mosaic. Audit the entire catalog for missing facets before answering.')
+        if cfg.get('media_type_policy')=='equal':
+            payload['media_type_policy']='equal; historical ART priority ratings are not selection preferences'
+        if cfg.get('coverage_facets'): payload['coverage_facets']=cfg['coverage_facets']
+        if cfg.get('duration_mode')=='coverage' and cfg.get('media_type_policy')=='equal':
+            prompt=prompt.replace(COMPACT_PRINCIPLE,COVERAGE_PROMPT)
         fingerprint = hashlib.sha256(json.dumps(dict(planner_version=4, prompt=prompt, model=cfg['model'], payload=payload,
             catalog_sha256=digest(catalog)), sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         cache = output / 'cache' / (fingerprint + '.json')
@@ -209,10 +220,10 @@ def run(path, dry_run=False):
             log.emit('CACHE', 'Using validated structure')
         else:
             from openai import OpenAI
-            load_dotenv(); client = OpenAI(timeout=180, max_retries=2)
+            load_dotenv(); client = OpenAI(timeout=180, max_retries=cfg.get('api_max_retries', 2))
             messages = [{'role': 'system', 'content': prompt}, {'role': 'user', 'content': json.dumps(payload, ensure_ascii=False)}]
-            for attempt in range(1, 4):
-                with log.activity(f'STRUCTURE API attempt={attempt}/3'):
+            for attempt in range(1, cfg.get('structure_attempts', 3)+1):
+                with log.activity(f"STRUCTURE API attempt={attempt}/{cfg.get('structure_attempts', 3)}"):
                     response = client.responses.create(model=cfg['model'], input=messages,
                         text={'format': dict(type='json_schema', name='video_structure', strict=True, schema=response_schema)})
                 refused = any(getattr(p, 'type', '') == 'refusal' for item in getattr(response, 'output', []) for p in getattr(item, 'content', []))
@@ -226,7 +237,7 @@ def run(path, dry_run=False):
                     validate(plan, rows, cfg); break
                 except (ValueError, KeyError, TypeError) as exc:
                     write_json(out / f'invalid_attempt_{attempt}.json', dict(output=response.output_text, error=str(exc)))
-                    if attempt == 3:
+                    if attempt == cfg.get('structure_attempts', 3):
                         raise
                     log.emit('RETRY', str(exc))
                     repair_messages(messages, response.output_text, exc, rows, cfg)
@@ -234,7 +245,7 @@ def run(path, dry_run=False):
             write_json(cache, plan)
         total = validate(plan, rows, cfg)
         write_json(out / 'structure.json', dict(schema_version=1, status='DRAFT_REVIEW_REQUIRED',
-            **plan, duration_seconds=total, duration_mode=cfg['duration_mode'], editorial_policy='compact_first_v1', classification_result=str(result_path),
+            **plan, duration_seconds=total, duration_mode=cfg['duration_mode'], editorial_policy='coverage_equal_v1' if cfg.get('duration_mode')=='coverage' and cfg.get('media_type_policy')=='equal' else 'compact_first_v1', classification_result=str(result_path),
             limitations=['Video trims/audio not reviewed', 'Family-tree references in catalog are context only'],
             requires_exact_edit_plan=True))
         by_id = {r['id']: r for r in rows}

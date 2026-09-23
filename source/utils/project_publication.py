@@ -38,6 +38,7 @@ EXCLUDED_FILE_PREFIXES = (".env.",)
 EXCLUDED_SOURCE_RELATIVE_DIRS = {"premiere_scripts/Ben26", "premiere_scripts/Arkady26"}
 EXCLUDED_SOURCE_RELATIVE_FILES = {
     "docs/NATIVE_FINISH_ONE_RUN_RU.md",
+    "docs/PORTRAIT_EDITORIAL_CHOICES_RU.md",
     "tools/audit_arkady_compact_stage1.py",
     "tools/prepare_arkady_compact_stage3.py",
     "tools/prepare_arkady_closeout.py",
@@ -83,6 +84,8 @@ PUBLISHED_SOURCE_SUFFIXES = {
 TEXT_READ_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251")
 
 DOC_TARGETS = {
+    "docs/PORTRAIT_WORKFLOW_CHOICES_RU.md": "docs/PORTRAIT_WORKFLOW_CHOICES_RU.md",
+    "docs/PORTRAIT_MODES_RU.md": "docs/PORTRAIT_MODES_RU.md",
     "docs/COMPACT_FIRST_RU.md": "docs/COMPACT_FIRST_RU.md",
     "docs/VIDEO_WORKFLOW_FINAL_RU.md": "docs/VIDEO_WORKFLOW_FINAL_RU.md",
     "docs/HERO_BATCH_PIPELINE_RU.md": "docs/HERO_BATCH_PIPELINE_RU.md",
@@ -184,6 +187,9 @@ def _is_excluded_file_name(filename: str) -> bool:
     if filename == ".env.template":
         return False
     name = filename.casefold()
+    # Personal completed-job instructions and launchers stay local.
+    if "romann26" in name or name.startswith("romann26_"):
+        return True
     # Configs for real people remain local; distribute BASE and explicit examples.
     if name.startswith('config_') and name.endswith(('.json', '.jsonc')):
         if name != 'config_base.json' and not name.endswith(('.example.json', '.example.jsonc')):

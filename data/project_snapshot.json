@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-09-22T11:38:42+03:00",
+  "generated_at": "2026-09-23T07:44:15+03:00",
   "source_project": "img-style-ag_1",
   "source_workspace": "img-style-ag_1",
-  "publication_version": "2026.09.22.01",
-  "publication_git_tag": "v2026.09.22.01",
-  "publication_signature": "246d5db2e274f23a466e4a0c0c03f93f7097c6c4a484dcaf5b43634ca15aedf8",
+  "publication_version": "2026.09.23.03",
+  "publication_git_tag": "v2026.09.23.03",
+  "publication_signature": "b2e15469cea94744f613354c26532014172922be72981bd8430fa7aecffd65d1",
   "counts": {
-    "all_files": 508,
-    "top_level_files": 233,
-    "python_files": 246,
-    "test_files": 71,
-    "config_files": 16,
-    "markdown_files": 38,
+    "all_files": 528,
+    "top_level_files": 237,
+    "python_files": 255,
+    "test_files": 74,
+    "config_files": 19,
+    "markdown_files": 41,
     "entry_points": 49,
     "api_modules": 17,
     "utils_modules": 53,
@@ -173,6 +173,7 @@
       "test/test_hero_pipeline.py",
       "test/test_hero_video_closeout.py",
       "test/test_hero_workspace_finalize.py",
+      "test/test_integrate_art.py",
       "test/test_motion_selection.py",
       "test/test_native_finish.py",
       "test/test_openai_scene.py",
@@ -180,6 +181,7 @@
       "test/test_plan_animation.py",
       "test/test_plan_color.py",
       "test/test_plan_transitions.py",
+      "test/test_portrait_publication_privacy.py",
       "test/test_premiere_art_runtime.py",
       "test/test_premiere_import_keep_main.py",
       "test/test_premiere_sequence_coarse_insert.py",
@@ -217,6 +219,7 @@
       "test/test_video_prompt_story.py",
       "test/test_video_structure.py",
       "test/test_video_workflow.py",
+      "test/test_watercolor_package.py",
       "test/test_workflow_closeout.py"
     ],
     "tests": [
@@ -254,6 +257,8 @@
     "docs/MINI_LAPTOP_WATERCOLOR.md",
     "docs/NATIVE_FINISH_RU.md",
     "docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md",
+    "docs/PORTRAIT_MODES_RU.md",
+    "docs/PORTRAIT_WORKFLOW_CHOICES_RU.md",
     "docs/PREMIERE_ART_TASKS_031_034_RU.md",
     "docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md",
     "docs/PREMIERE_TASK_WORKFLOWS_RU.md",
@@ -266,6 +271,7 @@
     "docs/USER_GUIDE_RU.md",
     "docs/VIDEO_WORKFLOW_FINAL_RU.md",
     "docs/portrait_styles_tables.md",
+    "examples/portrait/README.md",
     "premiere_extensions/run_transition_script_panel/README.md"
   ],
   "configs": [
@@ -284,7 +290,10 @@
     "config_structure.example.json",
     "config_workflow.example.json",
     "config_workflow_closeout.example.json",
-    "examples/config_api_single_image.example.json"
+    "examples/config_api_single_image.example.json",
+    "examples/portrait/config_full.example.json",
+    "examples/portrait/config_render.example.json",
+    "examples/portrait/config_short.example.json"
   ],
   "subsystem_ids": [
     "config",

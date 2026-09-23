@@ -4,13 +4,13 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.09.22.01`
-- Git tag: `v2026.09.22.01`
+- Publication version: `2026.09.23.03`
+- Git tag: `v2026.09.23.03`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-09-22T11:38:42+03:00`
+- Last synchronized: `2026-09-23T07:44:15+03:00`
 - Source project: `img-style-ag_1`
-- Python files: `246`
-- Test files: `71`
+- Python files: `255`
+- Test files: `74`
 - Entry points: `49`
 
 ## Install this release
@@ -19,7 +19,7 @@ Choose one repository: `img-style-ag_1` for the private desktop code, or this pu
 For this public clone, select the release tag, then run the installer from `source/` (Windows AMD64, Python 3.14.2):
 
 ```powershell
-git switch --detach v2026.09.22.01
+git switch --detach v2026.09.23.03
 cd source
 .\install_project.bat
 .\run_verify_installation.bat --require-tag
@@ -30,7 +30,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 
 ## Published Source Mirror
 
-- Mirrored source files: `507`
+- Mirrored source files: `527`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/.env.template`
@@ -196,10 +196,12 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/run_hero_definition.bat`
 - `source/run_hero_pipeline.bat`
 - `source/run_hero_video_closeout.bat`
+- `source/run_integrate_art.bat`
 - `source/run_laptop_env_compare.bat`
 - `source/run_laptop_env_snapshot.bat`
 - `source/run_local_portrait_batch.bat`
 - `source/run_openai_portrait_batch.bat`
+- `source/run_portrait_draft.bat`
 - `source/run_premiere_art_task.bat`
 - `source/run_premiere_sequence_motion.bat`
 - `source/run_premiere_transform_script.bat`
@@ -227,10 +229,12 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/run_sequence_media_import_standalone.bat`
 - `source/run_sequence_music_recommendation.bat`
 - `source/run_sequence_trim_review.bat`
+- `source/run_short_portrait.bat`
 - `source/run_verify_installation.bat`
 - `source/run_video_prompt_story_export.bat`
 - `source/run_video_prompt_story_generate.bat`
 - `source/run_video_workflow.bat`
+- `source/run_watercolor_package.bat`
 - `source/scripts`
 - `source/sequence_import_and_keep_template.json`
 - `source/sequence_keep_apply_template.json`
@@ -293,6 +297,8 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `docs/MINI_LAPTOP_WATERCOLOR.md`
 - `docs/NATIVE_FINISH_RU.md`
 - `docs/PARAMETER_PROGRAM_BATCH_MATRIX_RU.md`
+- `docs/PORTRAIT_MODES_RU.md`
+- `docs/PORTRAIT_WORKFLOW_CHOICES_RU.md`
 - `docs/PREMIERE_ART_TASKS_031_034_RU.md`
 - `docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md`
 - `docs/PREMIERE_TASK_WORKFLOWS_RU.md`
