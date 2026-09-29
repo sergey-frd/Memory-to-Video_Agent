@@ -1,5 +1,10 @@
 # Publishing Workflow
 
+## Release 2026.09.29.02
+
+Adds explicit archive-verified cleanup of closed-project video retry metadata.
+Unrelated output files are preserved. The Windows queue mutex leaves no disk lock.
+
 ## Release 2026.09.29.01
 
 Adds the optional manually selected image queue, image-aware AI prompts,

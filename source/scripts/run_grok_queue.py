@@ -215,24 +215,31 @@ def prepare(name, profile, settings, dry_run=False, client=None):
 
 @contextmanager
 def queue_lock(path):
-    """Windows OS lock is automatically released after a crash, unlike a PID file."""
-    import msvcrt
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open('a+b') as stream:
-        stream.seek(0, 2)
-        if stream.tell() == 0:
-            stream.write(b'0')
-            stream.flush()
-        stream.seek(0)
-        try:
-            msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
-        except OSError as exc:
-            raise RuntimeError('Another Grok queue is already running') from exc
-        try:
-            yield
-        finally:
-            stream.seek(0)
-            msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+    """Windows named mutex: no persistent lock file in output, even after a crash."""
+    import ctypes
+    from ctypes import wintypes
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+    kernel.CreateMutexW.restype = wintypes.HANDLE
+    kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel.WaitForSingleObject.restype = wintypes.DWORD
+    kernel.ReleaseMutex.argtypes = [wintypes.HANDLE]
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    name = 'Local\\GrokQueue_' + fingerprint(str(path.resolve()).casefold())
+    handle = kernel.CreateMutexW(None, False, name)
+    if not handle:
+        raise ctypes.WinError(ctypes.get_last_error())
+    acquired = False
+    try:
+        result = kernel.WaitForSingleObject(handle, 0)
+        acquired = result in (0, 0x80)  # owned, or abandoned by a terminated process
+        if not acquired:
+            raise RuntimeError('Another Grok queue is already running')
+        yield
+    finally:
+        if acquired:
+            kernel.ReleaseMutex(handle)
+        kernel.CloseHandle(handle)
 
 
 def main():

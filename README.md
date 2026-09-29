@@ -4,13 +4,13 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.09.29.01`
-- Git tag: `v2026.09.29.01`
+- Publication version: `2026.09.29.02`
+- Git tag: `v2026.09.29.02`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-09-29T11:17:41+03:00`
+- Last synchronized: `2026-09-29T11:32:47+03:00`
 - Source project: `img-style-ag_1`
-- Python files: `282`
-- Test files: `80`
+- Python files: `284`
+- Test files: `81`
 - Entry points: `49`
 
 ## Install this release
@@ -19,7 +19,7 @@ Choose one repository: `img-style-ag_1` for the private desktop code, or this pu
 For this public clone, select the release tag, then run the installer from `source/` (Windows AMD64, Python 3.14.2):
 
 ```powershell
-git switch --detach v2026.09.29.01
+git switch --detach v2026.09.29.02
 cd source
 .\install_project.bat
 .\run_verify_installation.bat --require-tag
@@ -30,7 +30,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 
 ## Published Source Mirror
 
-- Mirrored source files: `587`
+- Mirrored source files: `589`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/.env.template`

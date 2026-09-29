@@ -19,8 +19,8 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 
 ## Current version
 
-- Workspace `VERSION`: **`2026.09.29.01`** ([`VERSION`](VERSION))
-- Release tag: **`v2026.09.29.01`**
+- Workspace `VERSION`: **`2026.09.29.02`** ([`VERSION`](VERSION))
+- Release tag: **`v2026.09.29.02`**
 
 ## Install this release on a laptop
 

@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-09-29T11:17:41+03:00",
+  "generated_at": "2026-09-29T11:32:47+03:00",
   "source_project": "img-style-ag_1",
   "source_workspace": "img-style-ag_1",
-  "publication_version": "2026.09.29.01",
-  "publication_git_tag": "v2026.09.29.01",
+  "publication_version": "2026.09.29.02",
+  "publication_git_tag": "v2026.09.29.02",
   "managed_files": [
     "README.md",
     ".gitignore",
@@ -339,6 +339,7 @@
     "source/scripts/check_grok_work_window.py",
     "source/scripts/classify.py",
     "source/scripts/classify_art.py",
+    "source/scripts/cleanup_grok_state.py",
     "source/scripts/diagnose_full_master.jsx",
     "source/scripts/diagnose_visual_finish.jsx",
     "source/scripts/family_contract.py",
@@ -492,6 +493,7 @@
     "source/tests/test_art_geometry.py",
     "source/tests/test_family_pipeline.py",
     "source/tests/test_grok_queue.py",
+    "source/tests/test_grok_state_cleanup.py",
     "source/tests/test_image_analysis.py",
     "source/tests/test_main_flow.py",
     "source/tests/test_pair_batch.py",
