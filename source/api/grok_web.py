@@ -849,9 +849,10 @@ class GrokWebAgent:
 
         self._dismiss_interfering_overlay(page)
         self._log("upload started")
-        file_input = page.locator("input[type='file']").first
+        self._attachment_baseline = page.evaluate("""() => Array.from(document.images).map(img => img.currentSrc || img.src)""")
+        file_input = page.locator("input[type='file'][accept*='image'], input[type='file']:not([accept]), input[type='file'][accept='']").first
         try:
-            file_input.set_input_files(str(image_path), timeout=5_000)
+            file_input.set_input_files(str(image_path.resolve()), timeout=5_000)
             return
         except Exception:
             pass
@@ -866,7 +867,7 @@ class GrokWebAgent:
             raise GrokWebError("Could not find the file attach control on Grok Web.") from exc
 
         file_input = page.locator("input[type='file']").first
-        file_input.set_input_files(str(image_path), timeout=10_000)
+        file_input.set_input_files(str(image_path.resolve()), timeout=10_000)
 
     def _fill_prompt(self, page: Page, prompt_text: str) -> None:
         self._dismiss_interfering_overlay(page)
@@ -1267,12 +1268,10 @@ class GrokWebAgent:
             looks_ready = (
                 not state["uploadBusyText"]
                 and (
-                    state["sendReady"]
-                    or state["attachmentDetected"]
-                    or state["fileNameDetected"]
+                    state["attachmentDetected"]
                 )
             )
-            if looks_ready and (state["busyCount"] == 0 or stable_polls >= 1):
+            if looks_ready and state["busyCount"] == 0:
                 stable_polls += 1
                 if stable_polls >= 2:
                     self._log("upload ready")
@@ -1287,12 +1286,6 @@ class GrokWebAgent:
         except Exception as exc:
             final_state = None
             last_error = last_error or exc
-
-        if final_state and not final_state["uploadBusyText"] and (
-            final_state["attachmentDetected"] or final_state["fileNameDetected"] or final_state["sendControlsPresent"]
-        ):
-            self._log("upload ready")
-            return
 
         debug_paths = self._write_debug_snapshot(page, self.config.output_path, "upload-wait-timeout", force=True)
         raise GrokWebError(
@@ -1376,7 +1369,13 @@ class GrokWebAgent:
                             element.getAttribute('alt') || '',
                             element.getAttribute('src') || ''
                         ].join(' ').toLowerCase();
-                        return text.includes(payload.filename) || text.includes(payload.stem) || element.tagName.toLowerCase() === 'img';
+                        const img = element.tagName.toLowerCase() === 'img' ? element : element.querySelector('img');
+                        if (!img || !visible(img) || !img.complete || img.naturalWidth === 0) return false;
+                        const src = img.currentSrc || img.src;
+                        if (!src || payload.baseline.includes(src)) return false;
+                        // Require a loaded, new preview in the composer/attachment area.
+                        const area = img.closest('form,[data-testid*="attachment"],[class*="attachment"],[class*="upload"],[class*="preview"]');
+                        return Boolean(area) && (src.startsWith('blob:') || src.startsWith('data:image/') || text.includes(payload.filename));
                     });
 
                 return {
@@ -1388,7 +1387,7 @@ class GrokWebAgent:
                     fileNameDetected: bodyText.includes(payload.filename) || bodyText.includes(payload.stem),
                 };
             }""",
-            {"filename": filename, "stem": stem},
+            {"filename": filename, "stem": stem, "baseline": getattr(self, "_attachment_baseline", [])},
         )
         if not isinstance(state, dict):
             raise GrokWebError("Could not inspect Grok upload state.")

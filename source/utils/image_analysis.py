@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, ImageFilter, ImageStat
+from PIL import Image, ImageFilter, ImageStat, ImageOps
 
 
 def _clamp(value: float, lower: float, upper: float) -> float:
@@ -28,7 +28,7 @@ class ImageMetadata:
 def analyze_image(image_path: Path) -> ImageMetadata:
     """Read image metadata and derive a deterministic scene summary from pixels."""
     with Image.open(image_path) as img:
-        rgb = img.convert("RGB")
+        rgb = ImageOps.exif_transpose(img).convert("RGB")
         width, height = rgb.size
         orientation = _detect_orientation(width, height)
         format_description = f"{width}x{height}, {orientation}"

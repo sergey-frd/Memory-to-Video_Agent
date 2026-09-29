@@ -1,0 +1,19 @@
+{
+  "default_project": "PROJECT",
+  "projects": {
+    "PROJECT": {
+      "heroes": ["Hero one", "Hero two"],
+      "goal": "A warm family film preserving the people and memories in the original photographs.",
+      "input_dir": "input",
+      "delivery_config": "config_grok_delivery.example.json",
+      "classification_file": null,
+      "art_checkpoints_dir": null,
+      "prompt_model": "gpt-4.1-mini",
+      "motion_guidance": "Minimal natural motion, preserve identity and poses, prefer a locked camera.",
+      "cdp_url": "http://127.0.0.1:9222",
+      "upload_timeout": 300,
+      "generation_timeout": 600,
+      "remove_completed_inputs": true
+    }
+  }
+}

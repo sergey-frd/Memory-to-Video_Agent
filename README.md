@@ -4,13 +4,13 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.09.23.03`
-- Git tag: `v2026.09.23.03`
+- Publication version: `2026.09.29.01`
+- Git tag: `v2026.09.29.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-09-23T07:44:15+03:00`
+- Last synchronized: `2026-09-29T11:17:41+03:00`
 - Source project: `img-style-ag_1`
-- Python files: `255`
-- Test files: `74`
+- Python files: `282`
+- Test files: `80`
 - Entry points: `49`
 
 ## Install this release
@@ -19,7 +19,7 @@ Choose one repository: `img-style-ag_1` for the private desktop code, or this pu
 For this public clone, select the release tag, then run the installer from `source/` (Windows AMD64, Python 3.14.2):
 
 ```powershell
-git switch --detach v2026.09.23.03
+git switch --detach v2026.09.29.01
 cd source
 .\install_project.bat
 .\run_verify_installation.bat --require-tag
@@ -30,7 +30,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 
 ## Published Source Mirror
 
-- Mirrored source files: `527`
+- Mirrored source files: `587`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/.env.template`
@@ -72,6 +72,9 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/config_color.example.json`
 - `source/config_color_design.example.json`
 - `source/config_draft.example.json`
+- `source/config_family_task.example.json`
+- `source/config_grok_delivery.example.json`
+- `source/config_grok_queue.example.json`
 - `source/config_inventory.example.json`
 - `source/config_native.example.json`
 - `source/config_native_finish.example.json`
@@ -193,6 +196,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `source/run_grok_automation.bat`
 - `source/run_grok_automation_all.bat`
 - `source/run_grok_portrait_batch_existing.bat`
+- `source/run_grok_queue.bat`
 - `source/run_hero_definition.bat`
 - `source/run_hero_pipeline.bat`
 - `source/run_hero_video_closeout.bat`
@@ -291,6 +295,8 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `docs/CHANGE_IMPACT.md`
 - `docs/COMPACT_FIRST_RU.md`
 - `docs/FULL_MINIMAL_PRODUCTION_RU.md`
+- `docs/GROK_QUEUE_RU.md`
+- `docs/GROK_SAFE_SESSIONS_RU.md`
 - `docs/HERO_BATCH_PIPELINE_RU.md`
 - `docs/HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md`
 - `docs/INSTALL_ON_NEW_COMPUTER_RU.md`

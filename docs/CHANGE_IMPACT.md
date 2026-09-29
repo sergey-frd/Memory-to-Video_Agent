@@ -11,6 +11,8 @@ This document is generated from `project_structure_registry.json` and helps oper
 - main_grok_batch.py по умолчанию очищает input/ и output/ после успешного batch-run, если не указан keep-workdirs.
 - main_full_pipeline.py может удалять обработанные входные изображения из input/.
 - mp4 доставляются в final_videos_dir, а non-video stage assets - в regeneration_assets_dir/<stage_id>/.
+- Task ART numbering: Wnn/source_nn.ext/watercolor_nn.png and Dnn/source_nn.ext/double_exposure_nn.png; ordered JSON/TXT, manifest, checkpoints, review and permanent delivery must agree. Counts are task-config parameters; no automatic next stage.
+- ART classification update preserves original media and timeline verbatim, links derivatives by parent/source_family, publishes a new permanent version and pointer only after validation; never automatically runs WIDE MASTER.
 
 ## Change Types
 

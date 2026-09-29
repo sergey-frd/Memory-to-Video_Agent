@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Family task: shared task metadata plus production orchestration settings",
+  "type": "object",
+  "required": [
+    "task_id",
+    "heroes",
+    "intent",
+    "paths",
+    "sequences",
+    "classify",
+    "classify_art",
+    "family_pipeline"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "heroes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "intent": {
+      "type": "string",
+      "minLength": 1
+    },
+    "paths": {
+      "type": "object",
+      "required": [
+        "premiere_project",
+        "source_materials"
+      ],
+      "properties": {
+        "premiere_project": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_materials": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "sequences": {
+      "type": "object",
+      "required": [
+        "source"
+      ],
+      "properties": {
+        "source": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "classify": {
+      "type": "object",
+      "required": [
+        "permanent_project_dir",
+        "permanent_relative_dir",
+        "model",
+        "frames_per_video"
+      ],
+      "properties": {
+        "permanent_project_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "permanent_relative_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "frames_per_video": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        }
+      }
+    },
+    "classify_art": {
+      "type": "object",
+      "required": [
+        "model",
+        "permanent_relative_dir"
+      ],
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "permanent_relative_dir": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "family_pipeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "planner_model",
+        "main_target_seconds",
+        "main_target_range",
+        "short_target_seconds",
+        "short_target_range",
+        "art",
+        "review",
+        "photo_seconds",
+        "art_seconds",
+        "run_enabled"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "run_enabled": {
+          "type": "boolean"
+        },
+        "planner_model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "main_target_seconds": {
+          "type": "number",
+          "minimum": 1
+        },
+        "main_target_range": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "number",
+            "minimum": 1
+          },
+          "maxItems": 2
+        },
+        "short_target_seconds": {
+          "type": "number",
+          "minimum": 1
+        },
+        "short_target_range": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "number",
+            "minimum": 1
+          },
+          "maxItems": 2
+        },
+        "photo_seconds": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 15
+        },
+        "art_seconds": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 15
+        },
+        "art": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "watercolor_count",
+            "double_exposure_count",
+            "model"
+          ],
+          "properties": {
+            "watercolor_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "double_exposure_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "model": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "width",
+            "height",
+            "fps",
+            "video_mbps",
+            "audio_kbps"
+          ],
+          "properties": {
+            "width": {
+              "type": "integer",
+              "const": 1280
+            },
+            "height": {
+              "type": "integer",
+              "const": 720
+            },
+            "fps": {
+              "type": "integer",
+              "const": 25
+            },
+            "video_mbps": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1.5
+            },
+            "audio_kbps": {
+              "type": "integer",
+              "enum": [
+                96,
+                128
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

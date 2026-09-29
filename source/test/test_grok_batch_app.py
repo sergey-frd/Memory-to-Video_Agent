@@ -129,6 +129,11 @@ def test_run_batch_skips_existing_when_requested() -> None:
     prompt_path.write_text("prompt a", encoding="utf-8")
     existing_output = settings.output_dir / "frame_a_20260311_081437_video_1.mp4"
     existing_output.write_bytes(b"existing")
+    main_grok_batch.save_state(existing_output.with_suffix('.mp4.complete.json'), {
+        "sha256": main_grok_batch.digest(existing_output),
+        "prompt_sha256": main_grok_batch.digest(prompt_path),
+        "image_sha256": main_grok_batch.digest(image_path),
+    })
 
     called = {"count": 0}
 
@@ -158,7 +163,7 @@ def test_run_batch_skips_existing_when_requested() -> None:
     assert called["count"] == 0
 
 
-def test_run_batch_clears_input_and_output_after_success(monkeypatch) -> None:
+def test_run_batch_preserves_shared_input_and_output_after_success(monkeypatch) -> None:
     root = Path("test_runtime") / f"grok_batch_{uuid4().hex}"
     settings = _settings_for(root)
 
@@ -203,10 +208,13 @@ def test_run_batch_clears_input_and_output_after_success(monkeypatch) -> None:
         keep_workdirs=False,
     )
 
-    monkeypatch.setattr(main_grok_batch, "clear_directory_contents", fake_clear)
+    unrelated = settings.output_dir / "unrelated.txt"
+    unrelated.write_text("keep", encoding="utf-8")
     run_batch(args, settings=settings, runner=fake_runner)
 
-    assert cleared == [settings.input_dir, settings.output_dir]
+    assert cleared == []
+    assert image_path.exists()
+    assert unrelated.read_text(encoding="utf-8") == "keep"
     assert (settings.output_dir / "frame_a_20260311_081437_video_1.mp4").exists()
 
 

@@ -170,7 +170,8 @@
 </head>
 <body>
   <div class="shell">
-    <aside class="sidebar"><nav><a class="level-2" href="#full-and-minimal-production">FULL and MINIMAL production</a>
+    <aside class="sidebar"><nav><a class="level-2" href="#optional-image-to-video-artistic-branch">Optional image-to-video artistic branch</a>
+<a class="level-2" href="#full-and-minimal-production">FULL and MINIMAL production</a>
 <a class="level-2" href="#latest-workspace-changes-premiere-and-external-api-images">Latest workspace changes: Premiere and external API images</a>
 <a class="level-3" href="#api-a-single-image-outside-input">API: a single image outside input</a>
 <a class="level-2" href="#one-minute-quick-start">One-Minute Quick Start</a>
@@ -227,6 +228,15 @@
 <a class="level-2" href="#job-closeout-and-public-bundle-preparation">Job closeout and public bundle preparation</a></nav></aside>
     <main><article class="content">
 <h1 id="user-guide">User Guide</h1>
+<h2 id="optional-image-to-video-artistic-branch">Optional image-to-video artistic branch</h2>
+<p><code>run_grok_queue.bat &lt;PROJECT&gt;</code> processes a manually selected <code>input</code> folder.
+The project configuration supplies heroes, film intent, classification and delivery
+folders. Image-aware model prompts drive sequential generation in the existing
+Chrome/Grok window. Verified videos are skipped on retries; shared output is preserved.
+See the <a href="GROK_QUEUE_RU.md">queue guide</a> and public example configurations.
+Watercolors, double exposures and generated clips can be edited into an optional
+artistic film manually. Automatic input selection and artistic film assembly are
+future possibilities, not implemented stages of the family AUTO workflow.</p>
 <h2 id="full-and-minimal-production">FULL and MINIMAL production</h2>
 <p>See <a href="FULL_MINIMAL_PRODUCTION_RU.md">the production and closeout guide (Russian)</a> for two editable sequences in one 4K project, user-run JSX, FULL locking and MINIMAL validation. Preserve source media and classifications; remove intermediates only after archive verification and project dependency checks.</p>
 <h2 id="latest-workspace-changes-premiere-and-external-api-images">Latest workspace changes: Premiere and external API images</h2>

@@ -1,5 +1,13 @@
 # Publishing Workflow
 
+## Release 2026.09.29.01
+
+Adds the optional manually selected image queue, image-aware AI prompts,
+sequential Grok execution, persistent completion records and scoped cleanup.
+Artistic film assembly remains manual and outside mandatory family AUTO stages.
+Public examples are `config_grok_queue.example.json` and
+`config_grok_delivery.example.json`; personal configs and `tasks/` are excluded.
+
 This repository is intended to contain only the managed publication bundle exported from the source project.
 The current bundle includes a full safe source mirror under `source/`, excluding secrets and runtime-only folders.
 Each successful guarded publication commit can also receive a matching Git tag derived from the generated `VERSION` file.

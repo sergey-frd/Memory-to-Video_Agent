@@ -51,6 +51,8 @@ def test_full_pipeline_processes_each_input_image_sequentially(monkeypatch, caps
     first.write_bytes(b"a")
     second.write_bytes(b"b")
 
+    sentinel = settings.output_dir / "unrelated.txt"
+    sentinel.write_text("preserve me", encoding="utf-8")
     processed: list[str] = []
     batch_calls: list[str] = []
     batch_debug_ports: list[object] = []
@@ -93,16 +95,20 @@ def test_full_pipeline_processes_each_input_image_sequentially(monkeypatch, caps
     monkeypatch.setattr(main_full_pipeline, "sync_stage_non_video_assets", fake_sync)
     monkeypatch.setattr(main_full_pipeline, "run_batch", fake_run_batch)
     monkeypatch.setattr(main_full_pipeline, "_remove_processed_input", fake_remove_processed_input)
-    monkeypatch.setattr(main_full_pipeline, "clear_directory_contents", lambda _directory: None)
 
     outputs = main_full_pipeline.run_full_pipeline(_args(root), settings=settings)
 
+    assert sentinel.read_text(encoding="utf-8") == "preserve me"
+    again = main_full_pipeline.run_full_pipeline(_args(root), settings=settings)
+    assert again == outputs
+    assert all(path.exists() for path in outputs)
+    assert not list(settings.output_dir.glob('.grok-sessions/*/work/*'))
     assert processed == ["frame_a.png", "frame_b.png"]
     assert batch_calls == ["frame_a_stage_v_prompt_1.txt", "frame_b_stage_v_prompt_1.txt"]
     assert batch_debug_ports == [9222, 9222]
     assert batch_reuse_pages == [False, False]
     assert batch_require_debug_ports == [False, False]
-    assert removed_inputs == ["frame_a.png", "frame_b.png"]
+    assert removed_inputs == ["frame_a.png", "frame_b.png"] * 2
     assert len(outputs) == 2
     captured = capsys.readouterr()
     assert "Starting Grok for current image..." in captured.out
@@ -119,6 +125,8 @@ def test_full_pipeline_moves_failed_stage_to_error_and_continues(monkeypatch) ->
     first.write_bytes(b"a")
     second.write_bytes(b"b")
 
+    sentinel = settings.output_dir / "unrelated.txt"
+    sentinel.write_text("preserve me", encoding="utf-8")
     processed: list[str] = []
     failed_inputs: list[tuple[str, list[str]]] = []
     failed_outputs: list[str] = []
@@ -163,17 +171,16 @@ def test_full_pipeline_moves_failed_stage_to_error_and_continues(monkeypatch) ->
     monkeypatch.setattr(main_full_pipeline, "write_pipeline_manifest", fake_manifest)
     monkeypatch.setattr(main_full_pipeline, "sync_stage_non_video_assets", fake_sync)
     monkeypatch.setattr(main_full_pipeline, "run_batch", fake_run_batch)
-    monkeypatch.setattr(main_full_pipeline, "move_input_files_to_error", fake_move_input_files_to_error)
-    monkeypatch.setattr(main_full_pipeline, "move_output_stage_to_error", fake_move_output_stage_to_error)
     monkeypatch.setattr(main_full_pipeline, "_remove_processed_input", fake_remove_processed_input)
-    monkeypatch.setattr(main_full_pipeline, "clear_directory_contents", lambda _directory: None)
 
     outputs = main_full_pipeline.run_full_pipeline(_args(root), settings=settings)
 
+    assert sentinel.read_text(encoding="utf-8") == "preserve me"
     assert processed == ["broken.png", "ok.png"]
-    assert outputs == [settings.output_dir / "ok_stage_video_1.mp4"]
-    assert failed_inputs == [("broken_stage", ["broken.png"])]
-    assert failed_outputs == ["broken_stage"]
+    assert outputs == [(root / "final_project/videos/ok_stage_video_1.mp4").resolve()]
+    assert failed_inputs == []
+    assert first.exists()
+    assert failed_outputs == []
     assert removed_inputs == ["ok.png"]
     error_report = root / "error" / "output" / "broken_stage" / "broken_stage_error.txt"
     assert error_report.exists()
@@ -266,9 +273,103 @@ def test_full_pipeline_retries_processed_input_cleanup_after_grok_closes(monkeyp
     monkeypatch.setattr(main_full_pipeline, "sync_stage_non_video_assets", fake_sync)
     monkeypatch.setattr(main_full_pipeline, "run_batch", fake_run_batch)
     monkeypatch.setattr(main_full_pipeline, "_remove_processed_input", fake_remove_processed_input)
-    monkeypatch.setattr(main_full_pipeline, "clear_directory_contents", lambda _directory: None)
 
     outputs = main_full_pipeline.run_full_pipeline(_args(root), settings=settings)
 
-    assert outputs == [settings.output_dir / "frame_a_stage_video_1.mp4"]
+    assert outputs == [(root / "final_project/videos/frame_a_stage_video_1.mp4").resolve()]
     assert cleanup_attempts == ["frame_a.png", "frame_a.png"]
+
+
+def test_partial_batch_resumes_without_regenerating_completed_video(monkeypatch):
+    root = Path("test_runtime") / f"resume_{uuid4().hex}"
+    settings = _settings_for(root)
+    (root / "config.json").write_text('{"read_input_list": true, "continue_after_failure": true}')
+    image = settings.input_dir / "photo.png"
+    image.write_bytes(b"source")
+    sentinel = settings.output_dir / "other-project"
+    sentinel.mkdir()
+    (sentinel / "keep.txt").write_text("keep")
+    prompt_calls = []
+    video_calls = []
+
+    def prompts(args, config, settings, **kwargs):
+        prompt_calls.append(args.image)
+        for index in (1, 2):
+            (settings.output_dir / f"{args.stage_id}_v_prompt_{index}.txt").write_text("prompt")
+        return SimpleNamespace()
+
+    def manifest(settings, stage_id, *args, **kwargs):
+        path = settings.output_dir / f"{stage_id}_manifest.json"
+        path.write_text("{}")
+        return path
+
+    def generate(args, settings, runner):
+        video_calls.append(args.prompt.name)
+        if len(video_calls) == 2:
+            raise RuntimeError("upload failed")
+        args.output_video.write_bytes(b"complete video")
+        return args.output_video
+
+    monkeypatch.setattr(main_full_pipeline, "_run_generation", prompts)
+    monkeypatch.setattr(main_full_pipeline, "write_pipeline_manifest", manifest)
+    monkeypatch.setattr(main_full_pipeline, "run_generation", generate)
+    assert main_full_pipeline.run_full_pipeline(_args(root), settings) == []
+    assert image.exists()
+    outputs = main_full_pipeline.run_full_pipeline(_args(root), settings)
+    assert len(outputs) == 2
+    assert len(prompt_calls) == 1
+    assert len(video_calls) == 3
+    assert video_calls[1] == video_calls[2]
+    assert all(path.exists() for path in outputs)
+    assert not image.exists()
+    assert (sentinel / "keep.txt").read_text() == "keep"
+
+
+def test_no_submit_preserves_input_and_workspace(monkeypatch):
+    root = Path("test_runtime") / f"prepare_{uuid4().hex}"
+    settings = _settings_for(root)
+    (root / "config.json").write_text('{"read_input_list": true}')
+    image = settings.input_dir / "photo.png"
+    image.write_bytes(b"source")
+    def prompts(args, config, settings, **kwargs):
+        (settings.output_dir / f"{args.stage_id}_v_prompt_1.txt").write_text("prompt")
+        return SimpleNamespace()
+    monkeypatch.setattr(main_full_pipeline, "_run_generation", prompts)
+    monkeypatch.setattr(main_full_pipeline, "write_pipeline_manifest", lambda *a, **k: Path("manifest"))
+    monkeypatch.setattr(main_full_pipeline, "run_batch", lambda *a, **k: [Path("planned.mp4")])
+    args = _args(root)
+    args.no_submit = True
+    main_full_pipeline.run_full_pipeline(args, settings)
+    assert image.exists()
+    assert list(settings.output_dir.glob('.grok-sessions/*/work/*_v_prompt_1.txt'))
+
+
+def test_completion_tracks_content_and_validates_delivery():
+    from utils.grok_workspace import record_completed, completed_image
+    root = Path("test_runtime") / f"completed_{uuid4().hex}"
+    settings = _settings_for(root)
+    image = settings.input_dir / "one.jpg"
+    image.write_bytes(b"image")
+    delivery = root / "delivered"
+    delivery.mkdir()
+    video = delivery / "one.mp4"
+    video.write_bytes(b"video")
+    record_completed(settings, image, delivery, [video])
+    renamed = settings.input_dir / "renamed.jpg"
+    renamed.write_bytes(b"image")
+    assert completed_image(settings, renamed, delivery) == [video.resolve()]
+    assert completed_image(settings, renamed, root / "other-project") is None
+    renamed.write_bytes(b"changed image")
+    assert completed_image(settings, renamed, delivery) is None
+    video.write_bytes(b"corrupted")
+    assert completed_image(settings, image, delivery) is None
+    video.unlink()
+    assert completed_image(settings, image, delivery) is None
+
+
+def test_empty_queue_is_success_without_generation(monkeypatch):
+    root = Path("test_runtime") / f"empty_{uuid4().hex}"
+    settings = _settings_for(root)
+    (root / "config.json").write_text('{"read_input_list": true}')
+    monkeypatch.setattr(main_full_pipeline, "_run_generation", lambda *a, **k: (_ for _ in ()).throw(AssertionError("Unexpected generation")))
+    assert main_full_pipeline.run_full_pipeline(_args(root), settings) == []

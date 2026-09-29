@@ -127,7 +127,7 @@ def format_scene_report(analysis: SceneAnalysis) -> str:
     return "\n".join(lines)
 
 
-def _request_scene_analysis(client: OpenAI, image_path: Path, model: str, language: str) -> str:
+def _request_scene_analysis(client: OpenAI, image_path: Path, model: str, language: str, *, additional_instructions: str = "") -> str:
     response = client.responses.create(
         model=model,
         input=[
@@ -149,7 +149,7 @@ def _request_scene_analysis(client: OpenAI, image_path: Path, model: str, langua
             {
                 "role": "user",
                 "content": [
-                    {"type": "input_text", "text": _analysis_prompt(language)},
+                    {"type": "input_text", "text": (_analysis_prompt(language).replace("Use the following schema exactly:", "Use the following base schema and include all additional fields requested below:") if additional_instructions else _analysis_prompt(language)) + "\n" + additional_instructions},
                     {"type": "input_image", "image_url": _image_to_data_url(image_path)},
                 ],
             },

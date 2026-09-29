@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import base64
+import hashlib
+import json
 import os
+import shutil
 import tempfile
+from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
@@ -23,6 +27,8 @@ MAX_IMAGE_BYTES = 4 * 1024 * 1024
 MAX_PROMPT_CHARS = 1000
 ModelName = str
 SUPPORTED_EDIT_MODELS = {"dall-e-2", "gpt-image-1", "gpt-image-1-mini", "gpt-image-1.5"}
+PRESERVE_ASPECT_RATIO = True
+GEOMETRY_POLICY = "exif-normalized-reference_native-output-v2"
 
 
 def _get_client() -> OpenAI:
@@ -49,10 +55,10 @@ def _prepare_uploadable(image_path: Path, model_name: str) -> tuple[Path, bool]:
 
 def _save_compressed_png(source: Path, destination: Path) -> None:
     with Image.open(source) as img:
-        base = img.convert("RGBA")
+        base = ImageOps.exif_transpose(img).convert("RGBA")
         factor = 1.0
         while True:
-            target_size = (int(base.width * factor), int(base.height * factor))
+            target_size = (max(1, round(base.width * factor)), max(1, round(base.height * factor)))
             resized = base if factor == 1.0 else base.resize(target_size, Image.LANCZOS)
             resized.save(destination, format="PNG", optimize=True, compress_level=9)
             if destination.stat().st_size <= MAX_IMAGE_BYTES or factor <= 0.1:
@@ -64,7 +70,7 @@ def _save_compressed_png(source: Path, destination: Path) -> None:
 
 def _save_dalle2_uploadable_png(source: Path, destination: Path) -> None:
     with Image.open(source) as img:
-        base = img.convert("RGBA")
+        base = ImageOps.exif_transpose(img).convert("RGBA")
         side = min(max(base.width, base.height), 1024)
         factor = 1.0
         while True:
@@ -108,9 +114,17 @@ def edit_image_with_openai(
     prompt_text = _fit_prompt_length(prompt_text)
     resolved_model_name = model_name or _model_name()
     _validate_model_name(resolved_model_name)
+    if output_path.exists():
+        raise FileExistsError(f"Preserve existing ART; use a separate version: {output_path}")
+    raw_path = output_path.with_suffix('.response.png')
+    if raw_path.exists():
+        raise FileExistsError(f"Saved API response exists; recover it without another paid request: {raw_path}")
     client = _get_client()
     upload_path, temp_used = _prepare_uploadable(image_path, resolved_model_name)
     try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        reference_path = output_path.with_suffix('.reference.png')
+        shutil.copyfile(upload_path, reference_path)
         with open(upload_path, "rb") as source_file:
             request_kwargs: dict[str, object] = {
                 "model": resolved_model_name,
@@ -122,6 +136,7 @@ def edit_image_with_openai(
                 request_kwargs["size"] = "1024x1024"
             else:
                 request_kwargs["output_format"] = "png"
+                request_kwargs["size"] = "auto"
             response = client.images.edit(**request_kwargs)
     except OpenAIError as exc:
         raise RuntimeError("OpenAI Images API request failed.") from exc
@@ -134,13 +149,36 @@ def edit_image_with_openai(
 
     raw_data = response.data[0].b64_json
     decoded = base64.b64decode(raw_data)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    # Preserve the actual backend response before any encoding/normalization.
+    with raw_path.open('xb') as f:
+        f.write(decoded)
     with Image.open(BytesIO(decoded)) as edited:
-        final = edited.convert("RGBA")
-        desired_size = (metadata.width, metadata.height)
-        if final.size != desired_size:
-            final = final.resize(desired_size, Image.LANCZOS)
-        final.save(output_path, format="PNG")
+        response_size = edited.size
+        final = ImageOps.exif_transpose(edited).convert("RGBA")
+        # A different artistic canvas is valid. Never squeeze it to source dimensions.
+        with output_path.open('xb') as f:
+            final.save(f, format="PNG")
+        final_size = final.size
+    def digest(path):
+        with Path(path).open('rb') as f:
+            return hashlib.file_digest(f, 'sha256').hexdigest()
+    with Image.open(image_path) as original:
+        raw_source_size = original.size
+        orientation = original.getexif().get(274, 1)
+        source_size = ImageOps.exif_transpose(original).size
+    with Image.open(reference_path) as reference:
+        reference_size = reference.size
+    geometry = dict(policy=GEOMETRY_POLICY, preserve_aspect_ratio=PRESERVE_ASPECT_RATIO,
+        timestamp=datetime.now(timezone.utc).isoformat(), model=resolved_model_name,
+        source_path=str(image_path), source_sha256=digest(image_path),
+        source_raw_size=raw_source_size, source_exif_orientation=orientation,
+        source_visual_size=source_size, reference_path=str(reference_path),
+        reference_size=reference_size, reference_sha256=digest(reference_path),
+        requested_size=request_kwargs.get('size'), raw_response_path=str(raw_path),
+        raw_response_size=response_size, raw_response_sha256=digest(raw_path),
+        saved_size=final_size, output_sha256=digest(output_path), postprocess_resize=False,
+        prompt=prompt_text)
+    output_path.with_suffix('.geometry.json').write_text(json.dumps(geometry, ensure_ascii=False, indent=2), encoding='utf-8')
     return output_path
 
 

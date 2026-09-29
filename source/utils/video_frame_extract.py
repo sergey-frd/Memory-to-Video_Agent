@@ -28,6 +28,32 @@ def extract_video_frames(
     if not video_path.exists():
         raise FileNotFoundError(f"Video file not found: {video_path}")
     output_dir.mkdir(parents=True, exist_ok=True)
+    if video_path.suffix.lower() == ".gif":
+        # GIF frames are held for their declared duration. Seeking FFmpeg past
+        # the last frame's PTS can return no image while that frame is visible.
+        from PIL import Image
+        frames: list[tuple[float, Path]] = []
+        with Image.open(video_path) as image:
+            bounds: list[tuple[float, float, int]] = []
+            elapsed = 0.0
+            for index in range(image.n_frames):
+                image.seek(index)
+                duration = image.info.get("duration")
+                if duration is None or duration <= 0:
+                    raise ValueError(f"Unknown GIF frame duration at frame {index}: {video_path}")
+                end = elapsed + duration / 1000.0
+                bounds.append((elapsed, end, index))
+                elapsed = end
+            for index, timestamp in enumerate(timestamps_sec):
+                safe_ts = max(0.0, float(timestamp))
+                selected = next((n for start, end, n in bounds if start <= safe_ts < end), None)
+                if selected is None:
+                    raise ValueError(f"GIF timestamp {safe_ts:.3f}s outside known duration {elapsed:.3f}s")
+                image.seek(selected)
+                frame_path = output_dir / f"{prefix}_{index:02d}_{safe_ts:07.2f}.jpg"
+                image.convert("RGB").save(frame_path, quality=95)
+                frames.append((safe_ts, frame_path))
+        return frames
     ffmpeg = resolve_ffmpeg_executable()
     frames: list[tuple[float, Path]] = []
     for index, timestamp in enumerate(timestamps_sec):
@@ -45,6 +71,9 @@ def extract_video_frames(
             str(video_path),
             "-frames:v",
             "1",
+            # MJPEG requires full-range YUV, including palette-based GIF input.
+            "-pix_fmt",
+            "yuvj420p",
             "-q:v",
             "3",
             str(frame_path),

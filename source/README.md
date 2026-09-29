@@ -1,4 +1,10 @@
+> Family video architecture (2026-09-28): [canonical AUTO / RESUME workflow](docs/VIDEO_WORKFLOW_FINAL_RU.md), launcher `scripts/run_all.bat`. WIDE → FULL → independent MAIN and SHORT. Earlier compact-first / FULL–MINIMAL descriptions below are historical for family tasks.
+
 # img-style-ag_1
+
+Optional artistic branch: [manually selected images → AI prompts → Grok videos](docs/GROK_QUEUE_RU.md).
+Use `run_grok_queue.bat <PROJECT>` with a project profile. Watercolors and generated
+clips can be edited into an artistic film manually; automatic input selection is not implemented.
 
 Dev workspace for the Memory-to-Video_Agent source project.
 
@@ -13,8 +19,8 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 
 ## Current version
 
-- Workspace `VERSION`: **`2026.09.22.01`** ([`VERSION`](VERSION))
-- Release tag: **`v2026.09.22.01`**
+- Workspace `VERSION`: **`2026.09.29.01`** ([`VERSION`](VERSION))
+- Release tag: **`v2026.09.29.01`**
 
 ## Install this release on a laptop
 

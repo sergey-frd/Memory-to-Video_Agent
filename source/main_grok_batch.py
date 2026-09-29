@@ -9,7 +9,9 @@ from typing import Callable
 from api.grok_web import GrokWebSessionRunner
 from config import ConfigValidationError, Settings, load_generation_config
 from main_grok_web import SUPPORTED_INPUT_SUFFIXES, default_output_video_path, run_generation
-from utils.project_delivery import clear_directory_contents, sync_video_file
+from utils.project_delivery import sync_video_file
+from utils.grok_workspace import digest, save_state
+import json
 
 PROMPT_NAME_RE = re.compile(r"^(?P<image_stem>.+)_\d{8}_\d{6}_v_prompt_(?P<index>\d+)$")
 
@@ -134,14 +136,19 @@ def run_batch(args: argparse.Namespace, settings: Settings | None = None, runner
 
     try:
         for prompt_path in prompts:
-            image_path = resolve_image_for_prompt(prompt_path, input_dir)
+            image_path = getattr(args, "source_image", None) or resolve_image_for_prompt(prompt_path, input_dir)
             output_video = default_output_video_path(prompt_path, settings)
             stage_id = prompt_path.stem.split("_v_prompt_", 1)[0]
             should_generate_background = bool(generation_config.generate_source_background and stage_id not in prepared_background_stages)
             if not generation_config.generate_video and not should_generate_background:
                 skipped_by_config += 1
                 continue
-            if args.skip_existing and output_video.exists():
+            receipt_path = output_video.with_suffix('.mp4.complete.json')
+            receipt = json.loads(receipt_path.read_text(encoding='utf-8')) if receipt_path.exists() else {}
+            if (args.skip_existing and output_video.is_file() and receipt
+                    and receipt.get('sha256') == digest(output_video)
+                    and receipt.get('prompt_sha256') == digest(prompt_path)
+                    and receipt.get('image_sha256') == digest(image_path)):
                 sync_video_file(settings, generation_config, output_video)
                 print(f"Skipped existing video: {output_video}")
                 outputs.append(output_video)
@@ -167,6 +174,13 @@ def run_batch(args: argparse.Namespace, settings: Settings | None = None, runner
                 no_submit=args.no_submit,
             )
             result = resolved_runner(run_args)
+            if not args.no_submit:
+                if not result.is_file() or result.stat().st_size == 0:
+                    raise RuntimeError(f"Missing or empty Grok result: {result}")
+                sync_video_file(settings, generation_config, result)
+                if result == output_video:
+                    save_state(receipt_path, {"sha256": digest(result),
+                        "prompt_sha256": digest(prompt_path), "image_sha256": digest(image_path)})
             outputs.append(result)
             if should_generate_background:
                 prepared_background_stages.add(stage_id)
@@ -188,10 +202,7 @@ def run_batch(args: argparse.Namespace, settings: Settings | None = None, runner
             flush=True,
         )
 
-    if not args.no_submit and not getattr(args, "keep_workdirs", False):
-        clear_directory_contents(settings.input_dir)
-        clear_directory_contents(settings.output_dir)
-        print("Input and output directories cleared after successful batch delivery.")
+    # Shared input/output folders may contain unrelated data. Never clear them.
 
     return outputs
 

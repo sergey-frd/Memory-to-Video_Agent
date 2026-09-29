@@ -17,13 +17,13 @@ from main_desktop_pipeline import (
 )
 from main_grok_batch import run_batch
 from utils.project_delivery import (
-    clear_directory_contents,
-    move_files_to_directory,
-    move_input_files_to_error,
-    move_output_stage_to_error,
     remove_path,
     sync_stage_non_video_assets,
+    sync_video_file,
+    resolve_delivery_dir,
 )
+
+from utils.grok_workspace import workspace, save_state, delivered_outputs, digest, clean_work, completed_image, record_completed
 
 
 def parse_args() -> argparse.Namespace:
@@ -86,6 +86,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--launch-timeout", type=float, default=60.0, help="How long to wait for Grok Web to open, in seconds.")
     parser.add_argument("--upload-timeout", type=float, default=180.0, help="How long to wait for image upload readiness before submit, in seconds.")
     parser.add_argument("--no-submit", action="store_true", help="Prepare Grok forms without submitting them.")
+    parser.add_argument("--force-regenerate", action="store_true", help="Ignore completed-image records and create a new generation session.")
     return parser.parse_args()
 
 
@@ -135,12 +136,6 @@ def _handle_failure(
     error: Exception,
 ) -> None:
     error_output_dir = settings.project_root / "error" / "output" / stage_id
-    if continue_after_failure:
-        move_input_files_to_error(settings, stage_id, [image_path])
-    else:
-        remaining_inputs = [path for path in settings.input_dir.iterdir() if path.is_file()]
-        move_files_to_directory(remaining_inputs, settings.project_root / "error" / "input" / stage_id)
-    move_output_stage_to_error(settings, stage_id)
     error_output_dir.mkdir(parents=True, exist_ok=True)
     error_report = error_output_dir / f"{stage_id}_error.txt"
     error_report.write_text(
@@ -156,16 +151,25 @@ def _handle_failure(
         ),
         encoding="utf-8",
     )
-    print(f"Stage failed and was moved to error folders: {stage_id}", flush=True)
+    print(f"Stage failed; input and workspace preserved for retry: {stage_id}", flush=True)
     print(f"Error report saved to: {error_report}", flush=True)
-    clear_directory_contents(settings.output_dir)
 
 
 def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None) -> list[Path]:
     settings = settings or Settings()
     settings.ensure_output()
     generation_config = build_generation_config(args)
+    if args.image is None and generation_config.read_input_list and not any(
+            p.is_file() and p.suffix.lower() in {'.jpg', '.jpeg', '.png', '.webp', '.bmp'}
+            for p in settings.input_dir.glob('*')):
+        print("Input queue is empty; nothing to generate.", flush=True)
+        return []
     input_images = resolve_input_images(args, settings, generation_config)
+    delivery_dir = resolve_delivery_dir(settings, generation_config.final_videos_dir)
+    force = getattr(args, 'force_regenerate', False)
+    from uuid import uuid4
+    force_key = uuid4().hex if force else None
+    base_settings = settings
     results: list[Path] = []
     pending_input_cleanup: list[Path] = []
     total = len(input_images)
@@ -173,46 +177,71 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
 
     try:
         for index, image_path in enumerate(input_images, start=1):
-            clear_directory_contents(settings.output_dir)
+            completed = None if force or args.no_submit else completed_image(base_settings, image_path, delivery_dir)
+            if completed is not None:
+                results.extend(completed)
+                print(f"Skipped completed image: {image_path}", flush=True)
+                pending_input_cleanup.append(image_path)
+                continue
             run_args = SimpleNamespace(**vars(args))
             run_args.image = image_path
             run_args.stage_id = stage_id_for_image(args.stage_id, image_path, index, total)
             stage_id = stage_identifier(run_args.stage_id, image_path)
+            settings, state_path, state = workspace(base_settings, image_path, {
+                "config": vars(generation_config), "model": args.model,
+                "prompt_model": args.prompt_model, "scene_model": getattr(args, "scene_model", None),
+                "styled": args.generate_styled_images, "stage_id": args.stage_id,
+                **({"force_run": force_key} if force else {}),
+            })
+            stage_id = state.setdefault("stage_id", stage_id)
             run_args.stage_id = stage_id
+            save_state(state_path, state)
+            completed = delivered_outputs(state)
+            if completed is not None and not args.no_submit:
+                results.extend(completed)
+                print(f"Skipped delivered image: {image_path}", flush=True)
+                record_completed(base_settings, image_path, delivery_dir, completed)
+                pending_input_cleanup.append(image_path)
+                continue
 
             try:
-                metadata = _run_generation(
-                    run_args,
-                    generation_config,
-                    settings=settings,
-                    generate_video=generation_config.generate_video,
-                    generate_styled_images=args.generate_styled_images,
-                    generate_final_frames=generation_config.generate_final_frames,
-                )
+                if not state.get("prompts_ready"):
+                    metadata = _run_generation(
+                        run_args,
+                        generation_config,
+                        settings=settings,
+                        generate_video=generation_config.generate_video,
+                        generate_styled_images=args.generate_styled_images,
+                        generate_final_frames=generation_config.generate_final_frames,
+                    )
 
-                manifest_path = write_pipeline_manifest(
-                    settings,
-                    stage_id,
-                    image_path,
-                    generation_config,
-                    generate_final_frames=generation_config.generate_final_frames,
-                    generate_styled_images=args.generate_styled_images,
-                    generate_video=generation_config.generate_video,
-                    model_name=args.model,
-                    prompt_model=args.prompt_model,
-                    motion_model=generation_config.motion_model,
-                )
-                sync_stage_non_video_assets(settings, generation_config, stage_id)
-                print(f"API pipeline manifest saved to: {manifest_path}")
-
-                if generation_config.generate_music:
-                    music_prompt_file = _write_music_prompt(settings, stage_id, metadata)
+                    manifest_path = write_pipeline_manifest(
+                        settings,
+                        stage_id,
+                        image_path,
+                        generation_config,
+                        generate_final_frames=generation_config.generate_final_frames,
+                        generate_styled_images=args.generate_styled_images,
+                        generate_video=generation_config.generate_video,
+                        model_name=args.model,
+                        prompt_model=args.prompt_model,
+                        motion_model=generation_config.motion_model,
+                    )
                     sync_stage_non_video_assets(settings, generation_config, stage_id)
-                    print(f"Music prompt saved: {music_prompt_file}")
+                    print(f"API pipeline manifest saved to: {manifest_path}")
+
+                    if generation_config.generate_music:
+                        music_prompt_file = _write_music_prompt(settings, stage_id, metadata)
+                        sync_stage_non_video_assets(settings, generation_config, stage_id)
+                        print(f"Music prompt saved: {music_prompt_file}")
+
+                    state["prompts_ready"] = True
+                    save_state(state_path, state)
 
                 grok_args = SimpleNamespace(
                     prompt_dir=settings.output_dir,
-                    input_dir=settings.input_dir,
+                    input_dir=image_path.parent,
+                    source_image=image_path,
                     config_file=args.config_file,
                     profile_dir=args.profile_dir,
                     target_url=args.target_url,
@@ -227,7 +256,7 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
                     generate_source_background=generation_config.generate_source_background,
                     save_grok_debug_artifacts=generation_config.save_grok_debug_artifacts,
                     no_submit=args.no_submit,
-                    skip_existing=False,
+                    skip_existing=True,
                     keep_workdirs=True,
                 )
                 def stage_runner(run_args: argparse.Namespace) -> Path:
@@ -241,7 +270,30 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
                         flush=True,
                     )
                 stage_outputs = run_batch(grok_args, settings=settings, runner=stage_runner)
-                results.extend(stage_outputs)
+                if args.no_submit:
+                    grok_session_runner.close_stage_session()
+                    results.extend(stage_outputs)
+                    continue
+                if not stage_outputs:
+                    raise RuntimeError("No delivered outputs; preserving input and workspace")
+                delivered = []
+                for output in stage_outputs:
+                    if not output.is_file() or output.stat().st_size == 0:
+                        raise RuntimeError(f"Missing or empty output: {output}")
+                    target = sync_video_file(settings, generation_config, output).resolve()
+                    if digest(target) != digest(output):
+                        raise RuntimeError(f"Delivery verification failed: {target}")
+                    if target.is_relative_to(settings.output_dir):
+                        raise ValueError("Delivery directory must be outside the temporary workspace")
+                    delivered.append({"path": str(target), "sha256": digest(target)})
+                sync_stage_non_video_assets(settings, generation_config, stage_id)
+                record_completed(base_settings, image_path, delivery_dir, [Path(item["path"]) for item in delivered])
+                state.update(complete=True, outputs=delivered)
+                save_state(state_path, state)
+                results.extend(Path(item["path"]) for item in delivered)
+                clean_work(settings.output_dir, state_path)
+                state["prompts_ready"] = False
+                save_state(state_path, state)
                 print("Closing Grok for current image...", flush=True)
                 grok_session_runner.close_stage_session()
                 if index < total:
@@ -249,9 +301,7 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
                 else:
                     print("Grok closed.", flush=True)
 
-                if not _remove_processed_input(image_path, settings):
-                    pending_input_cleanup.append(image_path)
-                clear_directory_contents(settings.output_dir)
+                pending_input_cleanup.append(image_path)
             except Exception as exc:
                 print("Closing Grok for current image...", flush=True)
                 grok_session_runner.close_stage_session()
@@ -266,7 +316,9 @@ def run_full_pipeline(args: argparse.Namespace, settings: Settings | None = None
                     raise
     finally:
         grok_session_runner.close()
-        remaining_inputs = _flush_processed_input_queue(pending_input_cleanup, settings)
+        remaining_inputs = _flush_processed_input_queue(pending_input_cleanup, base_settings)
+        if remaining_inputs:
+            remaining_inputs = _flush_processed_input_queue(remaining_inputs, base_settings)
         if remaining_inputs:
             remaining_label = ", ".join(path.name for path in remaining_inputs)
             print(f"Warning: processed input files could not be removed from queue: {remaining_label}", flush=True)

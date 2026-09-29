@@ -2,19 +2,19 @@
 
 This document is generated from the source project and is intended for the external project-information repository.
 
-- Generated at: `2026-09-23T07:44:15+03:00`
+- Generated at: `2026-09-29T11:17:41+03:00`
 - Source project: `img-style-ag_1`
 
 ## Snapshot
 
-- Files scanned: `528`
-- Python files: `255`
-- Test files: `74`
-- Config JSON files: `19`
-- Markdown docs: `41`
+- Files scanned: `588`
+- Python files: `282`
+- Test files: `80`
+- Config JSON files: `22`
+- Markdown docs: `43`
 - Entry points: `49`
 - API modules: `17`
-- Utils modules: `53`
+- Utils modules: `54`
 - Model modules: `7`
 
 ## Entry Points
@@ -83,6 +83,10 @@ This document is generated from the source project and is intended for the exter
 | `sequence_trim_review` | KEEP/DROP-анализ Premiere sequence через heuristic, semantic, hero, report_replay, ручное применение KEEP JSON, импорт списка медиа и import-and-keep за один проход. |
 | `premiere_motion_and_task_edits` | Переносимые Motion JSON-режимы и специализированные TASK/Alla монтаж, анимация, цвет; backup, saved-project QA, preview. |
 | `portable_art_release` | Portable installation and fixed ART 031–034 contracts |
+| `task_art` | Prepare/run restart-safe ART candidate bank from completed TASK CLASSIFY; manual generation only after prepare. |
+| `task_classify_art` | Manual ART-only analysis and versioned permanent unified media bank; original classification unchanged. |
+| `task_wide_master` | Content-led wide plan without duration target; prepare separate Premiere checkpoint, protected sequence clone and native 720p review for manual user execution. |
+| `grok_prepared_queue` | Optional manually selected image queue with image-aware prompts, sequential Chrome generation and verified scoped cleanup. |
 
 ## Change Types
 

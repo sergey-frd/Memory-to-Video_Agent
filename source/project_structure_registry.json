@@ -21,7 +21,9 @@
     "docs/PREMIERE_JSON_EDIT_AND_MOTION_RU.md",
     "docs/PREMIERE_TASK_WORKFLOWS_RU.md",
     "docs/INSTALL_ON_NEW_COMPUTER_RU.md",
-    "docs/PREMIERE_ART_TASKS_031_034_RU.md"
+    "docs/PREMIERE_ART_TASKS_031_034_RU.md",
+    "docs/GROK_QUEUE_RU.md",
+    "docs/GROK_SAFE_SESSIONS_RU.md"
   ],
   "core_invariants": [
     "GenerationConfig в config.py является единой точкой правды для generation-флагов.",
@@ -30,7 +32,9 @@
     "Одновременно можно включить только один framing-режим: prefer_face_closeups, use_ai_optimal_framing, generate_dual_framing_videos.",
     "main_grok_batch.py по умолчанию очищает input/ и output/ после успешного batch-run, если не указан keep-workdirs.",
     "main_full_pipeline.py может удалять обработанные входные изображения из input/.",
-    "mp4 доставляются в final_videos_dir, а non-video stage assets - в regeneration_assets_dir/<stage_id>/."
+    "mp4 доставляются в final_videos_dir, а non-video stage assets - в regeneration_assets_dir/<stage_id>/.",
+    "Task ART numbering: Wnn/source_nn.ext/watercolor_nn.png and Dnn/source_nn.ext/double_exposure_nn.png; ordered JSON/TXT, manifest, checkpoints, review and permanent delivery must agree. Counts are task-config parameters; no automatic next stage.",
+    "ART classification update preserves original media and timeline verbatim, links derivatives by parent/source_family, publishes a new permanent version and pointer only after validation; never automatically runs WIDE MASTER."
   ],
   "subsystems": [
     {
@@ -293,6 +297,88 @@
       "tests": [
         "test/test_premiere_art_runtime.py",
         "test/test_release_installation.py"
+      ]
+    },
+    {
+      "id": "task_art",
+      "purpose": "Prepare/run restart-safe ART candidate bank from completed TASK CLASSIFY; manual generation only after prepare.",
+      "files": [
+        "scripts/art.py",
+        "scripts/run_art.bat",
+        "tasks/*/art_config.json",
+        "api/openai_image.py",
+        "utils/image_analysis.py",
+        "utils/project_delivery.py"
+      ],
+      "tests": [
+        "tests/test_task_art.py"
+      ],
+      "must_review_when_changed": [
+        "docs/PROJECT_STRUCTURE.md",
+        "docs/README.md",
+        "tasks/*/art/art_manifest.json",
+        "tasks/*/art/watercolor_sources.json",
+        "tasks/*/art/double_exposure_sources.json",
+        "tasks/*/art/ART_REVIEW.html"
+      ]
+    },
+    {
+      "id": "task_classify_art",
+      "purpose": "Manual ART-only analysis and versioned permanent unified media bank; original classification unchanged.",
+      "files": [
+        "scripts/classify_art.py",
+        "scripts/run_classify_art.bat",
+        "scripts/classify.py",
+        "tasks/*/task.json"
+      ],
+      "tests": [
+        "tests/test_task_classify_art.py"
+      ],
+      "must_review_when_changed": [
+        "docs/PROJECT_STRUCTURE.md",
+        "docs/README.md",
+        "tasks/*/classified_media_bank.json"
+      ]
+    },
+    {
+      "id": "task_wide_master",
+      "purpose": "Content-led wide plan without duration target; prepare separate Premiere checkpoint, protected sequence clone and native 720p review for manual user execution.",
+      "files": [
+        "scripts/prepare_wide_master.py",
+        "scripts/watch_wide_master.ps1",
+        "scripts/watch_wide_master.bat",
+        "tasks/*/wide_master_config.json",
+        "tools/prepare_native_export.py",
+        "tools/prepare_native_finish.py"
+      ],
+      "tests": [
+        "tests/test_wide_master_prepare.py"
+      ],
+      "must_review_when_changed": [
+        "docs/PROJECT_STRUCTURE.md",
+        "docs/README.md",
+        "tasks/*/wide_master/wide_master.json"
+      ]
+    },
+    {
+      "id": "grok_prepared_queue",
+      "purpose": "Optional manually selected image queue with image-aware prompts, sequential Chrome generation and verified scoped cleanup.",
+      "files": [
+        "run_grok_queue.bat",
+        "scripts/run_grok_queue.py",
+        "scripts/run_grok_prepared_queue.py",
+        "utils/grok_workspace.py",
+        "config_grok_queue.example.json",
+        "config_grok_delivery.example.json"
+      ],
+      "tests": [
+        "tests/test_grok_queue.py"
+      ],
+      "must_review_when_changed": [
+        "docs/GROK_QUEUE_RU.md",
+        "docs/GROK_SAFE_SESSIONS_RU.md",
+        "main_full_pipeline.py",
+        "main_grok_batch.py"
       ]
     }
   ],

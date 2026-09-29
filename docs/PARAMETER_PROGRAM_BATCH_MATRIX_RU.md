@@ -1,5 +1,14 @@
 # Матрица Parameter → Program → Batch
 
+## Дополнительная очередь изображений
+
+| Конфигурация | Программа | BAT | Результат |
+| --- | --- | --- | --- |
+| `config_grok_queue.json`: projects, heroes, goal, input_dir, classification_file, delivery_config | `scripts/run_grok_queue.py` → `scripts/run_grok_prepared_queue.py` | `run_grok_queue.bat <PROJECT>` | Индивидуальные AI-промпты, проверенные MP4, архив исходников и реестр готовых изображений |
+
+Отбор `input` и художественный монтаж выполняются вручную. Подробности и шаблоны:
+[GROK_QUEUE_RU.md](GROK_QUEUE_RU.md). Это независимая опция, не обязательная стадия AUTO.
+
 Этот справочник связывает параметры конфигурации с программами, batch-файлами и результатами. Он охватывает полную цепочку работы с героем и Premiere:
 
 1. создание визуального определения героя;

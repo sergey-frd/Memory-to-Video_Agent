@@ -31,12 +31,17 @@ EXCLUDED_DIR_NAMES = {
     "tmp",
     "temp",
     "source",
+    "tasks",
+    ".test_runs",
+    "project_media",
 }
 EXCLUDED_DIR_PREFIXES = ("pytest-cache-files-", "pytest-temp", ".tmp", "tmp_", "input_", "output_", "TASK_")
 EXCLUDED_FILE_NAMES = {".env"}
 EXCLUDED_FILE_PREFIXES = (".env.",)
 EXCLUDED_SOURCE_RELATIVE_DIRS = {"premiere_scripts/Ben26", "premiere_scripts/Arkady26"}
 EXCLUDED_SOURCE_RELATIVE_FILES = {
+    "tests/test_full_master_prepare.py",
+    "tests/test_wide_master_prepare.py",
     "docs/NATIVE_FINISH_ONE_RUN_RU.md",
     "docs/PORTRAIT_EDITORIAL_CHOICES_RU.md",
     "tools/audit_arkady_compact_stage1.py",
@@ -60,6 +65,7 @@ EXCLUDED_SOURCE_RELATIVE_FILES = {
     "docs/HERO_VIDEO_CLOSEOUT_RU.md",
 }
 PUBLISHED_SOURCE_SUFFIXES = {
+    ".epr",
     ".bat",
     ".css",
     ".csv",
@@ -84,6 +90,8 @@ PUBLISHED_SOURCE_SUFFIXES = {
 TEXT_READ_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251")
 
 DOC_TARGETS = {
+    "docs/GROK_QUEUE_RU.md": "docs/GROK_QUEUE_RU.md",
+    "docs/GROK_SAFE_SESSIONS_RU.md": "docs/GROK_SAFE_SESSIONS_RU.md",
     "docs/PORTRAIT_WORKFLOW_CHOICES_RU.md": "docs/PORTRAIT_WORKFLOW_CHOICES_RU.md",
     "docs/PORTRAIT_MODES_RU.md": "docs/PORTRAIT_MODES_RU.md",
     "docs/COMPACT_FIRST_RU.md": "docs/COMPACT_FIRST_RU.md",
@@ -187,6 +195,8 @@ def _is_excluded_file_name(filename: str) -> bool:
     if filename == ".env.template":
         return False
     name = filename.casefold()
+    if 'bm26' in name:
+        return True
     # Personal completed-job instructions and launchers stay local.
     if "romann26" in name or name.startswith("romann26_"):
         return True

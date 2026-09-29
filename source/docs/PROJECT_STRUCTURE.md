@@ -1,3 +1,17 @@
+# Актуальная family-архитектура — 2026-09-28
+
+Дополнительная необязательная ветка: [ручной input → AI-промпты → Grok-видео](GROK_QUEUE_RU.md).
+Вход `run_grok_queue.bat`, профиль `config_grok_queue.json`, планировщик
+`scripts/run_grok_queue.py`, исполнитель `scripts/run_grok_prepared_queue.py`,
+реестр/хеши `utils/grok_workspace.py`. Автоотбор input и художественный монтаж
+не реализованы; пользователь может вручную объединять эти видео с акварелями и ART.
+
+Канонический порядок и границы реализации: [VIDEO_WORKFLOW_FINAL_RU.md](VIDEO_WORKFLOW_FINAL_RU.md). `scripts/run_all.bat` оркестрирует существующие stage modules через `run_all.py` и `family_stages.py`; `family_contract.py` и `scripts/schemas/` задают контракт. Task config/state/checkpoints живут в `tasks/<TASK>/`, независимые копии — в родном permanent storage. `tasks/legacy/` и `output/` сохраняются нетронутыми.
+
+INIT → INGEST → CLASSIFY ORIGINAL → ART → ART CLASSIFY → BANK → WIDE → FULL → PREMIERE HANDOFF; затем независимые FULL → MAIN и FULL → SHORT → STRUCTURE REVIEW → VISUAL FINISH → COLOR → USER FINAL EDIT + MUSIC → FINAL. WIDE/FULL без duration target; MAIN/SHORT параметризованы.
+
+Прежние compact-first и FULL → MINIMAL описания ниже — справка для старых workflows. Новые family TASK следуют каноническому маршруту выше. Исторические статусы конкретных героев вынесены в их архивы.
+
 # Project Structure Web Map
 
 <main>
@@ -26,6 +40,17 @@
 ---
 
 <section id="architecture">
+
+## Базовая структура task-системы
+
+Общий код находится в scripts/, контракты — в scripts/schemas/.
+Настройки, исходные требования и состояния конкретного задания — в tasks/<TASK>/.
+Классификации, ART, проекты и журналы сохраняются также в постоянных каталогах героя.
+Исторические рабочие статусы конкретных героев архивируются отдельно и не задают
+состояние общего pipeline. Актуальный порядок: [VIDEO_WORKFLOW_FINAL_RU.md](VIDEO_WORKFLOW_FINAL_RU.md).
+
+Дополнительная очередь [GROK_QUEUE_RU.md](GROK_QUEUE_RU.md) не является стадией AUTO:
+пользователь отбирает input вручную, а затем вручную использует ролики в монтаже.
 
 ## Architecture
 
@@ -73,7 +98,7 @@
 
 1. `GenerationConfig` в `config.py` является единой точкой правды для generation-флагов.
 2. Все артефакты одного этапа имеют общий префикс `stage_id`.
-3. `output/` является временной рабочей зоной; итоговая доставка идет через `utils/project_delivery.py`.
+3. `output/` теперь считается нетронутым legacy. Исторически он использовался как временная рабочая зона с доставкой через `utils/project_delivery.py`; существующий код на этом шаге не меняется.
 4. Sequence-утилиты используют stage-based артефакты из `regeneration_assets_dir`.
 
 </section>

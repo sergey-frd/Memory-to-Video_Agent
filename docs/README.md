@@ -1,15 +1,25 @@
 # Project Documentation
 
-Каноническая документация проекта хранится в этом каталоге.
+Каноническая технология: [Family Video Pipeline](VIDEO_WORKFLOW_FINAL_RU.md).
+Общая команда — `scripts/run_all.bat TASK_ID --auto`; остановка перед необходимой
+нативной операцией Premiere и продолжение `--resume` описаны в руководстве.
+WIDE → FULL → независимые MAIN и SHORT → VISUAL FINISH → COLOR → ручной FINAL.
+
+Необязательная художественная ветка: [ручной input → AI-промпты → видео](GROK_QUEUE_RU.md).
+Акварели, двойные экспозиции и видео из фотографий можно монтировать вручную.
+Автоматическое наполнение input пока не реализовано.
 
 ## Основные руководства
+
+- [Канонический Family Video Pipeline после BM26](VIDEO_WORKFLOW_FINAL_RU.md) — AUTO до Premiere, handoff, resume, FULL → MAIN и FULL → SHORT, configurable targets.
+
 
 - [PORTRAIT_WORKFLOW_CHOICES_RU.md](PORTRAIT_WORKFLOW_CHOICES_RU.md) — выбор цели нового портрета, карта скриптов/JSON, нативные этапы и границы автоматизации.
 - [PORTRAIT_MODES_RU.md](PORTRAIT_MODES_RU.md) — реальные параметры и примеры FULL/SHORT.
 
-- [COMPACT_FIRST_RU.md](COMPACT_FIRST_RU.md) — первая компактная сборка после CLASSIFY, достаточность длительности и границы автоматизации.
+- [COMPACT_FIRST_RU.md](COMPACT_FIRST_RU.md) — DEPRECATED: прежняя компактная сборка; справка для старых запусков.
 
-- [FULL_MINIMAL_PRODUCTION_RU.md](FULL_MINIMAL_PRODUCTION_RU.md) — актуальная технология FULL → LOCK → MINIMAL, совместный запуск Adobe, постоянное хранение и удаление промежуточных файлов.
+- [FULL_MINIMAL_PRODUCTION_RU.md](FULL_MINIMAL_PRODUCTION_RU.md) — DEPRECATED: прежний FULL → LOCK → MINIMAL; справка для старых запусков.
 
 - [USER_GUIDE_RU.md](USER_GUIDE_RU.md) — руководство пользователя на русском.
 - [USER_GUIDE_EN.md](USER_GUIDE_EN.md) — English user guide.
@@ -56,9 +66,12 @@
 
 ## Общая технология с редакциями и остановками
 
-Реализован `run_video_workflow.bat`: начальный pipeline до 720p, повторяемые редакции, утверждение монтажа, нативный экспорт, анимация, переходы и приёмка. Полная инструкция и параметры: [VIDEO_WORKFLOW_FINAL_RU.md](VIDEO_WORKFLOW_FINAL_RU.md). Состояние сохраняется; операции Premiere выполняются через подготовленный JSX с последующим возобновлением сценария.
+**DEPRECATED для новых family TASK:** `run_video_workflow.bat`: начальный pipeline до 720p, повторяемые редакции, утверждение монтажа, нативный экспорт, анимация, переходы и приёмка. Полная инструкция и параметры: [VIDEO_WORKFLOW_FINAL_RU.md](VIDEO_WORKFLOW_FINAL_RU.md). Состояние сохраняется; операции Premiere выполняются через подготовленный JSX с последующим возобновлением сценария.
 
 - [CLASSIFICATION_INPUT_RU.md](CLASSIFICATION_INPUT_RU.md) — параметризованные WC/DE, классификация готовых ART и накопление каталога.
-- [VIDEO_WORKFLOW_FINAL_RU.md](VIDEO_WORKFLOW_FINAL_RU.md) — общий видеопроцесс и отдельный сценарий двух первоначальных черновиков RomanN26.
+- [VIDEO_WORKFLOW_FINAL_RU.md](VIDEO_WORKFLOW_FINAL_RU.md) — актуальный общий видеопроцесс.
 
 - [Режимы портрета для любого героя: поля, зависимости и примеры](PORTRAIT_MODES_RU.md)
+
+
+- [GROK_SAFE_SESSIONS_RU.md](GROK_SAFE_SESSIONS_RU.md) — сохранение результатов и пропуск повторов.

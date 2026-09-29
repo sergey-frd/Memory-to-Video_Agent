@@ -770,15 +770,17 @@ def test_run_generation_skips_background_flow_when_disabled() -> None:
     assert output_path == settings.output_dir / "frame_a_20260311_120000_video_1.mp4"
 
 
-def test_wait_for_upload_ready_accepts_attachment_fallback(monkeypatch) -> None:
+def test_wait_for_upload_ready_requires_stable_idle_attachment(monkeypatch) -> None:
     agent = GrokWebAgent(
         GrokWebConfig(
             prompt_text="prompt",
             image_path=Path("frame.png"),
             output_path=Path("out.mp4"),
-            upload_timeout_ms=5,
+            upload_timeout_ms=10000,
         )
     )
+    import api.grok_web as web_module
+    monkeypatch.setattr(web_module.time, "sleep", lambda seconds: None)
     observed_logs: list[str] = []
 
     monkeypatch.setattr(agent, "_raise_if_auth_required", lambda page: None)
@@ -796,7 +798,7 @@ def test_wait_for_upload_ready_accepts_attachment_fallback(monkeypatch) -> None:
                 "fileNameDetected": True,
             },
             {
-                "busyCount": 1,
+                "busyCount": 0,
                 "uploadBusyText": False,
                 "sendReady": False,
                 "sendControlsPresent": True,
@@ -804,7 +806,7 @@ def test_wait_for_upload_ready_accepts_attachment_fallback(monkeypatch) -> None:
                 "fileNameDetected": True,
             },
             {
-                "busyCount": 1,
+                "busyCount": 0,
                 "uploadBusyText": False,
                 "sendReady": False,
                 "sendControlsPresent": True,
@@ -2020,3 +2022,17 @@ def test_session_runner_falls_back_to_profile_launch_when_cdp_unavailable(monkey
     runner.close()
 
     assert result == output_path
+
+
+def test_upload_never_accepts_send_button_without_attachment(monkeypatch):
+    import pytest
+    import api.grok_web as web_module
+    agent = GrokWebAgent(GrokWebConfig(prompt_text="prompt", image_path=Path("photo.png"),
+        output_path=Path("out.mp4"), upload_timeout_ms=0))
+    monkeypatch.setattr(agent, "_upload_state", lambda page: {
+        "busyCount": 0, "uploadBusyText": False, "sendReady": True,
+        "sendControlsPresent": True, "attachmentDetected": False, "fileNameDetected": True})
+    monkeypatch.setattr(agent, "_write_debug_snapshot", lambda *a, **k:
+        {"screenshot": "s", "html": "h", "json": "j"})
+    with pytest.raises(web_module.GrokWebError, match="did not reach a ready state"):
+        agent._wait_for_upload_ready(object())

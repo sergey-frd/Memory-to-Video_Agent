@@ -1,3 +1,168 @@
+# Family Video Pipeline — каноническая технология после BM26
+
+Обновлено 2026-09-28. Этот раздел заменяет прежние COMPACT FIRST, FULL → MINIMAL и обязательный STOP после каждого этапа для новых семейных TASK. История ниже сохранена как DEPRECATED. Код и документация меняются вместе.
+
+## Архитектура и зависимости
+
+```text
+INIT → USER CHECK → AUTO
+  INGEST → CLASSIFY ORIGINAL → ART PLAN / GENERATION
+  → ART CLASSIFY UPDATE → UNIFIED CLASSIFIED MEDIA BANK
+  → WIDE PLAN → FULL PLAN → FIRST PREMIERE HANDOFF
+  → native WIDE + FULL → RESUME / verification
+                     FULL
+                    /    \
+                 MAIN    SHORT
+                    \    /
+              native branch handoff
+              → STRUCTURE REVIEW (user)
+              → VISUAL FINISH → COLOR
+              → USER FINAL EDIT + MUSIC → FINAL
+```
+
+WIDE не имеет target duration. Он покрывает хороший разнообразный материал оригинального видео, фото, watercolor и double exposure через единый классифицированный банк. Технический мусор, дубли, бессмысленные повторы и явно слабые материалы исключаются с причинами. Это не dump и не компактный монтаж под заданное время.
+
+FULL строится из WIDE без фиксированной длительности. Смысловые повторы и слабые хвосты сокращаются. Подготовка, ожидание и повторяемые действия могут ускоряться; значимые человеческие действия остаются в естественном темпе. Текущий исполнитель поддерживает скорости 1×, 2×, 3×; исходный звук сохраняется на 1×, ускоренные участки без него. Решения по sampled frames не доказывают границы речи: требуется последующий просмотр со звуком.
+
+MAIN и SHORT — независимые отборы непосредственно из FULL. MAIN сохраняет разнообразие, дыхание и человеческие моменты; SHORT строит собственные hook / development / peak / ending. Одна ветка никогда не является источником другой. Цели обеих веток — параметры TASK, а не 5–6 минут / 60–90 секунд из BM26. Нехватка материала или выход плана из диапазона вызывает диагностическую остановку, а не искусственное заполнение.
+
+## Единая точка запуска
+
+Из корня проекта, в обычном Windows cmd:
+
+```bat
+scripts\run_all.bat TASK_ID --status
+scripts\run_all.bat TASK_ID --dry-run
+scripts\run_all.bat TASK_ID --accept-init
+scripts\run_all.bat TASK_ID --auto
+scripts\run_all.bat TASK_ID --resume
+```
+
+`--accept-init` выполняют только после проверки INIT пользователем; команда сохраняет принятие текущего task.json и исходного проекта по SHA256, но ничего не генерирует. `--auto` требует этот checkpoint. После PASS каждого автономного этапа launcher сохраняет checkpoint и продолжает без вопросов. Он не открывает Premiere и не ждёт GUI. `--status` только читает состояние. `--dry-run` проверяет конфигурацию, наличие source sequence, механизмов и целостность существующих checkpoints; не вызывает AI, не создаёт монтаж и не подтверждает будущий native QA.
+
+`--from STAGE` не обходит зависимости: все предшествующие checkpoints должны существовать и пройти проверку. Стандартный способ восстановления — `--resume`. Изменение task.json или исходного проекта после принятия INIT останавливает запуск: не удаляйте checkpoints ради повторной оплаты; изменение требует отдельного аудита.
+
+Прогресс: stage, current item, n/total (когда известно), elapsed, last success, heartbeat и error count. Дочерние механизмы сохраняют свой подробный вывод; heartbeat означает живой процесс, а не подтверждённый результат. Последний структурированный прогресс доступен в pipeline/state.json. Вывод более 30 минут без обновлений останавливает дочерний этап; отдельные API и FFmpeg операции имеют собственные timeout.
+
+## INIT / конфигурация / схемы
+
+Используются существующие `tasks/<TASK>/task.json`, `state.json`, `request.md`. Шаблон — [config_family_task.example.json](../config_family_task.example.json); пустые пути намеренны, такой шаблон не является принятым INIT. Заполняются только реальные проверенные пути и имя source sequence. `configs/` в текущем проекте отсутствует; дополнительное параллельное дерево конфигураций не создаётся.
+
+| Категория | Поля и правило |
+| --- | --- |
+| UNIVERSAL | task_id, paths.premiere_project, paths.source_materials, sequences.source.name, постоянное хранилище, модели, review |
+| TASK_SPECIFIC | heroes (один или несколько), intent, main_target_seconds/range, short_target_seconds/range, ART counts, параметры фото/ART |
+| MULTI_HERO | несколько имён в heroes; отношения и смысл фильма задаются в intent пользователем, не выводятся по лицам |
+| OPTIONAL | legacy task metadata; заранее известное expected_timeline_items; нулевое число ART одного или обоих стилей |
+
+`family_pipeline` содержит `run_enabled`, planner_model, обе target/range, photo_seconds, art_seconds, art.watercolor_count, art.double_exposure_count, art.model и review. Range имеет ровно два положительных значения и содержит target. Список heroes непустой и уникальный. Никакие Ben / Max / brothers не встроены в универсальный маршрут. Для ART используется описание задачи с нейтральным person/people; старый детский prompt остаётся только для прежних конфигураций без этого поля.
+
+Схемы: [TASK](../scripts/schemas/family_task.schema.json), [editorial plan](../scripts/schemas/family_edit_plan.schema.json). Runtime валидирует используемое подмножество JSON Schema и дополнительные межфайловые инварианты: происхождение, parent hashes, source bounds, тайминг, скорость, количество и результаты. Текущая native сборка поддерживает 3840×2160 / 25fps; review 1280×720 / 25fps. Это явное ограничение исполнителя, не универсальный художественный стандарт.
+
+BM26 — завершённый эксперимент / frozen reference (`run_enabled: false`). Существующие результаты не переоцениваются и не пересобираются. KATYA INIT не создан: подтверждённых входных данных KATYA в задачах не найдено. Следующий отдельный шаг — предоставить реальные входные данные, выполнить INIT KATYA, проверить его пользователем, затем AUTO.
+
+## Reuse-first: что исполняется
+
+| Stage | Переиспользуемый механизм |
+| --- | --- |
+| INGEST | scripts/ingest.py, существующий Premiere XML reader |
+| CLASSIFY ORIGINAL | scripts/classify.py, per-media checkpoints и permanent copy |
+| ART | scripts/art.py, существующий OpenAI image backend, manifests и recovery |
+| ART CLASSIFY / BANK | scripts/classify_art.py, immutable versioned bank / original records сохраняются |
+| WIDE | scripts/prepare_wide_master.py build_plan + validate |
+| FULL, MAIN, SHORT | generic editorial adapter, проверка выбора и bounds; XML через prepare_full_master.make_xml |
+| Native | существующие full_master_native.jsx и HELPERS: import, conform, source/speed/timing readback, old sequence guards, export |
+
+`run_all.py` только оркестрирует. `family_stages.py` связывает существующие механизмы и параметризует редакторские планы, которые прежде были BM26-specific. `family_contract.py` — общий контракт. Старые tools/run_hero_pipeline.py и tools/run_video_workflow.py сохраняются для прежних workflows, но не являются входом нового family AUTO. BM26-specific prepare_main_cut/prepare_short_master/prepare_visual_finish/prepare_final_color и ручные решения остаются историческими рецептами, а не готовыми параметрами для KATYA.
+
+## ART: геометрия source/reference/output — правило v2
+
+С 2026-09-28 reusable `api/openai_image.py` использует `PRESERVE_ASPECT_RATIO=True` и geometry policy `exif-normalized-reference_native-output-v2`. Правило одинаково для portrait, landscape, square / near-square, BM26 ART_2, KATYA и следующих задач.
+
+1. Исходник не меняется. EXIF orientation применяется в памяти до определения width/height, анализа и подготовки reference.
+2. Reference уменьшается только пропорционально (погрешность округления до пикселя). Backend с фиксированным square canvas получает proportional contain/padding; никакого stretching.
+3. GPT Images получает PNG/reference и `size=auto`. Внешний canvas ответа может отличаться от source. Это само по себе не ошибка.
+4. Ответ сохраняется без resize к размерам source: фигуры/лица не растягиваются постобработкой. Общая художественная задача и prompt сохраняются.
+5. Рядом сохраняются `.reference.png` (фактический upload), `.response.png` (оригинальные байты ответа), `.geometry.json` (EXIF, размеры, hashes, model/prompt, отсутствие postprocess resize). ART adapter копирует provenance в permanent storage. Наличие raw response без готового output требует восстановления, а не новой оплаты.
+6. Existing ART не перезаписывается. Geometry policy включена в signature новой генерации. Не пытаться возобновить частичный v1 как v2 поверх старого manifest — нужна отдельная явно запрошенная версия.
+
+Исторический дефект: сохранение API-ответа через `resize((metadata.width, metadata.height))` могло деформировать содержимое; EXIF также не нормализовался. Старые ART остаются нетронутыми. Для revision сначала диагностика реальных файлов и визуальный отбор, затем candidate list и dry-run, затем отдельное подтверждение платной генерации. Один ratio не является критерием перегенерации. BM26 ART_2: [отчёт](../tasks/BM26/art_2/ART_2_DIAGNOSTIC.md), [план](../tasks/BM26/art_2/ART_2_REGENERATE.json). `scripts/prepare_art_revision.bat BM26 --dry-run` не имеет режима генерации. После явного подтверждения выбранных ID и передачи исходных фотографий в API используется отдельный `python scripts/run_art_revision.py BM26` (проверка: `--dry-run`). Он исполняет только frozen candidate list, сохраняет generation_state.json, оригинальный ответ/reference/geometry и независимые permanent copies. Выполненные результаты проверяются по hashes и пропускаются; частичный/неопределённый платный запрос автоматически не повторяется. Генерация не обновляет classified bank или монтаж: для включения ART_2 требуется отдельное задание.
+
+## Необязательная художественная ветка: фото → видео
+
+Помимо WIDE/FULL, самостоятельных MAIN/SHORT, finishing и финальной ручной правки,
+доступна отдельная [очередь Grok](GROK_QUEUE_RU.md): `run_grok_queue.bat <PROJECT>`.
+Пользователь вручную отбирает изображения в `input`; конфиг задаёт героев, цель,
+классификацию и папки результата. Модель строит индивидуальный промпт по самому
+изображению и найденному описанию, затем Chrome последовательно создаёт видео.
+Готовые результаты проверяются и учитываются в реестре для пропуска повторов.
+
+Это опция, а не обязательная стадия AUTO. Акварели, двойные экспозиции и видео
+из фотографий могут стать материалом отдельного художественного фильма,
+который пользователь собирает вручную. Очередь не меняет MAIN/SHORT, не создаёт
+художественный монтаж и не наполняет `input` автоматически. Автоматический отбор
+кандидатов из классифицированного банка — возможное будущее расширение.
+
+## Checkpoints, состояние и безопасная остановка
+
+Авторитетное orchestration state — `tasks/<TASK>/pipeline/state.json`; task/state.json синхронизируется с ним, подробные legacy stage reports сохраняются. `pipeline/run.lock` запрещает одновременные запуски. После аварийного прекращения процесса lock не удаляется автоматически: сначала проверить PID и отсутствие работающего процесса, затем разбирать stale lock отдельно.
+
+Успешный checkpoint включает SHA256 артефактов. Resume проверяет hashes и семантическую валидность outputs, а также size/mtime классифицированных источников. Изменённые исходники/результаты не запускают молча повторный AI. CLASSIFY / ART / ART CLASSIFY используют прежние per-item checkpoints. Планировщик сохраняет fingerprint запроса и raw response до дальнейшей проверки, включая неполные ответы: invalid response не ведёт к бесконтрольному повторному платному запросу. API-ошибка до получения и записи ответа не может доказать отсутствие списания у провайдера.
+
+В AUTO первая ошибка элемента прекращает stage после сохранения его checkpoint; исходники не удаляются, предыдущие успехи остаются. FAILED сохраняет timestamp, failed stage, last success, expected/actual, error, traceback, relevant paths и точную resume command. Есть master.log, отдельные stage.log и failure_*.json. State/logs/plans/checkpoints независимо копируются в `<permanent_project_dir>/pipeline/<TASK>/`; ART и классификация сохраняют прежние постоянные размещения. Если само хранилище недоступно, его успешная запись не заявляется.
+
+При preflight/невалидном INIT paid stage не запускается, ошибка видна в консоли. Исправлять входные данные нужно до AUTO. При ошибке native не повторять JSX поверх частично собранного проекта: сохранить журнал и рабочую копию, разобрать причину и подготовить отдельную версию восстановления.
+
+## Первый Premiere handoff и RESUME
+
+После WIDE/FULL plan создаётся отдельная рабочая копия исходного проекта и пакет с JSON, XML, JSX, preset. В консоль и handoff.json выводятся:
+
+- `USER_ACTION_REQUIRED`, TASK, `FULL_PREMIERE_HANDOFF`;
+- точный путь рабочего `.prproj` и JSX;
+- подготовленные планы и ожидаемые WIDE/FULL sequences;
+- инструкция открыть рабочую копию и выполнить JSX через Run Transition Script;
+- точная команда `run_all.bat <TASK> --resume`.
+
+Перед запуском JSX откройте отдельное консольное окно с выведенной `monitor_command` (`scripts\run_all.bat TASK_ID --watch`). Монитор показывает native_progress.log и heartbeat; ничего не запускает в Adobe. После сообщения export требуется `--resume` для реальной проверки.
+
+Это штатная остановка, exit code 0. Прежние sequences сохраняются. Коллизии одинаковых basenames решаются проверенными копиями selected media в пакете; оригиналы не перемещаются. Все контрольные sequences продолжаются в одной линии versioned проектов: следующая копия содержит предыдущие checkpoints, исходные проекты остаются самостоятельными резервными точками.
+
+Resume требует успешный native_status, неизменные подготовленные файлы, реальный сохранённый проект, ожидаемые sequences, source paths, video/audio counts, IN/OUT и timeline. Проверяются наличие, длительность, H.264/720p/25fps, AAC при исходном аудио и полное декодирование review. Проверка проекта + техническая проверка MP4 не равна полному художественному просмотру со звуком.
+
+После первого PASS автоматически готовятся MAIN и SHORT непосредственно из подтверждённого FULL, затем второй native handoff. После второго RESUME — реальный human checkpoint `STRUCTURE_REVIEW`: принять структуры обеих версий перед finishing. Текущий launcher здесь заканчивает автоматизированный участок; повторный --resume без отдельной подготовки finishing не означает принятия структур.
+
+## VISUAL FINISH → COLOR → пользовательский FINAL
+
+После принятия MAIN/SHORT обе проходят общий finishing: animation, reframing, scale, крупности, virtual camera, transitions, transmissions, ART inserts, visual rhythm. MAIN допускает больше дыхания, SHORT — более плотный ритм. Каждый эффект мотивирован конкретным кадром/стыком, без механического применения ко всем материалам. Исходники и редактируемые Motion/effect keyframes сохраняются; создаются независимые versioned FINISH sequences.
+
+COLOR выполняется только после структурного монтажа и animation: CORRECTION → MATCH → OPTIONAL LIGHT LOOK. Сначала исправление технических проблем кадра, затем согласование соседей/эпизода; дополнительный look не обязателен. Кожа и атмосфера сцены сохраняются; watercolor paper / double exposure palette оцениваются отдельно. MAIN/SHORT имеют собственные COLOR sequences. Общие native helpers существуют; новые покадровые решения и их native QA готовятся отдельным finishing заданием после STRUCTURE REVIEW. BM26 profiles не применяются к новым героям автоматически.
+
+Пользователь выполняет окончательную режиссёрскую правку, добавляет музыку и сохраняет FINAL отдельно. AI не отмечает FINAL ACCEPTED по факту export. Нативный open-check, readback effects/keyframes и полноценный аудиовизуальный просмотр выполняются на соответствующих результатах; FFmpeg preview этого не заменяет.
+
+## Review и finalization
+
+Preset [review_720p25.epr](../scripts/presets/review_720p25.epr): H.264, 1280×720, 25fps, VBR target 1.2 Mbps (max 2 Mbps), AAC 128 kbps. Config допускает target video 1–1.5 Mbps и AAC 96/128 kbps. Пятиминутный review ориентировочно 50 MB. Это диагностический файл, не master; крупный review 500–800 MB не создаётся как стандарт.
+
+Будущая процедура — только после отдельного `FINAL ACCEPTED` пользователем:
+
+1. FINALIZE: записать принятую FINAL sequence, отдельный master, проект и список зависимостей/контрольные суммы; подтвердить permanent copies.
+2. REPO CLEAN: составить явный список временных артефактов/игнорируемых результатов. Сначала отчёт, без удаления и без изменения output/legacy.
+3. VERIFY: проверить открываемость FINAL, media links, master/decode, независимое хранилище и восстановимость.
+4. GIT COMMIT/TAG: после review diff и отдельного задания; не включать секреты, кэши браузера и тяжёлые медиа.
+5. OPTIONAL CLEANUP PLAN: точные пути, размеры, назначение и backup evidence; исполнение только отдельной явно разрешённой операцией.
+
+Никакого автоматического destructive cleanup. В текущей работе cleanup, перемещение исходников, Premiere GUI и дорогие операции BM26/KATYA не выполнялись.
+
+## Проверка этой поставки
+
+Проверены 25 изолированных тестов (2026-09-28), семь Python-модулей прошли syntax check; реальный BAT `BM26 --status` и read-only `BM26 --dry-run` прошли без обработки материалов. Проверяются syntax, schema, single/multi hero, configurable targets, launcher status/dry-run, checkpoint hashes, fail/resume, exclusive lock, USER_ACTION_REQUIRED, независимость веток, source bounds и генерация native handoff на синтетических данных. Эти проверки не вызывают AI и не запускают Adobe. Реальный end-to-end production test ещё предстоит на KATYA; готовность launcher не является подтверждением результата неисполненного native render.
+
+---
+
+# DEPRECATED — исторический workflow до принятой архитектуры BM26
+
+Нижеследующий текст сохранён для старых запусков. Его порядок compact/approval/FULL–MINIMAL и команды не применяются к новым family TASK. Актуальные правила — выше.
+
 # Технология видео: полный сценарий, редакции и финальный экспорт
 
 ## Актуальное продолжение технологии

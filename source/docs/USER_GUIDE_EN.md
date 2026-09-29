@@ -1,5 +1,16 @@
 # User Guide
 
+## Optional image-to-video artistic branch
+
+`run_grok_queue.bat <PROJECT>` processes a manually selected `input` folder.
+The project configuration supplies heroes, film intent, classification and delivery
+folders. Image-aware model prompts drive sequential generation in the existing
+Chrome/Grok window. Verified videos are skipped on retries; shared output is preserved.
+See the [queue guide](GROK_QUEUE_RU.md) and public example configurations.
+Watercolors, double exposures and generated clips can be edited into an optional
+artistic film manually. Automatic input selection and artistic film assembly are
+future possibilities, not implemented stages of the family AUTO workflow.
+
 ## FULL and MINIMAL production
 
 See [the production and closeout guide (Russian)](FULL_MINIMAL_PRODUCTION_RU.md) for two editable sequences in one 4K project, user-run JSX, FULL locking and MINIMAL validation. Preserve source media and classifications; remove intermediates only after archive verification and project dependency checks.

@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Family editorial plan",
+  "type": "object",
+  "required": [
+    "task_id",
+    "sequence_name",
+    "source_sequence",
+    "source_plan_sha256",
+    "fps",
+    "frames",
+    "duration_seconds",
+    "duration_target",
+    "clips"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sequence_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_sequence": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_plan_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "fps": {
+      "type": "integer",
+      "const": 25
+    },
+    "frames": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "duration_seconds": {
+      "type": "number",
+      "minimum": 0.04
+    },
+    "clips": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "parent_id",
+          "kind",
+          "path",
+          "frames",
+          "timeline_start_frame",
+          "source_in_seconds",
+          "source_out_seconds",
+          "duration_seconds",
+          "speed"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parent_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "frames": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "timeline_start_frame": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source_in_seconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "source_out_seconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "duration_seconds": {
+            "type": "number",
+            "minimum": 0.04
+          },
+          "speed": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 3
+          }
+        }
+      }
+    }
+  }
+}

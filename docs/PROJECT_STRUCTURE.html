@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="source" content="docs/PROJECT_STRUCTURE.md">
-  <title>Memory-to-Video Agent | Project Structure Web Map</title>
+  <title>Memory-to-Video Agent | Актуальная family-архитектура — 2026-09-28</title>
   <style>
     :root {
       --bg: #f7f8fb;
@@ -324,7 +324,8 @@
 </head>
 <body>
   <div class="shell">
-    <aside class="sidebar"><nav><a class="level-2" href="#architecture-1">Architecture</a>
+    <aside class="sidebar"><nav><a class="level-2" href="#базовая-структура-task-системы">Базовая структура task-системы</a>
+<a class="level-2" href="#architecture-1">Architecture</a>
 <a class="level-3" href="#four-core-contracts">Four Core Contracts</a>
 <a class="level-2" href="#subsystem-cards-1">Subsystem Cards</a>
 <a class="level-3" href="#рабочие-дополнения-на-2026-08-30">Рабочие дополнения на 2026-08-30</a>
@@ -349,6 +350,15 @@
 <a class="level-2" href="#выпуск-2026083101-перенос-установки-и-art">Выпуск 2026.08.31.01: перенос установки и ART</a>
 <a class="level-2" href="#архивирование-и-локальная-подготовка-публикации">Архивирование и локальная подготовка публикации</a></nav></aside>
     <main><article class="content">
+<h1 id="актуальная-family-архитектура-2026-09-28">Актуальная family-архитектура — 2026-09-28</h1>
+<p>Дополнительная необязательная ветка: <a href="GROK_QUEUE_RU.md">ручной input → AI-промпты → Grok-видео</a>.
+Вход <code>run_grok_queue.bat</code>, профиль <code>config_grok_queue.json</code>, планировщик
+<code>scripts/run_grok_queue.py</code>, исполнитель <code>scripts/run_grok_prepared_queue.py</code>,
+реестр/хеши <code>utils/grok_workspace.py</code>. Автоотбор input и художественный монтаж
+не реализованы; пользователь может вручную объединять эти видео с акварелями и ART.</p>
+<p>Канонический порядок и границы реализации: <a href="VIDEO_WORKFLOW_FINAL_RU.md">VIDEO_WORKFLOW_FINAL_RU.md</a>. <code>scripts/run_all.bat</code> оркестрирует существующие stage modules через <code>run_all.py</code> и <code>family_stages.py</code>; <code>family_contract.py</code> и <code>scripts/schemas/</code> задают контракт. Task config/state/checkpoints живут в <code>tasks/&lt;TASK&gt;/</code>, независимые копии — в родном permanent storage. <code>tasks/legacy/</code> и <code>output/</code> сохраняются нетронутыми.</p>
+<p>INIT → INGEST → CLASSIFY ORIGINAL → ART → ART CLASSIFY → BANK → WIDE → FULL → PREMIERE HANDOFF; затем независимые FULL → MAIN и FULL → SHORT → STRUCTURE REVIEW → VISUAL FINISH → COLOR → USER FINAL EDIT + MUSIC → FINAL. WIDE/FULL без duration target; MAIN/SHORT параметризованы.</p>
+<p>Прежние compact-first и FULL → MINIMAL описания ниже — справка для старых workflows. Новые family TASK следуют каноническому маршруту выше. Исторические статусы конкретных героев вынесены в их архивы.</p>
 <h1 id="project-structure-web-map">Project Structure Web Map</h1>
 <section id="hero">
 
@@ -400,6 +410,14 @@
 <hr>
 <section id="architecture">
 
+<h2 id="базовая-структура-task-системы">Базовая структура task-системы</h2>
+<p>Общий код находится в scripts/, контракты — в scripts/schemas/.
+Настройки, исходные требования и состояния конкретного задания — в tasks/<TASK>/.
+Классификации, ART, проекты и журналы сохраняются также в постоянных каталогах героя.
+Исторические рабочие статусы конкретных героев архивируются отдельно и не задают
+состояние общего pipeline. Актуальный порядок: <a href="VIDEO_WORKFLOW_FINAL_RU.md">VIDEO_WORKFLOW_FINAL_RU.md</a>.</p>
+<p>Дополнительная очередь <a href="GROK_QUEUE_RU.md">GROK_QUEUE_RU.md</a> не является стадией AUTO:
+пользователь отбирает input вручную, а затем вручную использует ролики в монтаже.</p>
 <h2 id="architecture-1">Architecture</h2>
 <p>Проект состоит из связанных pipeline-маршрутов вокруг одного базового объекта: <strong><code>stage_id</code></strong>.</p>
 <table>
@@ -444,7 +462,7 @@
 <ol>
 <li><code>GenerationConfig</code> в <code>config.py</code> является единой точкой правды для generation-флагов.</li>
 <li>Все артефакты одного этапа имеют общий префикс <code>stage_id</code>.</li>
-<li><code>output/</code> является временной рабочей зоной; итоговая доставка идет через <code>utils/project_delivery.py</code>.</li>
+<li><code>output/</code> теперь считается нетронутым legacy. Исторически он использовался как временная рабочая зона с доставкой через <code>utils/project_delivery.py</code>; существующий код на этом шаге не меняется.</li>
 <li>Sequence-утилиты используют stage-based артефакты из <code>regeneration_assets_dir</code>.</li>
 </ol>
 </section>
