@@ -19,8 +19,12 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 
 ## Current version
 
-- Workspace `VERSION`: **`2026.09.29.02`** ([`VERSION`](VERSION))
-- Release tag: **`v2026.09.29.02`**
+- Workspace `VERSION`: **`2026.10.03.01`** ([`VERSION`](VERSION))
+- Release tag: **`v2026.10.03.01`**
+
+Latest workflow: [user-assembled vertical sequence finishing](docs/USER_SEQUENCE_FINISH_RU.md),
+with external [TASK data storage](docs/FAMILY_STORAGE_RU.md), editable Motion,
+manual Premiere handoff and explicit native QA status.
 
 ## Install this release on a laptop
 

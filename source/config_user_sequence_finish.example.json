@@ -1,0 +1,16 @@
+{
+  "source_project": "<LOCAL_PATH>",
+  "premiere_project_dir": "<LOCAL_PATH>",
+  "task_root": "<LOCAL_PATH>",
+  "run_id": "Hero_VERTICAL_FINISH_01",
+  "source_sequence": "USER_VERTICAL_MONTAGE",
+  "target_sequence": "VERTICAL_FINISH_01",
+  "width": 2160,
+  "height": 3840,
+  "fps": 25,
+  "video_track": 0,
+  "transition_alignment": 0.5,
+  "export_preview": false,
+  "edits": [],
+  "transitions": []
+}

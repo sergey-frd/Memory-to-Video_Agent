@@ -23,7 +23,9 @@
     "docs/INSTALL_ON_NEW_COMPUTER_RU.md",
     "docs/PREMIERE_ART_TASKS_031_034_RU.md",
     "docs/GROK_QUEUE_RU.md",
-    "docs/GROK_SAFE_SESSIONS_RU.md"
+    "docs/GROK_SAFE_SESSIONS_RU.md",
+    "docs/USER_SEQUENCE_FINISH_RU.md",
+    "docs/FAMILY_STORAGE_RU.md"
   ],
   "core_invariants": [
     "GenerationConfig в config.py является единой точкой правды для generation-флагов.",

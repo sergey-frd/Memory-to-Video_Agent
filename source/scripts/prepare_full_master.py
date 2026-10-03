@@ -81,7 +81,7 @@ def make_xml(plan, wide):
         el(parent,'width',w);el(parent,'height',h);rate(parent);el(parent,'pixelaspectratio','square');el(parent,'fielddominance','none');el(parent,'anamorphic','FALSE')
     root=ET.Element('xmeml',version='5');seq=el(root,'sequence',id=plan['sequence_name'].lower().replace('_','-'))
     el(seq,'name',plan['sequence_name']);el(seq,'duration',plan['frames']);rate(seq)
-    media=el(seq,'media');video=el(media,'video');fmt(el(el(video,'format'),'samplecharacteristics'));vt=el(video,'track')
+    media=el(seq,'media');video=el(media,'video');fmt(el(el(video,'format'),'samplecharacteristics'),plan.get('width',3840),plan.get('height',2160));vt=el(video,'track')
     audio=el(media,'audio');el(audio,'numOutputChannels',2);aformat=el(el(audio,'format'),'samplecharacteristics');el(aformat,'depth',16);el(aformat,'samplerate',48000)
     outputs=el(audio,'outputs')
     for ch in (1,2):
@@ -165,7 +165,7 @@ def prepare(task_id, dry_run=False):
 
 Открыть отдельный проект `{project}`. WIDE остаётся в нём и в независимом checkpoint.
 Выбирать sequence не требуется: JSX импортирует новую {plan['sequence_name']} из XML.
-Запустить монитор `scripts\\watch_full_master.bat BM26` из корня репозитория.
+Запустить монитор `scripts\\watch_full_master.bat {task.name}` из корня репозитория.
 Через Run Transition Script запустить `{package / 'assemble_full_master.jsx'}`.
 Скрипт проверяет speed, IN/OUT, длительности, источники, звук и неизменность прежних sequences; затем сохраняет и экспортирует 720p.
 При ошибке не повторять поверх частичной сборки. Прислать native_status.txt и native_progress.log.

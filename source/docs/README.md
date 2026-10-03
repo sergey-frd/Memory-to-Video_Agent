@@ -1,5 +1,8 @@
 # Project Documentation
 
+- [Доведение пользовательского вертикального монтажа](USER_SEQUENCE_FINISH_RU.md) — индивидуальное кадрирование, Motion, переходы, сохранение Lumetri, manual native QA; границы будущего 16:9.
+- [Хранение данных задач](FAMILY_STORAGE_RU.md) — TASK/output, Video Project и проверенный внешний архив.
+
 Каноническая технология: [Family Video Pipeline](VIDEO_WORKFLOW_FINAL_RU.md).
 Общая команда — `scripts/run_all.bat TASK_ID --auto`; остановка перед необходимой
 нативной операцией Premiere и продолжение `--resume` описаны в руководстве.

@@ -47,6 +47,20 @@ def test_prompt_uses_image_and_caches_by_goal(tmp_path):
     assert client.responses.create.call_count == 2
 
 
+def test_alternative_camera_has_separate_prompt_contract_and_cache(tmp_path):
+    _,image,profile=fixture_project(tmp_path)
+    client=fake_client();cache=tmp_path/'cache'
+    queue.make_prompt(image,profile,{},cache,client)
+    profile['camera_variant']='alternative_perspective'
+    profile['previous_prompts']={digest(image):['Locked camera, minimal breathing.']}
+    queue.make_prompt(image,profile,{},cache,client)
+    assert client.responses.create.call_count==2
+    args=client.responses.create.call_args.kwargs
+    assert args['instructions']==queue.ALTERNATIVE_CAMERA_INSTRUCTION
+    context=json.loads(args['input'][0]['content'][0]['text'])
+    assert context['previous_prompts']==['Locked camera, minimal breathing.']
+
+
 def test_invalid_model_response_not_rebilled_on_retry(tmp_path):
     _, image, profile = fixture_project(tmp_path)
     client = fake_client()
@@ -128,6 +142,22 @@ def test_empty_queue_no_model(tmp_path):
     client = fake_client()
     assert queue.prepare('T', profile, settings, client=client) is None
     client.responses.create.assert_not_called()
+
+
+def test_external_workspace_persisted_and_registry_used_on_resume(tmp_path, monkeypatch):
+    settings,image,profile=fixture_project(tmp_path)
+    profile['output_dir']=str(tmp_path/'hero'/'work')
+    plan=queue.prepare('T',profile,settings,client=fake_client())
+    assert plan.is_relative_to(Path(profile['output_dir']))
+    assert queue.read(plan)['output_dir']==str(Path(profile['output_dir']).resolve())
+    delivery=tmp_path/'videos';delivery.mkdir()
+    video=delivery/'done.mp4';video.write_bytes(b'verified fixture')
+    record_completed(settings,image,delivery,[video])
+    profile_settings=Settings(project_root=tmp_path)
+    monkeypatch.setattr(runner,'Settings',lambda:profile_settings)
+    monkeypatch.setattr(runner,'resolve_ffmpeg_executable',lambda:pytest.fail('Completed item must not reach browser'))
+    runner.run(plan)
+    assert profile_settings.output_dir==Path(profile['output_dir']).resolve()
 
 
 def test_changed_delivered_video_no_longer_skips(tmp_path):

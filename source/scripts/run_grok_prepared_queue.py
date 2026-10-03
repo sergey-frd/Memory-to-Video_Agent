@@ -37,6 +37,8 @@ def cleanup_inputs(settings, cleanup, delivery, enabled):
 def run(plan_path: Path) -> None:
     plan = json.loads(plan_path.read_text(encoding='utf-8'))
     settings = Settings()
+    if plan.get('output_dir'):
+        settings.output_dir = Path(plan['output_dir']).resolve()
     if plan.get('input_dir'):
         settings.input_dir = Path(plan['input_dir']).resolve()
     config = load_generation_config(Path(plan['config_file']))

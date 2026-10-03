@@ -27,26 +27,40 @@
     "schema_version": 1,
     "run_enabled": true,
     "planner_model": "gpt-4.1-mini",
-    "main_target_seconds": 240,
-    "main_target_range": [
-      210,
-      270
-    ],
-    "short_target_seconds": 60,
-    "short_target_range": [
-      45,
-      75
-    ],
+    "main_target_seconds": null,
+    "main_target_range": null,
+    "short_target_seconds": 160,
+    "short_target_range": null,
     "photo_seconds": 2.8,
     "art_seconds": 2.4,
     "art": {
-      "watercolor_count": 4,
-      "double_exposure_count": 4,
+      "watercolor_count": null,
+      "double_exposure_count": null,
       "model": "gpt-image-1.5"
     },
     "review": {
       "width": 1280,
       "height": 720,
+      "fps": 25,
+      "video_mbps": 1.2,
+      "audio_kbps": 128
+    },
+    "short_max_seconds": 175,
+    "main_format": {
+      "width": 3840,
+      "height": 2160,
+      "fps": 25,
+      "aspect_ratio": "16:9"
+    },
+    "short_format": {
+      "width": 2160,
+      "height": 3840,
+      "fps": 25,
+      "aspect_ratio": "9:16"
+    },
+    "short_review": {
+      "width": 720,
+      "height": 1280,
       "fps": 25,
       "video_mbps": 1.2,
       "audio_kbps": 128

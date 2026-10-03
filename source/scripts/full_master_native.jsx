@@ -3,7 +3,8 @@ var job=__JOB__,ticks=254016000000,frame=ticks/25,operation='startup';
 var base=new File($.fileName).parent;
 function log(s){var f=new File(base.fsName+'/native_progress.log');f.encoding='UTF-8';if(!f.open('a'))throw Error('Cannot write log');f.writeln(new Date().toString()+' '+s);f.close();}
 function state(s){var f=new File(base.fsName+'/native_status.txt');f.open('w');f.write(s);f.close();log(s);}
-function same(a,b){return String(a).replace(/\\/g,'/').toLowerCase()===String(b).replace(/\\/g,'/').toLowerCase();}
+function normalizedPath(p){return String(p).replace(/\\/g,'/').replace(/\/{2,}/g,'/').toLowerCase();}
+function same(a,b){return normalizedPath(a)===normalizedPath(b);}
 function time(n){var t=new Time();t.ticks=String(Math.round(n));return t;}
 function exact(a,b,label){if(Math.abs(Number(a)-Number(b))>frame/2)throw Error(label+' mismatch: '+a+' != '+b);}
 function sequence(name){var found=null;for(var i=0;i<app.project.sequences.numSequences;i++)if(app.project.sequences[i].name===name){if(found)throw Error('Duplicate sequence '+name);found=app.project.sequences[i];}return found;}
@@ -31,7 +32,7 @@ try{
  operation='import FULL XML';state(operation);
  if(!app.project.importFiles([job.xml],true,app.project.rootItem,false))throw Error('XML import failed');
  var seq=sequence(job.sequence);if(!seq)throw Error('FULL not imported');app.project.openSequence(seq.sequenceID);
- exact(seq.timebase,frame,'timebase');if(seq.frameSizeHorizontal!==3840||seq.frameSizeVertical!==2160)throw Error('Sequence is not 4K');
+ exact(seq.timebase,frame,'timebase');if(seq.frameSizeHorizontal!==(job.plan.width||3840)||seq.frameSizeVertical!==(job.plan.height||2160))throw Error('Sequence is not 4K');
  if(seq.videoTracks[0].clips.numItems!==job.plan.clips.length)throw Error('Video clip count');
  for(i=1;i<seq.videoTracks.numTracks;i++)if(seq.videoTracks[i].clips.numItems)throw Error('Unexpected video track');
  for(i=0;i<job.plan.clips.length;i++){

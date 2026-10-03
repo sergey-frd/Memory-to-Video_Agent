@@ -1,5 +1,13 @@
 # Publishing Workflow
 
+## Release 2026.10.03.01
+
+Adds reusable preparation for finishing a user-assembled vertical sequence,
+external task archive procedures and the current visual finishing guide.
+No Adobe execution is part of this release. The generalized JSX requires native
+validation on the next real task. Horizontal finishing is a documented extension,
+not a supported native result. Personal recipes and runtime/test outputs are excluded.
+
 ## Release 2026.09.29.02
 
 Adds explicit archive-verified cleanup of closed-project video retry metadata.

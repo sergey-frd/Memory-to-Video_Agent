@@ -24,6 +24,13 @@ utils/__pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.test_runs/
+.verification/
+tasks/
+project_media/
+premiere_scripts/*26/
+docs/PORTRAIT_EDITORIAL_CHOICES_RU.md
+docs/ROMANN26_*.md
 test_runtime/
 cleanup_archive/
 error/

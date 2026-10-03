@@ -1,3 +1,45 @@
+## SHORT contract — 2026-09-29
+
+FULL — богатый источник содержания. MAIN — основной горизонтальный фильм 16:9,
+3840×2160 / 25 fps. SHORT — самостоятельный мобильный вертикальный фильм 9:16,
+2160×3840 / 25 fps. FULL → MAIN и FULL → SHORT; cross-parenting запрещён runtime.
+SHORT ≠ shortened MAIN и не трейлер. Собственные selection, montage, hook,
+development, peak, ending, reframing, VISUAL FINISH и COLOR. Допускается материал
+FULL, отсутствующий в MAIN, и другой порядок сцен с содержательной причиной.
+
+`main_format`, `short_format` независимо задают aspect_ratio/width/height/fps.
+`review`: MAIN 1280×720; `short_review`: 720×1280 / 25 fps, H.264,
+1–1.5 Mbps, AAC 128 kbps. Старые configs без новых полей сохраняют свои
+горизонтальные форматы и диапазоны. `short_max_seconds` — TASK-specific hard max.
+При его наличии target — ориентир, не квота; нижняя граница range не навязывает
+длительность. CONTENT FIRST / NO FILLER TO REACH TARGET. Target <= hard max.
+Katya26: SHORT target 160 / max 175 секунд. MAIN duration/range и ART counts
+могут быть null при INIT. Status/dry-run разрешены; accept-init и исполнение
+блокируются как USER_INPUT_REQUIRED до заполнения этих полей.
+
+VERTICAL ≠ STRETCHED. Selection, crop, uniform scale, reframe, virtual camera,
+composition, position animation; никогда geometric distortion. Фото высокого
+разрешения: GENERAL → MEDIUM → CLOSE, лицо, глаза, руки, взаимодействие.
+Видео: индивидуальная композиция с приоритетом FACE / PERSON / INTERACTION / ACTION;
+один fixed center crop для всех сцен запрещён. При плохой композиции выбрать
+другой материал FULL. Движение осмысленное, не механическое.
+ART geometry независима: PRESERVE_ASPECT_RATIO=True и
+exif-normalized-reference_native-output-v2 не изменены.
+
+Граница реализации: формат планов/XML и review preset параметризованы.
+Native executor пока имеет только static proportional fit. До реализации и проверки
+shot-specific reframing вертикальный handoff явно останавливается ДО копирования
+проекта. Existing-empty MAIN target задан в config; native importer запрещает
+совпадение имени и потребует адаптера заполнения существующей sequence.
+CONFIG READY не означает native assembly/QA PASS. VISUAL FINISH/COLOR —
+последующие стадии; текущий AUTO останавливается на STRUCTURE REVIEW.
+
+Katya26 создан с нуля в tasks/Katya26; permanent namespace:
+FamilyMemoryHub/output/Katya26. Только INIT, approval отсутствует.
+MAIN: KatyaZ_26_v01; SHORT: Katya26_SHORT_MASTER_01 (только имя, не создана).
+FINISH/COLOR имеют отдельные имена Katya26_MAIN_FINISH_01,
+Katya26_SHORT_FINISH_01, Katya26_MAIN_COLOR_01, Katya26_SHORT_COLOR_01.
+
 # Актуальная family-архитектура — 2026-09-28
 
 Дополнительная необязательная ветка: [ручной input → AI-промпты → Grok-видео](GROK_QUEUE_RU.md).
@@ -669,3 +711,8 @@ Publication safety:
 | `run_prepare_public_bundle.bat`, `tools/audit_public_bundle.py` | Новый локальный пакет и аудит без commit/push |
 
 Полный порядок: [HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md](HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md). Постоянные архивы и отчёты не относятся к временным файлам.
+
+
+## User montage finish / внешнее хранение — 2026.10.03.01
+
+See [USER_SEQUENCE_FINISH_RU.md](USER_SEQUENCE_FINISH_RU.md) for finishing an existing user-assembled vertical sequence and [FAMILY_STORAGE_RU.md](FAMILY_STORAGE_RU.md) for TASK/output and separate Video Project storage. The generalized preparer does not launch Adobe; native QA remains required. Horizontal finishing is planned, not validated.

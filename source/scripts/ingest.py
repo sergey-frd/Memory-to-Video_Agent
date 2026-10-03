@@ -6,6 +6,8 @@ import json
 import re
 import sys
 import threading
+import tempfile
+import os
 import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -43,9 +45,25 @@ def digest(path):
 
 def write_json(path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + '.tmp')
-    temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
-    temporary.replace(path)
+    # Each writer owns its temporary file; readers only see complete JSON.
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=path.parent,
+                prefix=path.name+'.', suffix='.tmp', delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(json.dumps(payload, ensure_ascii=False, indent=2)+'\n')
+            stream.flush()
+            os.fsync(stream.fileno())
+        for attempt in range(20):
+            try:
+                temporary.replace(path)
+                break
+            except PermissionError as exc:
+                # Windows readers may briefly hold a handle without delete sharing.
+                if os.name != "nt" or getattr(exc, "winerror", None) not in (5,32,33) or attempt == 19:raise
+                time.sleep(.01*(attempt+1))
+    finally:
+        if temporary is not None:temporary.unlink(missing_ok=True)
 
 
 def number(node, field):

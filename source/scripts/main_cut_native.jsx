@@ -23,7 +23,7 @@ try{
  var tr=seq.videoTracks[0].transitions;if(tr.numItems!==job.transitions.length)throw Error('Transition count mismatch');
  for(i=0;i<job.transitions.length;i++){r=job.transitions[i];if(!near(tr[i].start.ticks,r.start_ticks)||!near(tr[i].end.ticks,r.end_ticks))throw Error('Transition bounds mismatch');}
  verifyCheckpoints();state('NATIVE_STRUCTURE_AND_EFFECTS_PASS');step('save native MAIN checkpoint');var started=new Date().getTime();app.project.save();var disk=new File(job.project);if(!disk.exists||disk.modified.getTime()<started-2000)throw Error('Save unconfirmed');
- app.project.openSequence(seq.sequenceID);state('EXPORTING BM26_MAIN_01');var result=seq.exportAsMediaDirect(new File(job.video).fsName,new File(job.preset).fsName,0);log('EXPORT '+result);
+ app.project.openSequence(seq.sequenceID);state('EXPORTING MAIN');var result=seq.exportAsMediaDirect(new File(job.video).fsName,new File(job.preset).fsName,0);log('EXPORT '+result);
  var file=new File(job.video);if(!file.exists||file.length<=0)throw Error('Review missing');verifyCheckpoints();state('EXPORT_FILE_CREATED_REQUIRES_MEDIA_QA');alert('MAIN review created. Send result for verification.');
 }catch(e){state('FAILED '+operation+' line='+e.line+' '+e);alert('MAIN failed: '+operation+' '+e);throw e;}
 })();

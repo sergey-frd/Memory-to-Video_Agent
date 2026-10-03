@@ -1995,3 +1995,8 @@ Keep only `README.md` and `CHANGELOG.md` as root-level documentation entry point
 ## Job closeout and public bundle preparation
 
 See the [closeout guide (Russian)](HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md) for planning, archiving, hash verification and removal of working copies. `run_prepare_public_bundle.bat <new-folder>` builds and audits a separate package without Git operations. Personal configs and media remain local; development Git history is not included.
+
+
+## User montage finish / внешнее хранение — 2026.10.03.01
+
+See [USER_SEQUENCE_FINISH_RU.md](USER_SEQUENCE_FINISH_RU.md) for finishing an existing user-assembled vertical sequence and [FAMILY_STORAGE_RU.md](FAMILY_STORAGE_RU.md) for TASK/output and separate Video Project storage. The generalized preparer does not launch Adobe; native QA remains required. Horizontal finishing is planned, not validated.

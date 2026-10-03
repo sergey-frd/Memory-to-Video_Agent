@@ -5,7 +5,7 @@ validation; invalid plans stop safely rather than triggering uncontrolled retrie
 """
 import argparse,copy,hashlib,json,re,subprocess,sys,xml.etree.ElementTree as ET
 from pathlib import Path
-from family_contract import ROOT,read,sha,config,task_path,validate_schema,artifacts,verify
+from family_contract import ROOT,read,sha,config,task_path,validate_schema,artifacts,verify,branch_format,branch_review,duration_bounds,require_parent,missing_inputs
 from ingest import write_json,heartbeat
 from classify import copy_verified
 from utils import premiere_project as pp
@@ -60,36 +60,100 @@ def art_plan(task,cfg):
  candidates=[m for m in catalog(bank) if Path(m['source_path']).suffix.lower() in {'.jpg','.jpeg','.png','.webp','.bmp','.tif','.tiff'}]
  counts=f['art'];schema=obj({'selections':{'type':'array','items':obj({'source_media_id':{'type':'string','enum':[m['media_id'] for m in candidates]},'art_type':{'type':'string','enum':['watercolor','double_exposure']},'background_concept':{'type':'string'},'artistic_rationale':{'type':'string','minLength':1}})}})
  if max(counts['watercolor_count'],counts['double_exposure_count'])>len(candidates):raise ValueError('Not enough classified stills for configured ART counts')
- selection=ask(task,cfg,'art_selection',dict(catalog=candidates,counts=counts,heroes=cfg['heroes'],concept=cfg['intent']),schema,'Select exactly the requested counts of diverse, strong photographs. No repeated source within a style. ART supports the human portrait. Select only supported content; double exposure backgrounds must be an artistic idea, not an invented biographical claim.') if counts['watercolor_count']+counts['double_exposure_count'] else {'selections':[]}
+ payload=dict(catalog=candidates,counts=counts,heroes=cfg['heroes'],concept=cfg['intent'])
+ instruction='Select exactly the requested counts of diverse, strong photographs. No repeated source within a style. ART supports the human portrait. Select only supported content; double exposure backgrounds must be an artistic idea, not an invented biographical claim.'
+ # Recover the original paid response without changing its fingerprint or raw bytes.
+ fingerprint=hashlib.sha256(json.dumps([1,instruction,payload,schema,f['planner_model']],sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+ cache_name='art_selection_'+fingerprint
+ folders=[task/'pipeline/cache',Path(cfg['classify']['permanent_project_dir'])/'pipeline'/task.name/'cache']
+ legacy=any((folder/(cache_name+suffix)).exists() for folder in folders for suffix in ['.json','.response.json'])
+ prior=ask(task,cfg,'art_selection',payload,schema,instruction)['selections'] if legacy else []
+ selection={'selections':[]}
+ for kind in ['watercolor','double_exposure']:
+  count=counts[kind+'_count'];rows=[r for r in prior if r['art_type']==kind]
+  if len(rows)>count or len({r['source_media_id'] for r in rows})!=len(rows):raise ValueError('Invalid cached ART selection for '+kind+'; preserve response for diagnosis')
+  remaining=count-len(rows)
+  if remaining:
+   available=[m for m in candidates if m['media_id'] not in {r['source_media_id'] for r in rows}]
+   item=copy.deepcopy(schema['properties']['selections']['items'])
+   item['properties']['art_type']['enum']=[kind]
+   item['properties']['source_media_id']['enum']=[m['media_id'] for m in available]
+   exact=obj({'selections':dict(type='array',minItems=remaining,maxItems=remaining,items=item)})
+   addition=ask(task,cfg,'art_selection_'+kind,dict(catalog=available,count=remaining,art_type=kind,heroes=cfg['heroes'],concept=cfg['intent'],already_selected=rows),exact,instruction+' Select only '+kind+'; return exactly '+str(remaining)+' additional selections.')
+   rows+=addition['selections']
+  if len(rows)!=count or any(r['art_type']!=kind for r in rows) or len({r['source_media_id'] for r in rows})!=count:raise ValueError('ART selection count/style/uniqueness mismatch: '+kind)
+  selection['selections'].extend(rows)
+
  ac=dict(schema_version=1,task_id=task.name,**counts,generation_backend='openai_api',heartbeat_seconds=10,permanent_project_dir=cfg['classify']['permanent_project_dir'],permanent_relative_dir='ART',classification_sha256=sha(task/'classify/classification.json'),subject_description=cfg['intent'],selections=selection['selections'])
  from art import build_plan
  build_plan(task,ac,bank,Path(ac['permanent_project_dir'])/'ART');write_json(target,ac)
+
+def wide_decisions(task,cfg,bank):
+ # Mandatory object keys guarantee one decision per source. Short local aliases
+ # prevent accidental transcription of long hashes; canonical IDs never change.
+ aliases={f'M{i+1:03d}':m['media_id'] for i,m in enumerate(bank['media'])}
+ rows=catalog(bank)
+ for alias,row in zip(aliases,rows):row['media_id']=alias
+ decision=obj({'chapter_id':{'type':'string'},'order':{'type':'integer','minimum':0},'reason':{'type':'string','minLength':1}})
+ schema=obj({'chapters':{'type':'array','minItems':1,'items':obj({'id':{'type':'string','minLength':1},'title':{'type':'string'},'purpose':{'type':'string'}})},'decisions':obj({alias:decision for alias in aliases})})
+ result=ask(task,cfg,'wide_partition_v2',dict(catalog=rows,concept=cfg['intent'],heroes=cfg['heroes']),schema,'Build WIDE coverage from original video, photos and classified ART as equals. NO duration target or quota. Cover good distinct content, not a dump. Every required media key needs one evidence-based decision: chapter_id identifies a chapter, or empty string means exclude. Exclude only technical junk, obvious duplicates, meaningless repetition or clearly weak material. Give each selected item a distinct order within its chapter. Include ART as independent candidates, no automatic source/ART adjacency. Do not invent biography or relationships.')
+ validate_schema(result,schema)
+ chapters={ch['id']:dict(ch,media_ids=[]) for ch in result['chapters']}
+ if len(chapters)!=len(result['chapters']):raise ValueError('Duplicate WIDE chapter ID')
+ exclusions=[];ordered={key:[] for key in chapters}
+ for alias,d in result['decisions'].items():
+  mid=aliases[alias];ch=d['chapter_id']
+  if not ch:exclusions.append(dict(media_id=mid,reason=d['reason']));continue
+  if ch not in chapters:raise ValueError('Unknown WIDE chapter '+ch)
+  ordered[ch].append((d['order'],mid))
+ for ch,entries in ordered.items():
+  if len({order for order,mid in entries})!=len(entries):raise ValueError('Duplicate WIDE editorial order in '+ch)
+  chapters[ch]['media_ids']=[mid for order,mid in sorted(entries)]
+ selected=[ch for ch in chapters.values() if ch['media_ids']]
+ if not selected:raise ValueError('Empty WIDE selection')
+ return dict(chapters=selected,exclusions=exclusions)
 
 def wide_plan(task,cfg):
  out=task/'pipeline/wide_plan.json'
  if out.exists():wide_validate(read(out));return
  pointer=read(task/'classified_media_bank.json');verify({pointer['classification_path']:pointer['sha256']});bank=read(pointer['classification_path']);f=cfg['family_pipeline']
- schema=obj({'chapters':{'type':'array','minItems':1,'items':obj({'id':{'type':'string'},'title':{'type':'string'},'purpose':{'type':'string'},'media_ids':{'type':'array','minItems':1,'items':{'type':'string','enum':[m['media_id'] for m in bank['media']]}}})},'exclusions':{'type':'array','items':obj({'media_id':{'type':'string'},'reason':{'type':'string','minLength':1}})}})
- choice=ask(task,cfg,'wide',dict(catalog=catalog(bank),concept=cfg['intent'],heroes=cfg['heroes']),schema,'Build WIDE coverage from original video, photos and classified ART as equals. NO duration target. Cover good distinct content, not a dump. Exclude only technical junk, obvious duplicates, meaningless repetition or clearly weak material. Every media ID must appear exactly once, selected in a chapter OR excluded with an evidence-based reason. No quota, no automatic source/ART adjacency.')
- selected=[mid for ch in choice['chapters'] for mid in ch['media_ids']];excluded=[x['media_id'] for x in choice['exclusions']]
- if len(set(selected+excluded))!=len(selected+excluded) or set(selected+excluded)!={m['media_id'] for m in bank['media']}:raise ValueError('WIDE decisions do not partition the entire bank')
+ choice=wide_decisions(task,cfg,bank)
+
  wc=dict(task_id=task.name,sequence_name=task.name+'_WIDE_MASTER_01',bank_sha256=pointer['sha256'],fps=25,width=3840,height=2160,chapters=choice['chapters'],art_seconds=f['art_seconds'],photo_seconds=f['photo_seconds'],audio_policy='source audio at normal speed; no added music')
  plan=wide_build(bank,wc);plan['not_selected']=choice['exclusions'];wide_validate(plan);write_json(out,plan)
 
-def edit_plan(task,cfg,source,branch):
+def edit_plan(task,cfg,source,branch,decision_override=None):
+ require_parent(source,branch)
  f=cfg['family_pipeline'];is_full=branch=='FULL';prefix={'FULL':'FM','MAIN':'MN','SHORT':'SM'}[branch]
  segment=obj({'in_seconds':{'type':'number','minimum':0},'out_seconds':{'type':'number','minimum':0},'speed':{'type':'integer','enum':[1,2,3] if is_full else [1]}})
- schema=obj({'decisions':{'type':'array','items':obj({'id':{'type':'string','enum':[c['id'] for c in source['clips']]},'reason':{'type':'string','minLength':1},'segments':{'type':'array','items':segment}})},'warnings':{'type':'array','items':{'type':'string'}}})
+ row=obj({'order':{'type':'integer','minimum':0},'reason':{'type':'string','minLength':1},'segments':{'type':'array','items':segment}})
+ schema=obj({'decisions':obj({c['id']:row for c in source['clips']}),'warnings':{'type':'array','items':{'type':'string'}}})
  payload=dict(concept=cfg['intent'],heroes=cfg['heroes'],clips=source['clips'],target=None if is_full else f[branch.lower()+'_target_seconds'],target_range=None if is_full else f[branch.lower()+'_target_range'])
  instruction=('Build a rich FULL from WIDE, NO duration target. Remove semantic repetition and weak tails. Speed 2 or 3 only for preparation/waiting/repetition supported by evidence; meaningful actions remain 1. Do not arbitrarily shorten every clip.' if is_full else f'Build independent {branch} directly from FULL, never the other branch. Select a self-contained story within configured range without padding weak material. MAIN allows breathing and human moments; SHORT needs hook/development/peak/ending. Keep inherited source speed, no new acceleration.')
- decision=ask(task,cfg,branch.lower(),payload,schema,instruction+' Return each source clip ID exactly once, in chosen editorial order; empty segments means DROP. Segment bounds are relative TIMELINE seconds within the parent clip, not media seconds. Bounds must align to 25fps; speed divisions must also align. Images can be shortened but not lengthened beyond parent. Preserve chronology unless thematic rearrangement is justified. Durations must reflect meaning; never uniform compression.')
- ds=decision['decisions'];lookup={c['id']:c for c in source['clips']}
+ if branch=='SHORT':
+  payload.update(format=branch_format(cfg,branch),hard_max_seconds=f.get('short_max_seconds'),reframing_policy='Selection, crop, uniform scale, virtual camera, position animation; never geometric stretching. Protect face, hands, interaction and action; choose alternative FULL material when needed.')
+  instruction+=' SHORT is an independent mobile film, not a trailer or shortened MAIN. Target is guidance, not a quota; end earlier when content ends. No filler. Plan shot-specific reframing, never a blanket center crop.'
+  limit=duration_bounds(cfg,'SHORT')[1]
+  payload['duration_budget_frames']=int(limit*25)
+  payload['source_total_seconds']=source['duration_seconds'] if 'duration_seconds' in source else sum(c['duration_seconds'] for c in source['clips'])
+  payload['clips']=[{k:c.get(k) for k in ['id','kind','duration_seconds','speed','art_type','reason','chapter_title','semantic_function']} for c in source['clips']]
+  instruction+=f' HARD CONSTRAINT: sum((out_seconds-in_seconds)/speed) across ALL selected segments must be <= {limit} seconds ({int(limit*25)} frames). Required decision keys do NOT mean keep all clips: explicitly DROP weaker/redundant clips using empty segments and evidence-based reasons. Build a selective story with hook, development, peak, ending; do not copy FULL selection/order. Keep natural timing of meaningful actions; no uniform compression, acceleration or arbitrary tail truncation. Calculate total before returning. Segment times are 0-based WITHIN each parent clip, never original media timecodes.'
+ decision=decision_override if decision_override is not None else ask(task,cfg,branch.lower()+'_partition_v2',payload,schema,instruction+' Return a decision under every required source clip key, with distinct order integers defining editorial order; empty segments means DROP. Segment bounds are relative TIMELINE seconds within the parent clip, not media seconds. Bounds must align to 25fps; speed divisions must also align. Images can be shortened but not lengthened beyond parent. Preserve chronology unless thematic rearrangement is justified. Durations must reflect meaning; never uniform compression.')
+ validate_schema(decision,schema)
+ rows=decision['decisions']
+ if len({d['order'] for d in rows.values()})!=len(rows):raise ValueError('Duplicate editorial decision order')
+ ds=[dict(id=key,**d) for key,d in sorted(rows.items(),key=lambda pair:pair[1]['order'])];lookup={c['id']:c for c in source['clips']}
  if len(ds)!=len(lookup) or {d['id'] for d in ds}!=set(lookup):raise ValueError('Missing/duplicate source decisions')
- clips=[];cursor=0
+ clips=[];cursor=0;coordinate_normalizations=[]
  for d in ds:
   c=lookup[d['id']];prev=0
   for seg in d['segments']:
    lo,hi,rate=seg['in_seconds'],seg['out_seconds'],seg['speed']
+   # Only an exact whole-source range at native speed is unambiguous.
+   # Preserve the paid response and document the coordinate conversion.
+   if hi>c['duration_seconds']+1e-7 and len(d['segments'])==1 and c['kind']=='video' and c.get('speed',1)==1 and abs(lo-c['source_in_seconds'])<1e-7 and abs(hi-c['source_out_seconds'])<1e-7:
+    coordinate_normalizations.append(dict(parent_id=c['id'],original_segment=dict(seg),relative_in_seconds=0,relative_out_seconds=c['duration_seconds'],reason='Exact complete source interval expressed in media coordinates'))
+    lo,hi=0,c['duration_seconds']
    if not 0<=prev<=lo<hi<=c['duration_seconds']+1e-7 or (c['kind']=='image' and rate!=1):raise ValueError('Invalid parent range '+d['id'])
    frames=round((hi-lo)*25/rate)
    if frames<1 or abs(frames*rate/25-(hi-lo))>1e-7 or abs(lo*25-round(lo*25))>1e-7:raise ValueError('Non-frame-aligned range '+d['id'])
@@ -98,9 +162,36 @@ def edit_plan(task,cfg,source,branch):
    clips.append(r);cursor+=frames;prev=hi
  if not clips:raise ValueError('Empty editorial plan')
  if not is_full:
-  low,high=f[branch.lower()+'_target_range']
+  low,high=duration_bounds(cfg,branch)
   if not low<=cursor/25<=high:raise ValueError(f'{branch} outside configured range: {cursor/25}; no mechanical padding')
- return dict(schema_version=1,task_id=task.name,sequence_name=task.name+'_'+branch+'_MASTER_01',source_sequence=source['sequence_name'],source_plan_sha256=hashlib.sha256(json.dumps(source,sort_keys=True).encode()).hexdigest(),fps=25,width=3840,height=2160,frames=cursor,duration_seconds=cursor/25,duration_target=None if is_full else f[branch.lower()+'_target_seconds'],clips=clips,decisions=ds,warnings=decision['warnings'],music_added=False,status='PLAN_READY_NATIVE_PENDING')
+ return dict(schema_version=1,task_id=task.name,sequence_name=cfg.get('sequences',{}).get(branch.lower(),{}).get('name',task.name+'_'+branch+'_MASTER_01'),source_sequence=source['sequence_name'],source_plan_sha256=hashlib.sha256(json.dumps(source,sort_keys=True).encode()).hexdigest(),branch=branch,**branch_format(cfg,branch),frames=cursor,duration_seconds=cursor/25,duration_target=None if is_full else f[branch.lower()+'_target_seconds'],clips=clips,decisions=ds,coordinate_normalizations=coordinate_normalizations,warnings=decision['warnings'],music_added=False,status='PLAN_READY_NATIVE_PENDING')
+
+def short_plan(task,cfg,source):
+ """Select an ordered shortlist, then assemble unchanged source intervals locally."""
+ limit=int(duration_bounds(cfg,'SHORT')[1]*25)
+ costs=sorted((c['frames'] for c in source['clips']),reverse=True)
+ maximum=0;total=0
+ for cost in costs:
+  if total+cost>limit:break
+  total+=cost;maximum+=1
+ if maximum<1:raise ValueError('No guaranteed whole-clip shortlist fits SHORT budget; explicit segment planning required')
+ item=obj({'id':{'type':'string','enum':[c['id'] for c in source['clips']]},'role':{'type':'string','enum':['hook','development','peak','ending']},'reason':{'type':'string','minLength':1}})
+ schema=obj({'story':{'type':'string','minLength':1},'selected':{'type':'array','minItems':1,'maxItems':maximum,'items':item}})
+ payload=dict(heroes=cfg['heroes'],concept=cfg['intent'],target_seconds=cfg['family_pipeline']['short_target_seconds'],hard_max_seconds=limit/25,maximum_items=maximum,catalog=[{k:c.get(k) for k in ['id','kind','art_type','duration_seconds','reason','chapter_title','semantic_function']} for c in source['clips']])
+ choice=ask(task,cfg,'short_shortlist_v3',payload,schema,'Select an ordered shortlist for an independent vertical mobile film directly from FULL. This is SELECTION, not one decision per source: return ONLY selected unique IDs, in story order. Build hook/development/peak/ending using strongest meaningful varied human moments and purposeful ART. Avoid redundant similar portraits or automatic original/ART pairing. Maximum items is only a ceiling, never a quota; stop earlier when content ends. Whole source intervals are retained to preserve natural actions; no mechanical compression. Select fewer than the ceiling when appropriate. Use only evidenced content; favor material suitable for vertical composition. Return Russian reasons.')
+ validate_schema(choice,schema)
+ selected=choice['selected'];ids=[r['id'] for r in selected]
+ if len(ids)!=len(set(ids)):raise ValueError('Duplicate SHORT shortlist item')
+ roles=[r['role'] for r in selected]
+ if roles[0]!='hook' or roles[-1]!='ending' or 'peak' not in roles or 'development' not in roles:raise ValueError('SHORT story lacks required development/peak or opening/ending')
+ lookup={c['id']:c for c in source['clips']};decisions={}
+ for index,r in enumerate(selected):
+  c=lookup[r['id']];decisions[r['id']]=dict(order=index,reason=r['role']+': '+r['reason'],segments=[dict(in_seconds=0,out_seconds=c['duration_seconds'],speed=1)])
+ for c in source['clips']:
+  if c['id'] not in decisions:decisions[c['id']]=dict(order=len(decisions),reason='Not selected for the independent SHORT story; available in FULL',segments=[])
+ plan=edit_plan(task,cfg,source,'SHORT',decision_override=dict(decisions=decisions,warnings=['Shot-specific vertical composition still requires visual review in Premiere.']))
+ plan['short_selection']=dict(story=choice['story'],maximum_items=maximum,selected=selected,method='ordered shortlist then whole-clip assembly; no duration padding')
+ validate_edit_plan(plan,source,task,cfg,'SHORT');return plan
 
 def metadata(path):
  from PIL import Image,ImageOps
@@ -125,15 +216,13 @@ def prepare_handoff(task,cfg,stage):
   plans=[read(task/'pipeline/wide_plan.json'),read(task/'pipeline/full_plan.json')];source=Path(cfg['paths']['premiere_project']);source_sequence=cfg['sequences']['source']['name']
  else:
   previous=read(task/'pipeline/FULL_PREMIERE_HANDOFF/handoff.json');source=Path(previous['project']);plans=[read(task/'pipeline/main_plan.json'),read(task/'pipeline/short_plan.json')];source_sequence=previous['jobs'][-1]['sequence']
+ if any(plan.get('height',2160)>plan.get('width',3840) for plan in plans):
+  from family_manual_branches import prepare
+  return prepare(task,cfg,source,plans)
  package=Path(cfg['classify']['permanent_project_dir'])/'pipeline'/task.name/stage;package.mkdir(parents=True,exist_ok=True)
- project=source.parent/(task.name+'_'+('FULL' if first else 'BRANCHES')+'_CHECKPOINT_01.prproj')
+ project=Path(cfg['classify']['permanent_project_dir'])/'projects'/(task.name+'_'+('FULL' if first else 'BRANCHES')+'_CHECKPOINT_01.prproj')
  if project.exists() and sha(project)!=sha(source):raise ValueError('Existing work project differs; preserve it and diagnose partial handoff')
  if not project.exists():copy_verified(source,project)
- preset=ET.parse(ROOT/'scripts/presets/review_720p25.epr');review=cfg['family_pipeline']['review']
- for n in preset.getroot().iter('ExporterParam'):
-  k=n.findtext('ParamIdentifier');v={'ADBEVideoTargetBitrate':review['video_mbps'],'ADBEAudioBitrate':review['audio_kbps']}.get(k)
-  if v is not None:n.find('ParamValue').text=str(v)
- preset.write(package/'review.epr',encoding='utf-8',xml_declaration=True)
  metadata_cache={};jobs=[];script=[]
  # Prevent Premiere importer basename collisions with previously imported assets.
  tree=pp.load_premiere_project_root(source);names={}
@@ -145,17 +234,23 @@ def prepare_handoff(task,cfg,stage):
   for c in plan['clips']:names.setdefault(Path(c['path']).name.lower(),set()).add(str(Path(c['path'])).lower())
  aliases={}
  for plan in plans:
+  review=branch_review(cfg,plan.get('branch','FULL'))
+  preset=ET.parse(ROOT/'scripts/presets/review_720p25.epr')
+  values={'ADBEVideoWidth':review['width'],'ADBEVideoHeight':review['height'],'ADBEVideoFPS':T//25,'ADBEVideoMatchSource':'false','ADBEVideoTargetBitrate':review['video_mbps'],'ADBEVideoMaxBitrate':1.5,'ADBEAudioBitrate':review['audio_kbps']}
+  for n in preset.getroot().iter('ExporterParam'):
+   if n.findtext('ParamIdentifier') in values:n.find('ParamValue').text=str(values[n.findtext('ParamIdentifier')])
+  preset_path=package/(plan['sequence_name']+'_review.epr');preset.write(preset_path,encoding='utf-8',xml_declaration=True)
   for c in plan['clips']:
    path=Path(c['path']);key=str(path)
    if key not in metadata_cache:metadata_cache[key]=metadata(path)
-   c.update(metadata_cache[key]);c['audio']='source' if c['kind']=='video' and c.get('speed',1)==1 and c['channels'] else 'muted';c['fit_scale']=100*min(3840/c['width'],2160/c['height']);c.setdefault('wide_item',c['id'])
-   if len(names[path.name.lower()])>1:
+   c.update(metadata_cache[key]);c['audio']='source' if c['kind']=='video' and c.get('speed',1)==1 and c['channels'] else 'muted';c['fit_scale']=100*min(plan.get('width',3840)/c['width'],plan.get('height',2160)/c['height']);c.setdefault('wide_item',c['id'])
+   if len(names[path.name.lower()])>1 or c.get('art_type') or c.get('media_origin')=='generated_art':
     alias=package/'media'/(task.name+'_'+sha(path)[:16]+'_'+path.name)
     if not alias.exists():copy_verified(path,alias)
     elif sha(alias)!=sha(path):raise ValueError('Alias conflict')
     aliases[str(alias)]=sha(alias);c['original_source_path']=str(path);c['path']=str(alias)
   xml=package/(plan['sequence_name']+'.xml');xml.write_text(make_xml(plan,plan),encoding='utf-8')
-  job=dict(project=project.as_posix(),sequence=plan['sequence_name'],source_sequence=source_sequence,plan=plan,xml=xml.as_posix(),preset=(package/'review.epr').as_posix(),video=(package/(plan['sequence_name']+'_REVIEW.mp4')).as_posix())
+  job=dict(project=project.as_posix(),sequence=plan['sequence_name'],source_sequence=source_sequence,plan=plan,xml=xml.as_posix(),review=review,preset=preset_path.as_posix(),video=(package/(plan['sequence_name']+'_REVIEW.mp4')).as_posix())
   source_sequence=job['sequence'] if first else source_sequence
   js=(ROOT/'scripts/full_master_native.jsx').read_text(encoding='utf-8').replace('__HELPERS__',HELPERS[:HELPERS.index('function cloneNamed')]).replace('__JOB__',json.dumps(job,ensure_ascii=True))
   js=js.replace("alert('FULL review created. Send result for verification: '+job.video);",'')
@@ -163,7 +258,7 @@ def prepare_handoff(task,cfg,stage):
   script.append(js);jobs.append(job)
  jsx=package/'assemble_checkpoints.jsx';jsx.write_text('\n'.join(script)+"\nalert('Checkpoints exported. Run the resume command.');\n",encoding='utf-8')
  handoff=dict(status='USER_ACTION_REQUIRED',task=task.name,stage=stage,project=str(project),source_project=str(source),source_sha256=sha(source),jsx=str(jsx),jobs=jobs,aliases=aliases,user_action='Open the listed work project; run the JSX via Run Transition Script; do not rerun after a partial failure.',expected_result=[j['sequence'] for j in jobs],resume_command=f'"{ROOT / "scripts/run_all.bat"}" {task.name} --resume')
- handoff['prepared_artifacts']=artifacts([jsx,package/'review.epr',*[j['xml'] for j in jobs],*aliases])
+ handoff['prepared_artifacts']=artifacts([jsx,*[j['preset'] for j in jobs],*[j['xml'] for j in jobs],*aliases])
  handoff['monitor_command']=f'"{ROOT / "scripts/run_all.bat"}" {task.name} --watch'
  write_json(hand,handoff);copy_verified(hand,package/'handoff.json')
 
@@ -192,7 +287,8 @@ def resume_handoff(task,cfg,pending):
   probe=subprocess.run([resolve_ffmpeg_executable(),'-i',str(video)],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=60).stderr
   duration=re.search(r'Duration: (\d+):(\d+):(\d+\.\d+)',probe)
   if not duration or abs(sum(float(v)*m for v,m in zip(duration.groups(),[3600,60,1]))-j['plan']['duration_seconds'])>.15:raise ValueError('Review duration mismatch')
-  if not re.search(r'Video: h264[^\r\n]*1280x720[^\r\n]*25 fps',probe):raise ValueError('Review must be H264 1280x720 25fps')
+  review=j.get('review',branch_review(cfg,'MAIN'));size=str(review['width'])+'x'+str(review['height'])
+  if not re.search(r'Video: h264[^\r\n]*'+size+r'[^\r\n]*25 fps',probe):raise ValueError('Review format mismatch')
   if any(c['audio']=='source' for c in j['plan']['clips']) and not re.search(r'Audio: aac',probe):raise ValueError('Review source audio missing')
   with heartbeat('VERIFY NATIVE REVIEW '+j['sequence']):
    result=subprocess.run([resolve_ffmpeg_executable(),'-v','error','-xerror','-i',str(video),'-f','null','-'],capture_output=True,timeout=900)
@@ -259,7 +355,10 @@ def stage_outputs(task,cfg,stage):
  raise ValueError('Unknown output stage '+stage)
 
 def validate_edit_plan(plan,parent,task,cfg,branch):
+ require_parent(parent,branch)
  validate_schema(plan,read(ROOT/'scripts/schemas/family_edit_plan.schema.json'))
+ for k in ['width','height','fps']:
+  if plan.get(k)!=branch_format(cfg,branch)[k]:raise ValueError('Editorial format mismatch')
  expected_hash=hashlib.sha256(json.dumps(parent,sort_keys=True).encode()).hexdigest()
  if plan['task_id']!=task.name or plan['source_sequence']!=parent['sequence_name'] or plan['source_plan_sha256']!=expected_hash:raise ValueError('Editorial parent mismatch')
  lookup={c['id']:c for c in parent['clips']};cursor=0;seen=set()
@@ -274,11 +373,13 @@ def validate_edit_plan(plan,parent,task,cfg,branch):
  if branch=='FULL':
   if plan['duration_target'] is not None:raise ValueError('FULL cannot have duration target')
  else:
-  lo,hi=cfg['family_pipeline'][branch.lower()+'_target_range']
+  lo,hi=duration_bounds(cfg,branch)
   if not lo<=cursor/25<=hi:raise ValueError('Branch target range exceeded')
 
 def run(task,stage):
- cfg=config(task);p=task/'pipeline';p.mkdir(exist_ok=True)
+ cfg=config(task)
+ if missing_inputs(cfg):raise ValueError('USER_INPUT_REQUIRED: '+', '.join(missing_inputs(cfg)))
+ p=task/'pipeline';p.mkdir(exist_ok=True)
  # Recovery after a crash between validated output creation and coordinator commit.
  if stage in ['INGEST','CLASSIFY','ART','ART_CLASSIFY','BANK']:
   try:stage_outputs(task,cfg,stage);print('RECOVER VALID OUTPUT '+stage);return
@@ -302,7 +403,7 @@ def run(task,stage):
   full=read(p/'FULL_PREMIERE_HANDOFF/handoff.json')['jobs'][-1]['plan']
   for branch in ['MAIN','SHORT']:
    out=p/(branch.lower()+'_plan.json')
-   if not out.exists():write_json(out,edit_plan(task,cfg,full,branch))
+   if not out.exists():write_json(out,short_plan(task,cfg,full) if branch=='SHORT' else edit_plan(task,cfg,full,branch))
  elif stage.endswith('PREMIERE_HANDOFF'):prepare_handoff(task,cfg,stage)
  else:raise ValueError('Unknown stage '+stage)
  stage_outputs(task,cfg,stage)

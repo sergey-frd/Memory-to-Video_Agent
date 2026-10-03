@@ -8,7 +8,7 @@ def render(task):
  work=task/'art_2';state=read(work/'generation_state.json');plan=read(work/'ART_2_REGENERATE.json')
  entries=[e for e in plan['entries'] if e['decision']=='REGENERATE_PORTRAIT']
  review=work/'review';review.mkdir(exist_ok=True)
- rows=['<!doctype html><html lang="ru"><meta charset="utf-8"><title>ART_2 results</title><style>body{font:17px system-ui;margin:24px;background:#eee}table{width:100%;table-layout:fixed;background:white}td{vertical-align:top;padding:12px}img{width:100%;height:480px;object-fit:contain}h2{margin-top:36px}</style><h1>BM26 — ART_2</h1><p>Original / ART v1 / ART v2. Canvas is preserved; no stretching. Four approved generations. Montage and v1 unchanged.</p>']
+ rows=['<!doctype html><html lang="ru"><meta charset="utf-8"><title>ART_2 results</title><style>body{font:17px system-ui;margin:24px;background:#eee}table{width:100%;table-layout:fixed;background:white}td{vertical-align:top;padding:12px}img{width:100%;height:480px;object-fit:contain}h2{margin-top:36px}</style><h1>ART_2 review</h1><p>Original / ART v1 / ART v2. Canvas is preserved; no stretching. Approved generations. Montage and v1 unchanged.</p>']
  for e in entries:
   r=state['results'][e['art_id']]
   if r['status']!='COMPLETE':raise ValueError('Generation incomplete')

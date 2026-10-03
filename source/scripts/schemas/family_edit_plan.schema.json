@@ -106,6 +106,22 @@
           }
         }
       }
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "branch": {
+      "type": "string",
+      "enum": [
+        "FULL",
+        "MAIN",
+        "SHORT"
+      ]
     }
   }
 }

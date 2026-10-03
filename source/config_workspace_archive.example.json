@@ -1,0 +1,10 @@
+{
+  "archive_id": "workspace_closeout_YYYYMMDD",
+  "heroes": {
+    "Hero": {
+      "config": "<LOCAL_PATH>",
+      "aliases": [],
+      "extra_files": []
+    }
+  }
+}

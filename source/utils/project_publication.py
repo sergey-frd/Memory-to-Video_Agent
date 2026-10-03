@@ -33,6 +33,7 @@ EXCLUDED_DIR_NAMES = {
     "source",
     "tasks",
     ".test_runs",
+    ".verification",
     "project_media",
 }
 EXCLUDED_DIR_PREFIXES = ("pytest-cache-files-", "pytest-temp", ".tmp", "tmp_", "input_", "output_", "TASK_")
@@ -65,6 +66,7 @@ EXCLUDED_SOURCE_RELATIVE_FILES = {
     "docs/HERO_VIDEO_CLOSEOUT_RU.md",
 }
 PUBLISHED_SOURCE_SUFFIXES = {
+    ".cjs",
     ".epr",
     ".bat",
     ".css",
@@ -90,6 +92,8 @@ PUBLISHED_SOURCE_SUFFIXES = {
 TEXT_READ_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251")
 
 DOC_TARGETS = {
+    "docs/USER_SEQUENCE_FINISH_RU.md": "docs/USER_SEQUENCE_FINISH_RU.md",
+    "docs/FAMILY_STORAGE_RU.md": "docs/FAMILY_STORAGE_RU.md",
     "docs/GROK_QUEUE_RU.md": "docs/GROK_QUEUE_RU.md",
     "docs/GROK_SAFE_SESSIONS_RU.md": "docs/GROK_SAFE_SESSIONS_RU.md",
     "docs/PORTRAIT_WORKFLOW_CHOICES_RU.md": "docs/PORTRAIT_WORKFLOW_CHOICES_RU.md",
@@ -195,7 +199,7 @@ def _is_excluded_file_name(filename: str) -> bool:
     if filename == ".env.template":
         return False
     name = filename.casefold()
-    if 'bm26' in name:
+    if any(hero in name for hero in ('bm26','ben26','max26','arkady26')):
         return True
     # Personal completed-job instructions and launchers stay local.
     if "romann26" in name or name.startswith("romann26_"):

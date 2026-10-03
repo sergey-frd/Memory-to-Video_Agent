@@ -2,7 +2,7 @@
 import argparse,json,os,queue,re,subprocess,sys,threading,time,traceback
 from datetime import datetime,timezone
 from pathlib import Path
-from family_contract import ROOT,STAGES,config,read,sha,task_path,artifacts,verify
+from family_contract import ROOT,STAGES,config,read,sha,task_path,artifacts,verify,missing_inputs
 from ingest import write_json
 
 def now():return datetime.now(timezone.utc).isoformat()
@@ -54,7 +54,7 @@ def run(task,mode,dry=False,start_stage=None,executor=None):
  if mode=='watch':return watch_native(task)
  if mode=='status':
   frozen=(task/'task.json').exists() and read(task/'task.json').get('family_pipeline',{}).get('run_enabled') is False
-  state=read(sp) if sp.exists() else {'task':task.name,'status':'FROZEN_REFERENCE' if frozen else 'NOT_INITIALIZED','next':'Historical experiment; no rerun' if frozen else command(task,'--dry-run')}
+  state=read(sp) if sp.exists() else read(task/'state.json') if (task/'state.json').exists() and not frozen else {'task':task.name,'status':'FROZEN_REFERENCE' if frozen else 'NOT_INITIALIZED','next':'Historical experiment; no rerun' if frozen else command(task,'--dry-run')}
   print(json.dumps(state,ensure_ascii=False,indent=2));return state
  cfg=config(task);fingerprint=sha(task/'task.json')
  if dry:
@@ -64,8 +64,9 @@ def run(task,mode,dry=False,start_stage=None,executor=None):
    state=read(sp)
    if state['config_sha256']!=fingerprint:raise ValueError('Config changed since checkpoint')
    for entry in state['checkpoints'].values():verify(entry['artifacts'])
-  result={'status':'DRY_RUN_PASS','stages':STAGES,'paid_operations':0,'premiere_started':False,'init_accepted':(path/'init_accepted.json').exists()}
+  result={'status':'DRY_RUN_PASS','stages':STAGES,'paid_operations':0,'premiere_started':False,'init_accepted':(path/'init_accepted.json').exists(),'user_input_required':missing_inputs(cfg)}
   print(json.dumps(result,indent=2));return result
+ if missing_inputs(cfg):raise ValueError('USER_INPUT_REQUIRED: '+', '.join(missing_inputs(cfg)))
  if not cfg['family_pipeline']['run_enabled']:raise ValueError('Task is frozen/reference-only: run_enabled=false')
  from family_stages import preflight,stage_outputs,resume_handoff
  preflight(task,cfg)
@@ -78,12 +79,12 @@ def run(task,mode,dry=False,start_stage=None,executor=None):
  state=read(sp) if sp.exists() else dict(task=task.name,config_sha256=fingerprint,checkpoints={},status='READY',last_success=None)
  with lock.open('x',encoding='utf-8') as f:f.write(json.dumps({'pid':os.getpid(),'started':now()}))
  stage='VALIDATE';remote=Path(cfg['classify']['permanent_project_dir'])/'pipeline'/task.name
- def save():
+ def save(sync_task=True):
   state['updated']=now();write_json(sp,state);write_json(remote/'state.json',state)
   # Stage modules keep their historical reports; this is the authoritative task view.
   task_state=task/'state.json'
-  if task_state.exists():
-   summary=read(task_state);summary.update(stage=state.get('stage','INIT'),status=state['status'],execution_state=state['status'],pipeline_state=str(sp),next_stage=state.get('resume_command',command(task)))
+  if sync_task and task_state.exists():
+   summary=read(task_state);summary.update(init_accepted=True,stage=state.get('stage','INIT'),status=state['status'],execution_state=state['status'],pipeline_state=str(sp),next_stage=state.get('resume_command',command(task)))
    if 'CLASSIFY' in state['checkpoints']:summary.setdefault('stages',{})['CLASSIFY']='COMPLETE'
    write_json(task_state,summary)
  def preserve_logs():
@@ -94,7 +95,7 @@ def run(task,mode,dry=False,start_stage=None,executor=None):
   with (path/'master.log').open('a',encoding='utf-8') as f:f.write(now()+' '+text+'\n')
  def progress(last,errors,elapsed):
   match=re.search(r'(\d+)/(\d+)',last)
-  state['progress']=dict(stage=stage,current_item=last,n=int(match[1]) if match else None,total=int(match[2]) if match else None,elapsed_seconds=elapsed,error_count=errors,last_success=state['last_success'],heartbeat=now());save()
+  state['progress']=dict(stage=stage,current_item=last,n=int(match[1]) if match else None,total=int(match[2]) if match else None,elapsed_seconds=elapsed,error_count=errors,last_success=state['last_success'],heartbeat=now());save(sync_task=False)
  try:
   if state['config_sha256']!=fingerprint:raise ValueError('Config changed; do not invalidate successful paid stages')
   if start_stage and any(s not in state['checkpoints'] for s in STAGES[:STAGES.index(start_stage)]):raise ValueError('--from cannot bypass unvalidated dependencies')
@@ -103,6 +104,23 @@ def run(task,mode,dry=False,start_stage=None,executor=None):
    if entry:
     verify(entry['artifacts']);stage_outputs(task,cfg,stage);event('[SKIP] '+stage+' checkpoint verified');continue
    if stage=='STRUCTURE_REVIEW':
+    approval_path=task/'pipeline/structure_accepted.json'
+    if approval_path.exists():
+     accepted=read(approval_path);verify(accepted['artifacts'])
+     if accepted.get('status')!='ACCEPTED' or accepted.get('config_sha256')!=fingerprint:raise ValueError('Structure approval is stale')
+     finish_status=task/'visual_finish/status.json'
+     if finish_status.exists():
+      finish=read(finish_status)
+      if finish.get('source_sha256') not in accepted['artifacts'].values():raise ValueError('FINISH preparation does not match accepted structure')
+      from family_finish_monitor import watch
+      watch(task,snapshot=True)
+      native=Path(finish['jsx']).parent/'native_status.txt'
+      result=native.read_text(encoding='utf-8-sig') if native.exists() else 'WAITING_USER_RUN'
+      if result.startswith('FAILED'):raise ValueError('Native VISUAL_FINISH '+result)
+      pending='VISUAL_FINISH_QA' if result=='EXPORT_FILE_CREATED_REQUIRES_MEDIA_QA' else 'VISUAL_FINISH_NATIVE'
+      state.update(status='USER_ACTION_REQUIRED',stage=pending,last_success='STRUCTURE_REVIEW',user_action=finish['next'],finish_handoff=finish,resume_command=command(task));save()
+      event('USER_ACTION_REQUIRED: '+pending+'\nProject: '+finish['project']+'\nJSX: '+finish['jsx']);return state
+     state.update(status='USER_ACTION_REQUIRED',stage='VISUAL_FINISH_PREPARATION',last_success='STRUCTURE_REVIEW',user_action='Structure accepted. Task-specific VISUAL FINISH preparation required; generic AUTO ends here.');save();event('USER_ACTION_REQUIRED: VISUAL_FINISH_PREPARATION');return state
     state.update(status='USER_ACTION_REQUIRED',stage=stage,user_action='Review MAIN and SHORT structures before VISUAL FINISH; no automatic COLOR or music.',resume_command=command(task));save();event('USER_ACTION_REQUIRED: STRUCTURE_REVIEW');return state
    if stage.endswith('PREMIERE_HANDOFF'):
     pending=state.get('handoff')
@@ -126,6 +144,8 @@ def run(task,mode,dry=False,start_stage=None,executor=None):
   state.update(status='FAILED',failed_stage=stage,diagnostic=str(diagnostic),resume_command=command(task));save();event('FAILED '+json.dumps(failure,ensure_ascii=False));preserve_logs();return state
  finally:
   lock.unlink(missing_ok=True)
+  from family_retention import retain
+  retain(task)
 
 def main():
  for s in [sys.stdout,sys.stderr]:

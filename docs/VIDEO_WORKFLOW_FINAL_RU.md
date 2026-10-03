@@ -1,3 +1,74 @@
+## Пользовательский монтаж → визуальное доведение — 2026-10-03
+
+Для уже собранной пользователем вертикальной последовательности используется
+отдельный маршрут [USER_SEQUENCE_FINISH_RU.md](USER_SEQUENCE_FINISH_RU.md).
+Он сохраняет монтаж и добавляет проверенные индивидуальные Motion/переходы;
+существующая цветокоррекция сохраняется. Этот вход не требует заново строить FULL.
+Данные героя и история выполнения находятся вне репозитория; правила —
+[FAMILY_STORAGE_RU.md](FAMILY_STORAGE_RU.md). Горизонтальное доведение — планируемое
+расширение, требующее отдельной нативной проверки.
+
+## SHORT shortlist and manual branch handoff — 2026-09-29
+
+SHORT now uses `short_plan`: one ordered shortlist containing selected IDs only,
+followed by local whole-clip assembly. The maximum number of items is computed
+from the largest source clip durations so any unique shortlist within the ceiling
+fits the task hard maximum. This ceiling is not a quota; there is no padding,
+uniform compression, or new acceleration. Hook/development/peak/ending and unique
+IDs are validated. Original cached invalid responses remain unchanged.
+
+Vertical branches use `family_manual_branches.py`: a separate work project,
+assembly JSX and independent verification/export JSX. MAIN_ASSEMBLY is copied by
+the user into the existing empty MAIN target; SHORT starts with proportional
+contain and requires manual shot-specific Motion composition in Premiere before
+verification/export. This replaces the previous unconditional vertical handoff
+block, but does NOT claim automatic reframing or native QA before user execution.
+The verifier does not rewrite user Motion. Structural timing/source checks and
+native review decode still run on RESUME; human audiovisual/composition QA remains
+required. Existing FULL and original projects are preserved.
+
+## SHORT contract — 2026-09-29
+
+FULL — богатый источник содержания. MAIN — основной горизонтальный фильм 16:9,
+3840×2160 / 25 fps. SHORT — самостоятельный мобильный вертикальный фильм 9:16,
+2160×3840 / 25 fps. FULL → MAIN и FULL → SHORT; cross-parenting запрещён runtime.
+SHORT ≠ shortened MAIN и не трейлер. Собственные selection, montage, hook,
+development, peak, ending, reframing, VISUAL FINISH и COLOR. Допускается материал
+FULL, отсутствующий в MAIN, и другой порядок сцен с содержательной причиной.
+
+`main_format`, `short_format` независимо задают aspect_ratio/width/height/fps.
+`review`: MAIN 1280×720; `short_review`: 720×1280 / 25 fps, H.264,
+1–1.5 Mbps, AAC 128 kbps. Старые configs без новых полей сохраняют свои
+горизонтальные форматы и диапазоны. `short_max_seconds` — TASK-specific hard max.
+При его наличии target — ориентир, не квота; нижняя граница range не навязывает
+длительность. CONTENT FIRST / NO FILLER TO REACH TARGET. Target <= hard max.
+Katya26: SHORT target 160 / max 175 секунд. MAIN duration/range и ART counts
+могут быть null при INIT. Status/dry-run разрешены; accept-init и исполнение
+блокируются как USER_INPUT_REQUIRED до заполнения этих полей.
+
+VERTICAL ≠ STRETCHED. Selection, crop, uniform scale, reframe, virtual camera,
+composition, position animation; никогда geometric distortion. Фото высокого
+разрешения: GENERAL → MEDIUM → CLOSE, лицо, глаза, руки, взаимодействие.
+Видео: индивидуальная композиция с приоритетом FACE / PERSON / INTERACTION / ACTION;
+один fixed center crop для всех сцен запрещён. При плохой композиции выбрать
+другой материал FULL. Движение осмысленное, не механическое.
+ART geometry независима: PRESERVE_ASPECT_RATIO=True и
+exif-normalized-reference_native-output-v2 не изменены.
+
+Граница реализации: формат планов/XML и review preset параметризованы.
+Native executor пока имеет только static proportional fit. До реализации и проверки
+shot-specific reframing вертикальный handoff явно останавливается ДО копирования
+проекта. Existing-empty MAIN target задан в config; native importer запрещает
+совпадение имени и потребует адаптера заполнения существующей sequence.
+CONFIG READY не означает native assembly/QA PASS. VISUAL FINISH/COLOR —
+последующие стадии; текущий AUTO останавливается на STRUCTURE REVIEW.
+
+Katya26 создан с нуля в tasks/Katya26; permanent namespace:
+FamilyMemoryHub/output/Katya26. Только INIT, approval отсутствует.
+MAIN: KatyaZ_26_v01; SHORT: Katya26_SHORT_MASTER_01 (только имя, не создана).
+FINISH/COLOR имеют отдельные имена Katya26_MAIN_FINISH_01,
+Katya26_SHORT_FINISH_01, Katya26_MAIN_COLOR_01, Katya26_SHORT_COLOR_01.
+
 # Family Video Pipeline — каноническая технология после BM26
 
 Обновлено 2026-09-28. Этот раздел заменяет прежние COMPACT FIRST, FULL → MINIMAL и обязательный STOP после каждого этапа для новых семейных TASK. История ниже сохранена как DEPRECATED. Код и документация меняются вместе.
@@ -57,9 +128,9 @@ scripts\run_all.bat TASK_ID --resume
 
 `family_pipeline` содержит `run_enabled`, planner_model, обе target/range, photo_seconds, art_seconds, art.watercolor_count, art.double_exposure_count, art.model и review. Range имеет ровно два положительных значения и содержит target. Список heroes непустой и уникальный. Никакие Ben / Max / brothers не встроены в универсальный маршрут. Для ART используется описание задачи с нейтральным person/people; старый детский prompt остаётся только для прежних конфигураций без этого поля.
 
-Схемы: [TASK](../scripts/schemas/family_task.schema.json), [editorial plan](../scripts/schemas/family_edit_plan.schema.json). Runtime валидирует используемое подмножество JSON Schema и дополнительные межфайловые инварианты: происхождение, parent hashes, source bounds, тайминг, скорость, количество и результаты. Текущая native сборка поддерживает 3840×2160 / 25fps; review 1280×720 / 25fps. Это явное ограничение исполнителя, не универсальный художественный стандарт.
+Схемы: [TASK](../scripts/schemas/family_task.schema.json), [editorial plan](../scripts/schemas/family_edit_plan.schema.json). Runtime валидирует используемое подмножество JSON Schema и дополнительные межфайловые инварианты: происхождение, parent hashes, source bounds, тайминг, скорость, количество и результаты. Форматы параметризованы; границы вертикального native handoff указаны в новом SHORT contract выше.
 
-BM26 — завершённый эксперимент / frozen reference (`run_enabled: false`). Существующие результаты не переоцениваются и не пересобираются. KATYA INIT не создан: подтверждённых входных данных KATYA в задачах не найдено. Следующий отдельный шаг — предоставить реальные входные данные, выполнить INIT KATYA, проверить его пользователем, затем AUTO.
+BM26 — завершённый эксперимент / frozen reference (`run_enabled: false`). Существующие результаты не переоцениваются и не пересобираются. Katya26 INIT создан 2026-09-29; требуется USER CHECK и ввод MAIN duration / ART counts. AUTO не запускался.
 
 ## Reuse-first: что исполняется
 

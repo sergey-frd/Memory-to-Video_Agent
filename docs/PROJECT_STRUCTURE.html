@@ -324,7 +324,8 @@
 </head>
 <body>
   <div class="shell">
-    <aside class="sidebar"><nav><a class="level-2" href="#базовая-структура-task-системы">Базовая структура task-системы</a>
+    <aside class="sidebar"><nav><a class="level-2" href="#short-contract-2026-09-29">SHORT contract — 2026-09-29</a>
+<a class="level-2" href="#базовая-структура-task-системы">Базовая структура task-системы</a>
 <a class="level-2" href="#architecture-1">Architecture</a>
 <a class="level-3" href="#four-core-contracts">Four Core Contracts</a>
 <a class="level-2" href="#subsystem-cards-1">Subsystem Cards</a>
@@ -348,8 +349,45 @@
 <a class="level-2" href="#machine-readable-registry">Machine-Readable Registry</a>
 <a class="level-2" href="#publication-sync-1">Publication Sync</a>
 <a class="level-2" href="#выпуск-2026083101-перенос-установки-и-art">Выпуск 2026.08.31.01: перенос установки и ART</a>
-<a class="level-2" href="#архивирование-и-локальная-подготовка-публикации">Архивирование и локальная подготовка публикации</a></nav></aside>
+<a class="level-2" href="#архивирование-и-локальная-подготовка-публикации">Архивирование и локальная подготовка публикации</a>
+<a class="level-2" href="#user-montage-finish-внешнее-хранение-2026100301">User montage finish / внешнее хранение — 2026.10.03.01</a></nav></aside>
     <main><article class="content">
+<h2 id="short-contract-2026-09-29">SHORT contract — 2026-09-29</h2>
+<p>FULL — богатый источник содержания. MAIN — основной горизонтальный фильм 16:9,
+3840×2160 / 25 fps. SHORT — самостоятельный мобильный вертикальный фильм 9:16,
+2160×3840 / 25 fps. FULL → MAIN и FULL → SHORT; cross-parenting запрещён runtime.
+SHORT ≠ shortened MAIN и не трейлер. Собственные selection, montage, hook,
+development, peak, ending, reframing, VISUAL FINISH и COLOR. Допускается материал
+FULL, отсутствующий в MAIN, и другой порядок сцен с содержательной причиной.</p>
+<p><code>main_format</code>, <code>short_format</code> независимо задают aspect_ratio/width/height/fps.
+<code>review</code>: MAIN 1280×720; <code>short_review</code>: 720×1280 / 25 fps, H.264,
+1–1.5 Mbps, AAC 128 kbps. Старые configs без новых полей сохраняют свои
+горизонтальные форматы и диапазоны. <code>short_max_seconds</code> — TASK-specific hard max.
+При его наличии target — ориентир, не квота; нижняя граница range не навязывает
+длительность. CONTENT FIRST / NO FILLER TO REACH TARGET. Target &lt;= hard max.
+Katya26: SHORT target 160 / max 175 секунд. MAIN duration/range и ART counts
+могут быть null при INIT. Status/dry-run разрешены; accept-init и исполнение
+блокируются как USER_INPUT_REQUIRED до заполнения этих полей.</p>
+<p>VERTICAL ≠ STRETCHED. Selection, crop, uniform scale, reframe, virtual camera,
+composition, position animation; никогда geometric distortion. Фото высокого
+разрешения: GENERAL → MEDIUM → CLOSE, лицо, глаза, руки, взаимодействие.
+Видео: индивидуальная композиция с приоритетом FACE / PERSON / INTERACTION / ACTION;
+один fixed center crop для всех сцен запрещён. При плохой композиции выбрать
+другой материал FULL. Движение осмысленное, не механическое.
+ART geometry независима: PRESERVE_ASPECT_RATIO=True и
+exif-normalized-reference_native-output-v2 не изменены.</p>
+<p>Граница реализации: формат планов/XML и review preset параметризованы.
+Native executor пока имеет только static proportional fit. До реализации и проверки
+shot-specific reframing вертикальный handoff явно останавливается ДО копирования
+проекта. Existing-empty MAIN target задан в config; native importer запрещает
+совпадение имени и потребует адаптера заполнения существующей sequence.
+CONFIG READY не означает native assembly/QA PASS. VISUAL FINISH/COLOR —
+последующие стадии; текущий AUTO останавливается на STRUCTURE REVIEW.</p>
+<p>Katya26 создан с нуля в tasks/Katya26; permanent namespace:
+FamilyMemoryHub/output/Katya26. Только INIT, approval отсутствует.
+MAIN: KatyaZ_26_v01; SHORT: Katya26_SHORT_MASTER_01 (только имя, не создана).
+FINISH/COLOR имеют отдельные имена Katya26_MAIN_FINISH_01,
+Katya26_SHORT_FINISH_01, Katya26_MAIN_COLOR_01, Katya26_SHORT_COLOR_01.</p>
 <h1 id="актуальная-family-архитектура-2026-09-28">Актуальная family-архитектура — 2026-09-28</h1>
 <p>Дополнительная необязательная ветка: <a href="GROK_QUEUE_RU.md">ручной input → AI-промпты → Grok-видео</a>.
 Вход <code>run_grok_queue.bat</code>, профиль <code>config_grok_queue.json</code>, планировщик
@@ -1147,6 +1185,8 @@ python .\main_project_publication_push.py --repo-dir &lt;path-to-local-Memory-to
 </tr>
 </tbody></table>
 <p>Полный порядок: <a href="HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md">HERO_VIDEO_CLOSEOUT_PUBLIC_RU.md</a>. Постоянные архивы и отчёты не относятся к временным файлам.</p>
+<h2 id="user-montage-finish-внешнее-хранение-2026100301">User montage finish / внешнее хранение — 2026.10.03.01</h2>
+<p>See <a href="USER_SEQUENCE_FINISH_RU.md">USER_SEQUENCE_FINISH_RU.md</a> for finishing an existing user-assembled vertical sequence and <a href="FAMILY_STORAGE_RU.md">FAMILY_STORAGE_RU.md</a> for TASK/output and separate Video Project storage. The generalized preparer does not launch Adobe; native QA remains required. Horizontal finishing is planned, not validated.</p>
 
       <p class="source-note">Source: <a href="PROJECT_STRUCTURE.md">docs/PROJECT_STRUCTURE.md</a>.</p>
     </article></main>

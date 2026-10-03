@@ -93,7 +93,7 @@ def prepare(task, dry_run=False):
         return
     write_json(work / 'ART_2_REGENERATE.json', plan)
     write_json(work / 'art_manifest.json', plan)
-    header = '''# BM26 — ART_2: диагностика без API
+    header = '''# TASK — ART_2: диагностика без API
 
 Статус: READY FOR ART_2 GENERATION — USER CONFIRMATION REQUIRED. Генерация не начата.
 
@@ -146,7 +146,7 @@ Geometry policy входит в signature новой работы, поэтом�
     footer = '\n## Итог\n\n```json\n' + json.dumps(plan['counts'], indent=2) + '\n```\n\n'
     footer += 'ART_2 TARGET: `' + plan['target'] + '`\n\n'
     footer += 'Проверка размеров и полные paths/hashes/prompts — ART_2_REGENERATE.json. New dimensions/hash = null до генерации.\n\n'
-    footer += 'Команда проверки без записи и API: `scripts\\prepare_art_revision.bat BM26 --dry-run`.\n\n'
+    footer += 'Команда проверки без записи и API: `scripts\\prepare_art_revision.bat TASK_ID --dry-run`.\n\n'
     footer += 'ART v1 / originals / montage не меняются. Следующий запуск генерации — только отдельное подтверждение пользователя. STOP.\n'
     (work / 'ART_2_DIAGNOSTIC.md').write_text(header + table + footer, encoding='utf-8')
     rows = ['<!doctype html><html lang="ru"><meta charset="utf-8"><title>ART_2 diagnostic</title>',

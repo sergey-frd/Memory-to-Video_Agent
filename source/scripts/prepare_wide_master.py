@@ -58,7 +58,7 @@ def build_plan(bank,cfg):
             'watercolor':sum(media[mid].get('art_type')=='watercolor' for mid in selected),'double_exposure':sum(media[mid].get('art_type')=='double_exposure' for mid in selected)}
     return dict(schema_version=1,task_id=cfg['task_id'],sequence_name=cfg['sequence_name'],bank_sha256=cfg['bank_sha256'],fps=fps,frames=cursor,duration_seconds=cursor/fps,duration_target=None,duration_was_not_a_target=True,
                 width=cfg['width'],height=cfg['height'],available_media=len(media),selected_media=len(selected),selected_counts=counts,clips=clips,chapters=cfg['chapters'],same_source_families=related,not_selected=excluded,
-                limitations=['CLASSIFY video analysis used sampled frames; no full listening or precise empty-tail decisions were invented.','Individual names and elder/younger assignments remain unverified; no invented biography or chronology.','Native run, full audiovisual review and 720p export QA are pending.'],
+                limitations=['CLASSIFY video analysis used sampled frames; no full listening or precise empty-tail decisions were invented.','Individual identities remain unverified; no invented biography, relationships or chronology.','Native run, full audiovisual review and 720p export QA are pending.'],
                 audio_policy=cfg['audio_policy'],music_added=False,animation=False,color_correction=False,transitions=False)
 
 def validate(plan):

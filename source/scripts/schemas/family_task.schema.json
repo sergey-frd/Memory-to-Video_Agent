@@ -140,11 +140,17 @@
           "minLength": 1
         },
         "main_target_seconds": {
-          "type": "number",
+          "type": [
+            "number",
+            "null"
+          ],
           "minimum": 1
         },
         "main_target_range": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "minItems": 2,
           "items": {
             "type": "number",
@@ -157,7 +163,10 @@
           "minimum": 1
         },
         "short_target_range": {
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "minItems": 2,
           "items": {
             "type": "number",
@@ -185,11 +194,17 @@
           ],
           "properties": {
             "watercolor_count": {
-              "type": "integer",
+              "type": [
+                "integer",
+                "null"
+              ],
               "minimum": 0
             },
             "double_exposure_count": {
-              "type": "integer",
+              "type": [
+                "integer",
+                "null"
+              ],
               "minimum": 0
             },
             "model": {
@@ -216,6 +231,115 @@
             "height": {
               "type": "integer",
               "const": 720
+            },
+            "fps": {
+              "type": "integer",
+              "const": 25
+            },
+            "video_mbps": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1.5
+            },
+            "audio_kbps": {
+              "type": "integer",
+              "enum": [
+                96,
+                128
+              ]
+            }
+          }
+        },
+        "short_max_seconds": {
+          "type": "number",
+          "minimum": 1
+        },
+        "main_format": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "width",
+            "height",
+            "fps",
+            "aspect_ratio"
+          ],
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "fps": {
+              "type": "integer",
+              "const": 25
+            },
+            "aspect_ratio": {
+              "type": "string",
+              "enum": [
+                "16:9",
+                "9:16"
+              ]
+            }
+          }
+        },
+        "short_format": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "width",
+            "height",
+            "fps",
+            "aspect_ratio"
+          ],
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "fps": {
+              "type": "integer",
+              "const": 25
+            },
+            "aspect_ratio": {
+              "type": "string",
+              "enum": [
+                "16:9",
+                "9:16"
+              ]
+            }
+          }
+        },
+        "short_review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "width",
+            "height",
+            "fps",
+            "video_mbps",
+            "audio_kbps"
+          ],
+          "properties": {
+            "width": {
+              "type": "integer",
+              "enum": [
+                1280,
+                720
+              ]
+            },
+            "height": {
+              "type": "integer",
+              "enum": [
+                720,
+                1280
+              ]
             },
             "fps": {
               "type": "integer",
