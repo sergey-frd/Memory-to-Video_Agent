@@ -1,5 +1,14 @@
 # Publishing Workflow
 
+## Release 2026.10.04.03
+
+Documents the user-edited-sequence workflow: thematic selection, shorter edits,
+gentle staggered pulse, semantic video trims and horizontal-to-vertical reframing.
+Adds shared creative-plan and critic-report contracts. Personal adapters stay in
+the hero archive; this is not an automatic universal end-to-end executor.
+The public bundle excludes personal recipes and runtime evidence. Native project
+loading remains a separate check from XML validation.
+
 ## Release 2026.10.03.01
 
 Adds reusable preparation for finishing a user-assembled vertical sequence,

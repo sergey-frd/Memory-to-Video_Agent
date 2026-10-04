@@ -26,6 +26,15 @@ Latest workflow: [user-assembled vertical sequence finishing](docs/USER_SEQUENCE
 with external [TASK data storage](docs/FAMILY_STORAGE_RU.md), editable Motion,
 manual Premiere handoff and explicit native QA status.
 
+The new [joint creative review](docs/CREATIVE_FINISH_RU.md) plans Motion,
+transitions and color together, then reviews the complete film. Agent review
+packets and plan validation are available; native application requires adaptation
+to the supported executors and a real Premiere QA check.
+
+The optional [final film critic review](docs/FILM_CRITIC_RU.md) is enabled by
+default in that agent procedure: inspect the actual native result, correct once,
+recheck, then stop before the user adds music. Its report validator does not watch video.
+
 ## Install this release on a laptop
 
 Use **img-style-ag_1** for the same private development code as the desktop.
@@ -115,3 +124,5 @@ Or:
 ```bat
 .\run_project_publication_push.bat --source-root .
 ```
+
+- [Пользовательский монтаж → мягкий творческий проход → вертикальный шорт](docs/USER_EDIT_TO_SHORT_RU.md).

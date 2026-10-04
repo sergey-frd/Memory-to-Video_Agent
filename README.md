@@ -4,13 +4,13 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.10.03.01`
-- Git tag: `v2026.10.03.01`
+- Publication version: `2026.10.04.03`
+- Git tag: `v2026.10.04.03`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-10-03T10:38:26+03:00`
+- Last synchronized: `2026-10-04T12:26:20+03:00`
 - Source project: `img-style-ag_1`
-- Python files: `291`
-- Test files: `84`
+- Python files: `295`
+- Test files: `86`
 - Entry points: `49`
 
 ## Install this release
@@ -19,7 +19,7 @@ Choose one repository: `img-style-ag_1` for the private desktop code, or this pu
 For this public clone, select the release tag, then run the installer from `source/` (Windows AMD64, Python 3.14.2):
 
 ```powershell
-git switch --detach v2026.10.03.01
+git switch --detach v2026.10.04.03
 cd source
 .\install_project.bat
 .\run_verify_installation.bat --require-tag
@@ -30,7 +30,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 
 ## Published Source Mirror
 
-- Mirrored source files: `605`
+- Mirrored source files: `612`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/.env.template`
@@ -298,7 +298,9 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `docs/BATCH_RUN_HISTORY.md`
 - `docs/CHANGE_IMPACT.md`
 - `docs/COMPACT_FIRST_RU.md`
+- `docs/CREATIVE_FINISH_RU.md`
 - `docs/FAMILY_STORAGE_RU.md`
+- `docs/FILM_CRITIC_RU.md`
 - `docs/FULL_MINIMAL_PRODUCTION_RU.md`
 - `docs/GROK_QUEUE_RU.md`
 - `docs/GROK_SAFE_SESSIONS_RU.md`
@@ -319,6 +321,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `docs/PUBLISHING.md`
 - `docs/README.md`
 - `docs/Seedance_2.0_Director.md`
+- `docs/USER_EDIT_TO_SHORT_RU.md`
 - `docs/USER_GUIDE_EN.html`
 - `docs/USER_GUIDE_EN.md`
 - `docs/USER_GUIDE_RU.html`

@@ -92,6 +92,9 @@ PUBLISHED_SOURCE_SUFFIXES = {
 TEXT_READ_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251")
 
 DOC_TARGETS = {
+    "docs/USER_EDIT_TO_SHORT_RU.md": "docs/USER_EDIT_TO_SHORT_RU.md",
+    "docs/FILM_CRITIC_RU.md": "docs/FILM_CRITIC_RU.md",
+    "docs/CREATIVE_FINISH_RU.md": "docs/CREATIVE_FINISH_RU.md",
     "docs/USER_SEQUENCE_FINISH_RU.md": "docs/USER_SEQUENCE_FINISH_RU.md",
     "docs/FAMILY_STORAGE_RU.md": "docs/FAMILY_STORAGE_RU.md",
     "docs/GROK_QUEUE_RU.md": "docs/GROK_QUEUE_RU.md",
@@ -199,7 +202,7 @@ def _is_excluded_file_name(filename: str) -> bool:
     if filename == ".env.template":
         return False
     name = filename.casefold()
-    if any(hero in name for hero in ('bm26','ben26','max26','arkady26')):
+    if any(hero in name for hero in ('bm26','ben26','max26','arkady26','katya26')):
         return True
     # Personal completed-job instructions and launchers stay local.
     if "romann26" in name or name.startswith("romann26_"):
