@@ -1,5 +1,14 @@
 # Publishing Workflow
 
+## Release 2026.10.06.01
+
+Adds the optional user-expanded-master entry point: semantic shortening, mandatory
+structure review, then transmission, transitions, motion and editable color in a
+separate project. The source format is preserved; vertical SHORT, new media and
+family AUTO are not required. Documents inherited-keyframe/plugin checks and
+archive-before-cleanup. Personal adapters/media remain local; this release does
+not claim a universal native executor or completed visual QA of private tasks.
+
 ## Release 2026.10.04.03
 
 Documents the user-edited-sequence workflow: thematic selection, shorter edits,

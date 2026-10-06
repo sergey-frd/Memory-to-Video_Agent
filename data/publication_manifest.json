@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-10-04T12:26:20+03:00",
+  "generated_at": "2026-10-06T06:56:59+03:00",
   "source_project": "img-style-ag_1",
   "source_workspace": "img-style-ag_1",
-  "publication_version": "2026.10.04.03",
-  "publication_git_tag": "v2026.10.04.03",
+  "publication_version": "2026.10.06.01",
+  "publication_git_tag": "v2026.10.06.01",
   "managed_files": [
     "README.md",
     ".gitignore",
@@ -38,6 +38,7 @@
     "docs/README.md",
     "docs/Seedance_2.0_Director.md",
     "docs/USER_EDIT_TO_SHORT_RU.md",
+    "docs/USER_EXPANDED_MASTER_RU.md",
     "docs/USER_GUIDE_EN.html",
     "docs/USER_GUIDE_EN.md",
     "docs/USER_GUIDE_RU.html",
@@ -158,6 +159,7 @@
     "source/docs/README.md",
     "source/docs/Seedance_2.0_Director.md",
     "source/docs/USER_EDIT_TO_SHORT_RU.md",
+    "source/docs/USER_EXPANDED_MASTER_RU.md",
     "source/docs/USER_GUIDE_EN.html",
     "source/docs/USER_GUIDE_EN.md",
     "source/docs/USER_GUIDE_RU.html",

@@ -4,10 +4,10 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.10.04.03`
-- Git tag: `v2026.10.04.03`
+- Publication version: `2026.10.06.01`
+- Git tag: `v2026.10.06.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-10-04T12:26:20+03:00`
+- Last synchronized: `2026-10-06T06:56:59+03:00`
 - Source project: `img-style-ag_1`
 - Python files: `295`
 - Test files: `86`
@@ -19,7 +19,7 @@ Choose one repository: `img-style-ag_1` for the private desktop code, or this pu
 For this public clone, select the release tag, then run the installer from `source/` (Windows AMD64, Python 3.14.2):
 
 ```powershell
-git switch --detach v2026.10.04.03
+git switch --detach v2026.10.06.01
 cd source
 .\install_project.bat
 .\run_verify_installation.bat --require-tag
@@ -30,7 +30,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 
 ## Published Source Mirror
 
-- Mirrored source files: `612`
+- Mirrored source files: `613`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/.env.template`
@@ -322,6 +322,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `docs/README.md`
 - `docs/Seedance_2.0_Director.md`
 - `docs/USER_EDIT_TO_SHORT_RU.md`
+- `docs/USER_EXPANDED_MASTER_RU.md`
 - `docs/USER_GUIDE_EN.html`
 - `docs/USER_GUIDE_EN.md`
 - `docs/USER_GUIDE_RU.html`

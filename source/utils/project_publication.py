@@ -92,6 +92,7 @@ PUBLISHED_SOURCE_SUFFIXES = {
 TEXT_READ_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251")
 
 DOC_TARGETS = {
+    "docs/USER_EXPANDED_MASTER_RU.md": "docs/USER_EXPANDED_MASTER_RU.md",
     "docs/USER_EDIT_TO_SHORT_RU.md": "docs/USER_EDIT_TO_SHORT_RU.md",
     "docs/FILM_CRITIC_RU.md": "docs/FILM_CRITIC_RU.md",
     "docs/CREATIVE_FINISH_RU.md": "docs/CREATIVE_FINISH_RU.md",

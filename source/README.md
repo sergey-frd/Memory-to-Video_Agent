@@ -22,6 +22,9 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 - Workspace `VERSION`: **`2026.10.03.01`** ([`VERSION`](VERSION))
 - Release tag: **`v2026.10.03.01`**
 
+Short workflow option: [user-expanded master → shorter edit → creative finish](docs/USER_EXPANDED_MASTER_RU.md).
+Preserves the source format; no mandatory vertical SHORT or new media generation.
+
 Latest workflow: [user-assembled vertical sequence finishing](docs/USER_SEQUENCE_FINISH_RU.md),
 with external [TASK data storage](docs/FAMILY_STORAGE_RU.md), editable Motion,
 manual Premiere handoff and explicit native QA status.
