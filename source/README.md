@@ -2,6 +2,8 @@
 
 # img-style-ag_1
 
+Current ART and photo-video authorization, editable motion and expressive transition rules: [workflow sections 0.4, 3, 9 and 10](docs/VIDEO_WORKFLOW_FINAL_RU.md). These rules apply to new heroes and new films of existing heroes; legacy AUTO commands must be checked before execution.
+
 Optional artistic branch: [manually selected images → AI prompts → Grok videos](docs/GROK_QUEUE_RU.md).
 Use `run_grok_queue.bat <PROJECT>` with a project profile. Watercolors and generated
 clips can be edited into an artistic film manually; automatic input selection is not implemented.
@@ -19,8 +21,8 @@ Do **not** push this workspace root to `publication`. Use `main_project_publicat
 
 ## Current version
 
-- Workspace `VERSION`: **`2026.10.03.01`** ([`VERSION`](VERSION))
-- Release tag: **`v2026.10.03.01`**
+- Workspace `VERSION`: **`2026.10.19.01`** ([`VERSION`](VERSION))
+- Release tag: **`v2026.10.19.01`**
 
 Short workflow option: [user-expanded master → shorter edit → creative finish](docs/USER_EXPANDED_MASTER_RU.md).
 Preserves the source format; no mandatory vertical SHORT or new media generation.

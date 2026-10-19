@@ -4,10 +4,10 @@ Living project information for the source workspace `img-style-ag_1`.
 
 This repository is intended to store the current architecture, guides, change-impact rules, and machine-readable project status exported from the working project.
 
-- Publication version: `2026.10.06.01`
-- Git tag: `v2026.10.06.01`
+- Publication version: `2026.10.19.01`
+- Git tag: `v2026.10.19.01`
 - Canonical version files: repository root `VERSION`, `data/project_snapshot.json`, and `source/VERSION`
-- Last synchronized: `2026-10-06T06:56:59+03:00`
+- Last synchronized: `2026-10-19T12:26:57+03:00`
 - Source project: `img-style-ag_1`
 - Python files: `295`
 - Test files: `86`
@@ -19,7 +19,7 @@ Choose one repository: `img-style-ag_1` for the private desktop code, or this pu
 For this public clone, select the release tag, then run the installer from `source/` (Windows AMD64, Python 3.14.2):
 
 ```powershell
-git switch --detach v2026.10.06.01
+git switch --detach v2026.10.19.01
 cd source
 .\install_project.bat
 .\run_verify_installation.bat --require-tag
@@ -30,7 +30,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 
 ## Published Source Mirror
 
-- Mirrored source files: `613`
+- Mirrored source files: `615`
 - Full file list: `data/publication_manifest.json`
 - `source/.cursor`
 - `source/.env.template`
@@ -302,6 +302,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `docs/FAMILY_STORAGE_RU.md`
 - `docs/FILM_CRITIC_RU.md`
 - `docs/FULL_MINIMAL_PRODUCTION_RU.md`
+- `docs/GROK_PHOTO_VIDEO_3_PLUS_3_RU.md`
 - `docs/GROK_QUEUE_RU.md`
 - `docs/GROK_SAFE_SESSIONS_RU.md`
 - `docs/HERO_BATCH_PIPELINE_RU.md`
@@ -328,6 +329,7 @@ Premiere, plugins, media, API keys and browser logins are installed/transferred 
 - `docs/USER_GUIDE_RU.html`
 - `docs/USER_GUIDE_RU.md`
 - `docs/USER_SEQUENCE_FINISH_RU.md`
+- `docs/VIDEO_WORKFLOW_FINAL_HISTORY_RU.md`
 - `docs/VIDEO_WORKFLOW_FINAL_RU.md`
 - `docs/portrait_styles_tables.md`
 

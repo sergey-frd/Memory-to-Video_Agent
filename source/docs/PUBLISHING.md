@@ -1,5 +1,9 @@
 # Publishing Workflow
 
+## Release 2026.10.19.01
+
+Restructures the workflow, records explicit ChatGPT ART / Grok web authorization, sparse editable motion, Transform inventory and expressive transition requirements. Historical commands remain reference only. This documentation release does not claim new runtime guards or native effect QA. Private cleanup/recovery evidence and family media remain outside Git and the public bundle.
+
 ## Release 2026.10.06.01
 
 Adds the optional user-expanded-master entry point: semantic shortening, mandatory
