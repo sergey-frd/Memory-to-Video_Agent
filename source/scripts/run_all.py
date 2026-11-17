@@ -20,8 +20,9 @@ def watch_native(task):
    if len(text)>offset:print(text[offset:],end='',flush=True);offset=len(text)
   actual=status.read_text(encoding='utf-8',errors='replace').strip() if status.exists() else 'WAITING FOR JSX'
   if actual.startswith('FAILED'):return {'status':'FAILED','native_status':actual}
-  if actual=='EXPORT_FILE_CREATED_REQUIRES_MEDIA_QA':
-   print('Native export reported; verification still required: '+command(task),flush=True);return {'status':'USER_ACTION_REQUIRED','native_status':actual}
+  if actual in ['EXPORT_FILE_CREATED_REQUIRES_MEDIA_QA','PROJECT_SAVED_REQUIRES_USER_REVIEW']:
+   label='Project save reported' if actual=='PROJECT_SAVED_REQUIRES_USER_REVIEW' else 'Native export reported'
+   print(label+'; verification still required: '+command(task),flush=True);return {'status':'USER_ACTION_REQUIRED','native_status':actual}
   print(f'HEARTBEAT {int(time.monotonic()-start)}s status={actual}; does not confirm native completion.',flush=True);time.sleep(5)
 
 def child(args,log,stage,progress,timeout=1800):
@@ -98,6 +99,20 @@ def run(task,mode,dry=False,start_stage=None,executor=None):
   state['progress']=dict(stage=stage,current_item=last,n=int(match[1]) if match else None,total=int(match[2]) if match else None,elapsed_seconds=elapsed,error_count=errors,last_success=state['last_success'],heartbeat=now());save(sync_task=False)
  try:
   if state['config_sha256']!=fingerprint:raise ValueError('Config changed; do not invalidate successful paid stages')
+  if state.get('editorial_revision'):
+   revision=read(Path(state['editorial_revision']));stage=revision['stage']
+   entry=state['checkpoints'].get(stage)
+   if entry:
+    verify(entry['artifacts'])
+   elif mode=='resume':
+    outputs=resume_handoff(task,cfg,revision)
+    state['checkpoints'][stage]=dict(artifacts=artifacts(outputs),completed=now())
+    state.update(last_success=stage,handoff=None)
+   else:
+    state.update(status='USER_ACTION_REQUIRED',stage=stage,handoff=revision,resume_command=command(task));save()
+    event('USER_ACTION_REQUIRED: revised native assembly\nProject: '+revision['project']+'\nJSX: '+revision['jsx']);return state
+   state.update(status='USER_ACTION_REQUIRED',stage='STRUCTURE_REVIEW',user_action='Review revised FULL, independent MAIN and vertical SHORT inside the saved project; no automatic finish, color, music or export.',resume_command=command(task));save()
+   event('USER_ACTION_REQUIRED: STRUCTURE_REVIEW; revised sequences saved and structural checks passed; human viewing pending.');return state
   if start_stage and any(s not in state['checkpoints'] for s in STAGES[:STAGES.index(start_stage)]):raise ValueError('--from cannot bypass unvalidated dependencies')
   for stage in STAGES:
    entry=state['checkpoints'].get(stage)

@@ -7,7 +7,7 @@ from classify import copy_verified
 from scripts.prepare_full_master import make_xml,HELPERS
 
 def prepare(task,cfg,source,plans):
- from family_stages import metadata,ROOT,T
+ from family_stages import metadata,ROOT,T,project_only
  import xml.etree.ElementTree as ET
  from utils import premiere_project as pp
  from utils.premiere_sequence_motion import _track_item_contexts
@@ -40,14 +40,18 @@ def prepare(task,cfg,source,plans):
   values={'ADBEVideoWidth':review['width'],'ADBEVideoHeight':review['height'],'ADBEVideoFPS':T//25,'ADBEVideoMatchSource':'false','ADBEVideoTargetBitrate':review['video_mbps'],'ADBEVideoMaxBitrate':1.5,'ADBEAudioBitrate':review['audio_kbps']}
   for n in preset.getroot().iter('ExporterParam'):
    if n.findtext('ParamIdentifier') in values:n.find('ParamValue').text=str(values[n.findtext('ParamIdentifier')])
-  preset_path=package/(final_name+'_review.epr');preset.write(preset_path,encoding='utf-8',xml_declaration=True);files.append(preset_path)
+  preset_path=package/(final_name+'_review.epr')
+  if not project_only(cfg):
+   preset.write(preset_path,encoding='utf-8',xml_declaration=True);files.append(preset_path)
   job=dict(project=project.as_posix(),sequence=final_name,source_sequence=plan['source_sequence'],plan=plan,xml=xml.as_posix(),review=review,preset=preset_path.as_posix(),video=(package/(final_name+'_REVIEW.mp4')).as_posix())
+  job['project_only']=project_only(cfg)
   assembly_job=dict(job,sequence=assembly_name,plan=assembly)
   js=template.replace('__HELPERS__',HELPERS[:HELPERS.index('function cloneNamed')]).replace('__JOB__',json.dumps(assembly_job,ensure_ascii=True))
-  start=js.index(" state('NATIVE_TIMELINE_CHECKED_EXPORTING')");end=js.index('}catch(e)',start)
+  start=js.index(' if(job.project_only){');end=js.index('}catch(e)',start)
   js=js[:start]+" state('ASSEMBLY_READY_MANUAL_EDIT_REQUIRED');\n"+js[end:]
   scripts.append(js);jobs.append(job)
- assembly_js=package/'assemble_branches.jsx';assembly_js.write_text('\n'.join(scripts)+"\nalert('Assembly ready. Copy MAIN_ASSEMBLY into the empty MAIN target, reframe SHORT manually, save, then run verify_and_export.jsx.');\n",encoding='utf-8');files.append(assembly_js)
+ verifier_name='verify_and_save.jsx' if project_only(cfg) else 'verify_and_export.jsx'
+ assembly_js=package/'assemble_branches.jsx';assembly_js.write_text('\n'.join(scripts)+"\nalert('Assembly ready. Copy MAIN_ASSEMBLY into the empty MAIN target, reframe SHORT manually, save, then run "+verifier_name+".');\n",encoding='utf-8');files.append(assembly_js)
  # Reuse the exact native timing/source readback and export code, with NO conform
  # or scale writes after the user has adjusted editable Motion.
  checks=[]
@@ -70,13 +74,13 @@ def prepare(task,cfg,source,plans):
   if(seq.audioTracks[i].clips.numItems!==expected.length)throw Error('Audio clip count');
   for(j=0;j<expected.length;j++)check(seq.audioTracks[i].clips[j],expected[j]);
  }
- if(new File(job.video).exists)throw Error('Review exists: inspect before rerunning');
+ if(!job.project_only&&new File(job.video).exists)throw Error('Review exists: inspect before rerunning');
 """
   js=js[:start]+checks_body+js[end:]
   js=js.replace("alert('FULL review created. Send result for verification: '+job.video);",'')
-  if index==0:js=js.replace("state('EXPORT_FILE_CREATED_REQUIRES_MEDIA_QA')","state('CHECKPOINT_EXPORTED_MORE_PENDING')")
+  if index==0:js=js.replace("state('EXPORT_FILE_CREATED_REQUIRES_MEDIA_QA')","state('CHECKPOINT_EXPORTED_MORE_PENDING')").replace("state('PROJECT_SAVED_REQUIRES_USER_REVIEW')","state('CHECKPOINT_SAVED_MORE_PENDING')")
   checks.append(js)
- verifier=package/'verify_and_export.jsx';verifier.write_text('\n'.join(checks)+"\nalert('Checkpoints exported. Run the resume command.');\n",encoding='utf-8');files.append(verifier)
+ verifier=package/verifier_name;verifier.write_text('\n'.join(checks)+"\nalert('Checkpoints saved. Run the resume command.');\n",encoding='utf-8');files.append(verifier)
  instructions=package/'USER_ACTION_RU.md'
  instructions.write_text('''# Katya26: ручная сборка и композиция
 
@@ -89,6 +93,18 @@ def prepare(task,cfg,source,plans):
 Native QA и качество композиции до выполнения этих действий НЕ подтверждены.
 ''',encoding='utf-8');files.append(instructions)
  h=dict(status='USER_ACTION_REQUIRED',task=task.name,stage='BRANCH_PREMIERE_HANDOFF',project=str(project),source_project=str(source),source_sha256=sha(source),jsx=str(verifier),assembly_jsx=str(assembly_js),jobs=jobs,aliases=aliases,expected_result=[j['sequence'] for j in jobs],user_action=str(instructions),manual_reframing_required=True,resume_command=f'"{ROOT / "scripts/run_all.bat"}" {task.name} --resume',monitor_command=f'"{ROOT / "scripts/run_all.bat"}" {task.name} --watch')
+ if project_only(cfg):
+  instructions.write_text(f'''# {task.name}: сборка для просмотра внутри Adobe
+
+1. Откройте {project} и запустите {assembly_js} через Run Transition Script один раз.
+2. Скопируйте все клипы видео и аудио из {task.name}_MAIN_ASSEMBLY_01 в существующую пустую {plans[0]['sequence_name']} с начала, без вложенной sequence.
+3. Просмотрите {plans[1]['sequence_name']}. Это структурный черновик с proportional contain; индивидуальное кадрирование и FINISH ещё не выполнены. Геометрически не растягивать.
+4. Сохраните проект и запустите {verifier}. Он проверяет источники и тайминг, сохраняет проект без видеоэкспорта и не меняет Motion.
+5. Выполните scripts\\run_all.bat {task.name} --resume. При ошибке не повторяйте JSX поверх частичного результата.
+
+Полный визуальный просмотр выполняет пользователь внутри проекта; до его подтверждения приёмка PENDING.
+''',encoding='utf-8')
+ h['project_only']=project_only(cfg)
  h['prepared_artifacts']=artifacts([*files,*aliases]);verify(h['prepared_artifacts'])
  out=task/'pipeline/BRANCH_PREMIERE_HANDOFF/handoff.json';write_json(out,h);write_json(package/'handoff.json',h)
  return h

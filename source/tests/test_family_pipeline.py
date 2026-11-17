@@ -255,3 +255,19 @@ def test_short_shortlist_budget_preserves_whole_clips(tmp_path,monkeypatch):
  assert plan['duration_seconds']==8 and len(plan['clips'])==4
  assert all(c['frames']==50 and c['speed']==1 for c in plan['clips'])
  assert sum(not d['segments'] for d in plan['decisions'])==2
+
+def test_editorial_revision_requires_native_resume_before_review(rig):
+ task,cfg,calls,execute=rig
+ runner.run(task,'auto',executor=execute)
+ hand=task/'pipeline/revision/handoff.json'
+ write(hand,{'stage':'EDITORIAL_REVISION_02','project':'work.prproj','jsx':'assembly.jsx'})
+ sp=task/'pipeline/state.json';state=contract.read(sp);state['editorial_revision']=str(hand);write(sp,state)
+ before=list(calls)
+ result=runner.run(task,'auto',executor=execute)
+ assert result['stage']=='EDITORIAL_REVISION_02' and calls==before
+ output=task/'pipeline/EDITORIAL_REVISION_02/result.json';write(output,{'verified':True})
+ result=runner.run(task,'resume',executor=execute)
+ assert result['stage']=='STRUCTURE_REVIEW' and calls==before
+ assert 'EDITORIAL_REVISION_02' in result['checkpoints']
+ result=runner.run(task,'resume',executor=execute)
+ assert result['stage']=='STRUCTURE_REVIEW' and calls==before

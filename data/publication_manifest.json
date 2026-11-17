@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-10-19T12:26:57+03:00",
-  "source_project": "img-style-ag_1",
-  "source_workspace": "img-style-ag_1",
-  "publication_version": "2026.10.19.01",
-  "publication_git_tag": "v2026.10.19.01",
+  "generated_at": "2026-11-17T04:21:56+02:00",
+  "source_project": "closeout_release_public2_src",
+  "source_workspace": "closeout_release_public2_src",
+  "publication_version": "2026.11.17.01",
+  "publication_git_tag": "v2026.11.17.01",
   "managed_files": [
     "README.md",
     ".gitignore",
@@ -521,6 +521,7 @@
     "source/tests/test_art_geometry.py",
     "source/tests/test_creative_finish_plan.py",
     "source/tests/test_family_pipeline.py",
+    "source/tests/test_family_project_only.py",
     "source/tests/test_family_vertical_contract.py",
     "source/tests/test_film_critic_review.py",
     "source/tests/test_grok_queue.py",

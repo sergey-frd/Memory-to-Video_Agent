@@ -25,8 +25,8 @@ try{
  if(!app.project||!same(app.project.path,job.project))throw Error('Open FULL work copy: '+job.project);
  if(sequence(job.sequence))throw Error('FULL already exists; no overwrite');
  if(!sequence(job.source_sequence))throw Error('WIDE absent');
- if(new File(job.video).exists)throw Error('Review already exists; no overwrite');
- if(!new File(job.xml).exists||!new File(job.preset).exists)throw Error('Missing XML/preset');
+ if(!job.project_only&&new File(job.video).exists)throw Error('Review already exists; no overwrite');
+ if(!new File(job.xml).exists||(!job.project_only&&!new File(job.preset).exists))throw Error('Missing XML/preset');
  var i,j;
  for(i=0;i<app.project.sequences.numSequences;i++){var old=app.project.sequences[i];checkpoints.push({sequence:old,signature:signature(old)});}
  operation='import FULL XML';state(operation);
@@ -56,9 +56,13 @@ try{
  exact(seq.end,job.plan.frames*frame,'total duration');verifyCheckpoints();
  operation='save FULL checkpoint';var started=new Date().getTime();app.project.save();var disk=new File(job.project);
  if(!disk.exists||disk.length<=0||disk.modified.getTime()<started-2000)throw Error('Save not confirmed');
+ if(job.project_only){
+ verifyCheckpoints();state('PROJECT_SAVED_REQUIRES_USER_REVIEW');
+ }else{
  state('NATIVE_TIMELINE_CHECKED_EXPORTING');operation='720p native export';
  var result=seq.exportAsMediaDirect(new File(job.video).fsName,new File(job.preset).fsName,0);log('EXPORT returned='+result);
  var output=new File(job.video);if(!output.exists||output.length<=0)throw Error('Review output absent');
  verifyCheckpoints();state('EXPORT_FILE_CREATED_REQUIRES_MEDIA_QA');alert('FULL review created. Send result for verification: '+job.video);
+ }
 }catch(e){state('FAILED operation='+operation+'; line='+e.line+'; '+e);alert('FULL failed: '+operation+'; '+e);throw e;}
 })();

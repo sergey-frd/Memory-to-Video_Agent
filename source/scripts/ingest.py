@@ -148,7 +148,8 @@ def main():
         if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]*',args.task_id) or args.task_id.lower()=='legacy':
             raise ValueError('Invalid task ID')
         candidate=ROOT/'tasks'/args.task_id
-        if candidate.resolve()!=candidate.absolute() or not (candidate/'task.json').is_file():
+        from family_contract import task_path
+        if (candidate.resolve()!=candidate.absolute() and task_path(args.task_id)!=candidate) or not (candidate/'task.json').is_file():
             raise ValueError('Task directory missing or redirected')
         task=candidate
         config=json.loads((task/'task.json').read_text(encoding='utf-8'))
@@ -189,7 +190,7 @@ def main():
         if not args.check:
             context['step']='WRITE AND VALIDATE MANIFEST'
             destination=task/'ingest'/'manifest.json'
-            if destination.parent.resolve()!=destination.parent.absolute():raise ValueError('Redirected ingest output directory')
+            if not destination.parent.resolve().is_relative_to(task.resolve()):raise ValueError('Redirected ingest output directory')
             payload=dict(schema_version=1,task_id=args.task_id,source_project=str(project),source_sequence=sequence_name,
                 project_sha256=before,timestamp=result['timestamp'],ticks_per_second=pp.PREMIERE_TICKS_PER_SECOND,
                 ordering='timeline start, track group, track index, clip position; missing starts last',

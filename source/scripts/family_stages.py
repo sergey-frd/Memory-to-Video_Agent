@@ -16,6 +16,17 @@ from scripts.prepare_wide_master import build_plan as wide_build,validate as wid
 from scripts.prepare_full_master import make_xml,HELPERS
 T=254016000000
 
+def project_only(cfg):
+ return cfg.get('execution_scope',{}).get('review_delivery')=='premiere_project_only'
+
+def no_art(cfg):
+ return all(cfg['family_pipeline']['art'][k]==0 for k in ['watercolor_count','double_exposure_count'])
+
+def original_bank(task,cfg):
+ original=task/'classify/classification.json'
+ pointer=dict(schema_version=1,task_id=task.name,classification_path=str(original),sha256=sha(original),bank_version='original-only',original_classified=len(read(original)['media']),new_watercolor=0,new_double_exposure=0,total_classified_media=len(read(original)['media']))
+ write_json(task/'classified_media_bank.json',pointer)
+
 def preflight(task,cfg):
  from art import SUPPORTED_EDIT_MODELS
  if cfg['family_pipeline']['art']['model'] not in SUPPORTED_EDIT_MODELS:raise ValueError('Unsupported existing ART model')
@@ -239,7 +250,8 @@ def prepare_handoff(task,cfg,stage):
   values={'ADBEVideoWidth':review['width'],'ADBEVideoHeight':review['height'],'ADBEVideoFPS':T//25,'ADBEVideoMatchSource':'false','ADBEVideoTargetBitrate':review['video_mbps'],'ADBEVideoMaxBitrate':1.5,'ADBEAudioBitrate':review['audio_kbps']}
   for n in preset.getroot().iter('ExporterParam'):
    if n.findtext('ParamIdentifier') in values:n.find('ParamValue').text=str(values[n.findtext('ParamIdentifier')])
-  preset_path=package/(plan['sequence_name']+'_review.epr');preset.write(preset_path,encoding='utf-8',xml_declaration=True)
+  preset_path=package/(plan['sequence_name']+'_review.epr')
+  if not project_only(cfg):preset.write(preset_path,encoding='utf-8',xml_declaration=True)
   for c in plan['clips']:
    path=Path(c['path']);key=str(path)
    if key not in metadata_cache:metadata_cache[key]=metadata(path)
@@ -251,21 +263,25 @@ def prepare_handoff(task,cfg,stage):
     aliases[str(alias)]=sha(alias);c['original_source_path']=str(path);c['path']=str(alias)
   xml=package/(plan['sequence_name']+'.xml');xml.write_text(make_xml(plan,plan),encoding='utf-8')
   job=dict(project=project.as_posix(),sequence=plan['sequence_name'],source_sequence=source_sequence,plan=plan,xml=xml.as_posix(),review=review,preset=preset_path.as_posix(),video=(package/(plan['sequence_name']+'_REVIEW.mp4')).as_posix())
+  job['project_only']=project_only(cfg)
   source_sequence=job['sequence'] if first else source_sequence
   js=(ROOT/'scripts/full_master_native.jsx').read_text(encoding='utf-8').replace('__HELPERS__',HELPERS[:HELPERS.index('function cloneNamed')]).replace('__JOB__',json.dumps(job,ensure_ascii=True))
   js=js.replace("alert('FULL review created. Send result for verification: '+job.video);",'')
-  if not jobs:js=js.replace("state('EXPORT_FILE_CREATED_REQUIRES_MEDIA_QA')","state('CHECKPOINT_EXPORTED_MORE_PENDING')")
+  if not jobs:
+   js=js.replace("state('EXPORT_FILE_CREATED_REQUIRES_MEDIA_QA')","state('CHECKPOINT_EXPORTED_MORE_PENDING')").replace("state('PROJECT_SAVED_REQUIRES_USER_REVIEW')","state('CHECKPOINT_SAVED_MORE_PENDING')")
   script.append(js);jobs.append(job)
- jsx=package/'assemble_checkpoints.jsx';jsx.write_text('\n'.join(script)+"\nalert('Checkpoints exported. Run the resume command.');\n",encoding='utf-8')
+ jsx=package/'assemble_checkpoints.jsx';jsx.write_text('\n'.join(script)+"\nalert('Checkpoints saved. Run the resume command.');\n",encoding='utf-8')
  handoff=dict(status='USER_ACTION_REQUIRED',task=task.name,stage=stage,project=str(project),source_project=str(source),source_sha256=sha(source),jsx=str(jsx),jobs=jobs,aliases=aliases,user_action='Open the listed work project; run the JSX via Run Transition Script; do not rerun after a partial failure.',expected_result=[j['sequence'] for j in jobs],resume_command=f'"{ROOT / "scripts/run_all.bat"}" {task.name} --resume')
- handoff['prepared_artifacts']=artifacts([jsx,*[j['preset'] for j in jobs],*[j['xml'] for j in jobs],*aliases])
+ handoff['project_only']=project_only(cfg)
+ handoff['prepared_artifacts']=artifacts([jsx,*[j['preset'] for j in jobs if not j['project_only']],*[j['xml'] for j in jobs],*aliases])
  handoff['monitor_command']=f'"{ROOT / "scripts/run_all.bat"}" {task.name} --watch'
  write_json(hand,handoff);copy_verified(hand,package/'handoff.json')
 
 def resume_handoff(task,cfg,pending):
  verify(pending['prepared_artifacts']);verify({pending['source_project']:pending['source_sha256']})
  project=Path(pending['project']);folder=Path(pending['jsx']).parent;status=folder/'native_status.txt'
- if not status.exists() or status.read_text().strip()!='EXPORT_FILE_CREATED_REQUIRES_MEDIA_QA':raise ValueError('Expected successful native status; actual missing/pending/failed')
+ expected_status='PROJECT_SAVED_REQUIRES_USER_REVIEW' if pending.get('project_only') else 'EXPORT_FILE_CREATED_REQUIRES_MEDIA_QA'
+ if not status.exists() or status.read_text().strip()!=expected_status:raise ValueError('Expected successful native status; actual missing/pending/failed')
  root=pp.load_premiere_project_root(project);ids=pp.build_project_object_id_lookup(root);uids=pp.build_project_object_uid_lookup(root)
  for j in pending['jobs']:
   seq=pp.find_project_sequence_node(root,j['sequence'])
@@ -282,6 +298,7 @@ def resume_handoff(task,cfg,pending):
      if str(Path(a.source_path)).lower()!=str(Path(c['path'])).lower():raise ValueError('Native source mismatch')
      for x,y in [(a.start,c['timeline_start_frame']/25),(a.end,(c['timeline_start_frame']+c['frames'])/25),(a.source_in,c['source_in_seconds']),(a.source_out,c['source_out_seconds'])]:
       if abs(x/T-y)>.021:raise ValueError('Native timing/source bound mismatch')
+  if pending.get('project_only'):continue
   video=Path(j['video'])
   if not video.is_file() or video.stat().st_size==0:raise ValueError('Missing native review')
   probe=subprocess.run([resolve_ffmpeg_executable(),'-i',str(video)],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=60).stderr
@@ -293,12 +310,18 @@ def resume_handoff(task,cfg,pending):
   with heartbeat('VERIFY NATIVE REVIEW '+j['sequence']):
    result=subprocess.run([resolve_ffmpeg_executable(),'-v','error','-xerror','-i',str(video),'-f','null','-'],capture_output=True,timeout=900)
   if result.returncode:raise ValueError('Native review decode failed')
- report=task/'pipeline'/pending['stage']/'verification.json';write_json(report,dict(status='NATIVE_TECHNICAL_PASS',project_sha256=sha(project),sequences=pending['expected_result'],human_audiovisual_review='PENDING'))
+ report=task/'pipeline'/pending['stage']/'verification.json';write_json(report,dict(status='SAVED_PROJECT_STRUCTURE_PASS' if pending.get('project_only') else 'NATIVE_TECHNICAL_PASS',project_sha256=sha(project),sequences=pending['expected_result'],human_audiovisual_review='PENDING',native_render_verified=not pending.get('project_only',False)))
  copy_verified(report,folder/'verification.json')
- return [report,project,status,*[j['video'] for j in pending['jobs']]]
+ return [report,project,status,*[j['video'] for j in pending['jobs'] if not pending.get('project_only')]]
 
 def stage_outputs(task,cfg,stage):
  p=task/'pipeline'
+ if no_art(cfg) and stage in ['ART_PLAN','ART','ART_CLASSIFY','BANK']:
+  out=p/'original_only.json';v=read(out)
+  if v!={'task_id':task.name,'classification_sha256':sha(task/'classify/classification.json'),'art_skipped':True}:raise ValueError('Original-only bank provenance mismatch')
+  pointer=read(task/'classified_media_bank.json');verify({pointer['classification_path']:pointer['sha256']})
+  if Path(pointer['classification_path']).resolve()!=(task/'classify/classification.json').resolve():raise ValueError('Unexpected original-only bank')
+  return [out,task/'classified_media_bank.json',task/'classify/classification.json']
  if stage=='INGEST':
   out=task/'ingest/manifest.json';v=read(out)
   if v['task_id']!=task.name or v['project_sha256']!=sha(cfg['paths']['premiere_project']):raise ValueError('INGEST provenance mismatch')
@@ -384,7 +407,10 @@ def run(task,stage):
  if stage in ['INGEST','CLASSIFY','ART','ART_CLASSIFY','BANK']:
   try:stage_outputs(task,cfg,stage);print('RECOVER VALID OUTPUT '+stage);return
   except (OSError,ValueError,KeyError):pass
- if stage=='INGEST':subprocess.run([sys.executable,str(ROOT/'scripts/ingest.py'),task.name],check=True)
+ if no_art(cfg) and stage in ['ART_PLAN','ART','ART_CLASSIFY','BANK']:
+  original_bank(task,cfg)
+  write_json(p/'original_only.json',dict(task_id=task.name,classification_sha256=sha(task/'classify/classification.json'),art_skipped=True))
+ elif stage=='INGEST':subprocess.run([sys.executable,str(ROOT/'scripts/ingest.py'),task.name],check=True)
  elif stage=='CLASSIFY':
   from classify import run as classify
   if classify(task.name):raise ValueError('CLASSIFY failed')

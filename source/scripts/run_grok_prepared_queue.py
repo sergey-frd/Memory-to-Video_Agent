@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -121,8 +122,13 @@ def run(plan_path: Path) -> None:
                         page.goto('https://grok.com/imagine', wait_until='domcontentloaded')
                         box = page.get_by_role('textbox', name='Ask Grok anything')
                         box.wait_for()
-                        page.get_by_role('radio', name='Video', exact=True).check()
-                        assert page.get_by_role('button', name='Remove image', exact=True).count() == 0
+                        video_mode = page.get_by_role('group', name='Generation mode', exact=True).get_by_role('button', name='Video', exact=True)
+                        if video_mode.count():
+                            if video_mode.get_attribute('aria-pressed') != 'true':
+                                video_mode.click()
+                        else:
+                            page.get_by_role('radio', name='Video', exact=True).check()
+                        assert page.get_by_role('button', name='Remove image', exact=True).count() == 0, 'Unexpected image attachment before upload'
                         box.fill('')
                         duration = page.get_by_role('button', name='Video duration', exact=True)
                         if '6s' not in duration.inner_text():
@@ -133,6 +139,11 @@ def run(plan_path: Path) -> None:
                         audio = page.get_by_role('button', name='Video audio', exact=True)
                         if audio.get_attribute('aria-pressed') == 'true':
                             audio.click()
+                        if plan.get('preserve_aspect_ratio'):
+                            aspect = page.get_by_role('button', name='Aspect Ratio', exact=True)
+                            if aspect.inner_text().strip() != 'Auto':
+                                aspect.click()
+                                page.get_by_role('menuitemradio', name='Auto', exact=True).click()
                         page.locator('input[type=file][name=files]').set_input_files(str(image))
                         remove = page.get_by_role('button', name='Remove image', exact=True)
                         remove.wait_for(state='visible', timeout=plan.get('upload_timeout', 300) * 1000)
@@ -145,13 +156,13 @@ def run(plan_path: Path) -> None:
                             return false;
                         }''', timeout=plan.get('upload_timeout', 300) * 1000)
                         box.fill(item['prompt'])
-                        assert box.inner_text().strip() == item['prompt'].strip()
+                        assert ' '.join(box.inner_text().split()) == ' '.join(item['prompt'].split()), 'Prompt text changed in the editor'
                         page.screenshot(path=str(archive / f'{image.stem}_prepared.png'))
                         state.update(status='SUBMITTING', input_sha256=item['sha256'], previous_url=previous,
                                      reset_verified=True, prompt=item['prompt'])
                         save_state(state_path, state)
                         page.get_by_role('button', name='Submit', exact=True).click()
-                        page.wait_for_url('**/imagine/post/**', timeout=30000)
+                        page.wait_for_function("() => location.pathname.includes('/imagine/post/') && !location.pathname.includes('/post/tmp_')", timeout=30000)
                         state.update(status='SUBMITTED', url=page.url)
                         save_state(state_path, state)
                         print('SUBMITTED; old player closed and fresh image attached', flush=True)
@@ -161,23 +172,20 @@ def run(plan_path: Path) -> None:
                         # Grok first opens the source-image post, then replaces it
                         # with the generated-video post in the same conversation.
                         if '/imagine/post/' in page.url and page.url != state['url']:
-                            if page.get_by_role('textbox', name='Ask Grok anything').inner_text().strip() != item['prompt'].strip():
+                            if ' '.join(page.get_by_role('textbox', name='Ask Grok anything').inner_text().split()) != ' '.join(item['prompt'].split()):
                                 raise RuntimeError('Page changed to a different request')
                             state['url'] = page.url
                             post_id = page.url.split('/post/', 1)[1].split('?', 1)[0]
                             save_state(state_path, state)
-                        videos = page.locator('main video').evaluate_all('(els)=>els.map(e=>({src:e.currentSrc,duration:e.duration,width:e.videoWidth,height:e.videoHeight}))')
+                        videos = page.locator('video').evaluate_all('(els)=>els.map(e=>({src:e.currentSrc,duration:e.duration,width:e.videoWidth,height:e.videoHeight}))')
                         ready = next((v for v in videos if post_id in v['src'] and v['duration'] and v['width']), None)
                         if ready:
                             state['video'] = ready
                             break
-                        print('Waiting: ' + page.locator('main').inner_text()[:180].replace('\n', ' '), flush=True)
+                        print('Waiting: ' + page.locator('body').inner_text()[-180:].replace('\n', ' '), flush=True)
                         page.wait_for_timeout(10000)
                     else:
                         raise TimeoutError('Generation did not finish; resume uses saved post URL')
-                    download = page.get_by_role('button', name='Download', exact=True)
-                    if not download.count():
-                        page.get_by_role('button', name='Post actions', exact=True).click()
                     try:
                         # Download only the URL observed on this request's player.
                         response = page.context.request.get(state['video']['src'], timeout=120000)
@@ -185,6 +193,9 @@ def run(plan_path: Path) -> None:
                             raise RuntimeError(f'Video download failed: HTTP {response.status}')
                         output.write_bytes(response.body())
                     except Exception:
+                        download = page.get_by_role('button', name='Download', exact=True)
+                        if not download.count():
+                            page.get_by_role('button', name='Post actions', exact=True).click()
                         with page.expect_download(timeout=60000) as info:
                             download.click()
                         info.value.save_as(str(output))
@@ -194,6 +205,13 @@ def run(plan_path: Path) -> None:
                 result = subprocess.run([ffmpeg, '-v', 'error', '-i', str(output), '-f', 'null', '-'], capture_output=True, text=True)
                 if result.returncode or result.stderr.strip():
                     raise RuntimeError(f'Video decode failed: {result.stderr}')
+                if plan.get('expected_duration_seconds'):
+                    probe = subprocess.run([ffmpeg, '-hide_banner', '-i', str(output)], capture_output=True, text=True, encoding='utf-8', errors='replace')
+                    duration = re.search(r'Duration: (\d+):(\d+):(\d+\.\d+)', probe.stderr)
+                    seconds = sum(float(v)*m for v,m in zip(duration.groups(), [3600,60,1])) if duration else None
+                    if seconds is None or abs(seconds-plan['expected_duration_seconds']) > .15:
+                        raise RuntimeError(f'Generated duration mismatch: {seconds}; expected {plan["expected_duration_seconds"]}')
+                    state['verified_duration_seconds'] = seconds
                 subprocess.run([ffmpeg, '-v', 'error', '-i', str(output), '-vf',
                     "select='eq(n,0)+eq(n,72)+eq(n,143)',scale=272:-1,tile=3x1", '-frames:v', '1', '-y',
                     str(archive / f'{image.stem}_qa.jpg')], check=True)
@@ -212,7 +230,7 @@ def run(plan_path: Path) -> None:
                 cleanup.append((image, item['sha256']))
                 print(f'COMPLETE: {target}', flush=True)
             except Exception as exc:
-                state['last_error'] = str(exc)
+                state['last_error'] = f'{type(exc).__name__}: {exc}'
                 save_state(state_path, state)
                 failures.append(image.name)
                 print(f'FAILED: {image.name}: {exc}', flush=True)
